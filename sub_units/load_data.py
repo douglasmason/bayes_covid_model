@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-
+import datetime
 data_dir = 'source_data'
 
 # NB: full_count_data is cumulative
@@ -10,6 +10,17 @@ full_count_data['date'] = full_count_data['date'].astype('datetime64[ns]')
 
 date_range = pd.date_range(min(full_count_data['date']), max(full_count_data['date']))
 map_state_to_series = dict()
+
+# get totals across U.S.
+list_of_dict_totals = list()
+for date in sorted(set(full_count_data['date'])):
+    date_iloc = [i for i, x in enumerate(full_count_data['date']) if x == date]
+    sum_cases = sum(full_count_data.iloc[date_iloc]['cases'])
+    sum_deaths = sum(full_count_data.iloc[date_iloc]['deaths'])
+    list_of_dict_totals.append({'date': date, 'cases': sum_cases, 'deaths': sum_deaths, 'state': 'total'})
+
+total_counts_data = pd.DataFrame(list_of_dict_totals)
+full_count_data = full_count_data.append(total_counts_data, ignore_index=True)
 
 # data munging gets daily-differences differences by state
 for state in sorted(set(full_count_data['state'])):
@@ -35,11 +46,13 @@ state_populations = pd.read_csv(os.path.join(data_dir,'state_population.csv'))
 map_state_to_population = {
     state_populations.iloc[i]['state']: int(state_populations.iloc[i]['population'].replace(',', '')) for i in
     range(len(state_populations))}
+map_state_to_population['total'] = sum(map_state_to_population.values())
 
 # get shelter-in-place dates
 SIP_dates = pd.read_csv(
     os.path.join(data_dir,'shelter_in_place_dates_by_state.csv'))  # from https://www.finra.org/rules-guidance/key-topics/covid-19/shelter-in-place
 SIP_dates['sip_date'] = SIP_dates['sip_date'].astype('datetime64[ns]')
+SIP_dates = SIP_dates.append(pd.DataFrame([{'state': 'total', 'sip_date': datetime.datetime.strptime('2020-03-20', '%Y-%m-%d')}]))
 
 for i in range(len(SIP_dates)):
     state = SIP_dates.iloc[i]['state']
