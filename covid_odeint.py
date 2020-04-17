@@ -10,13 +10,11 @@ import datetime
 from scipy.optimize import Bounds
 import matplotlib.dates as mdates
 import time
-
-
 ####
 # Load Data
 ####
 
-state = 'total'#'California'#New York
+state = 'New York'#'California'#New York
 state_data = load_data.get_state_data(state)
 series_data = state_data['series_data']
 SIP_date = state_data['sip_date']
@@ -133,6 +131,16 @@ def solve_and_plot_solution(test_params):
     '''
     Solve ODEs and plot relavant parts
     :param test_params: dictionary of parameters
+        example:       {'I_0': 1.0, # starting infections
+                       'alpha_1': 0.4, # infection rate 1
+                       'alpha_2': 0.2, # infection rate 2
+                       'beta': 0.1, # infectious-to-symptomatic rate
+                       'delta': 0.002, symptomatic-to-confirmed
+                       'gamma': 0.004, # confirmed-to-dead
+                       'eta': 0.1, # recovery rate
+                       'delta_t': 9, # delta_t (days after SIP date)
+                       }
+    : 
     :return: None
     '''
     time0 = get_time()
@@ -157,9 +165,7 @@ def solve_and_plot_solution(test_params):
     max_plot_pt = min(len(sol), len(series_data) + 14)
     data_plot_date_range = [min_date + datetime.timedelta(days=1) * i for i in range(len(series_data))][min_plot_pt:]
     sol_plot_date_range = [min_date + datetime.timedelta(days=1) * i for i in range(len(sol))][min_plot_pt:max_plot_pt]
-    
-    print(len(data_plot_date_range), len(sol_plot_date_range))
-    
+        
     fig, ax = plt.subplots()
     ax.plot(sol_plot_date_range, [sol[i][infected_ind] for i in range(min_plot_pt, max_plot_pt)], 'blue', label='contagious (current)')
     ax.plot(sol_plot_date_range, [sol[i][symptomatic_ind] for i in range(min_plot_pt, max_plot_pt)], 'cyan', label='symptomatic (current)')
@@ -186,9 +192,6 @@ def solve_and_plot_solution(test_params):
     # for i in range(len(sol)):
     #     print(f'index: {i}, odeint_value: {sol[i]}, real_value: {[None, series_data[i]]}')
 
-bootstrap_selection = np.random.choice(len(bootstrap_params))
-solve_and_plot_solution(bootstrap_params[bootstrap_selection])
-
 solve_and_plot_solution(test_params)
 
 #####
@@ -205,8 +208,13 @@ solve_and_plot_solution(test_params)
 orig_test_params = [test_params[key] for key in sorted_names]
 for bootstrap_ind in range(n_bootstraps):
     
-    bootstrap_indices = list(range(len(series_data)))
-    bootstrap_indices = np.random.choice(bootstrap_indices, len(bootstrap_indices), replace=True)
+    # get bootstrap indices by concatenating cases and deaths
+    cases_indices = list(range(day_of_100th_case, len(series_data)))
+    deaths_indices = list(range(day_of_100th_death, len(series_data)))
+    bootstrap_tuples = [('cases', x) for x in cases_indices] + [('deaths', x) for x in deaths_indices]
+    bootstrap_indices_tuples = np.random.choice(list(range(len(bootstrap_tuples))), len(bootstrap_tuples), replace=True)
+    cases_bootstrap_indices = [bootstrap_tuples[i][1] for i in bootstrap_indices_tuples if bootstrap_tuples[i][0] == 'cases']
+    deaths_bootstrap_indices = [bootstrap_tuples[i][1] for i in bootstrap_indices_tuples if bootstrap_tuples[i][0] == 'deaths']
     
     # Add normal-distributed jitter with sigma=sqrt(N)
     tested_jitter = [max(0.01, data_new_tested[i] + np.random.normal(0, np.sqrt(data_new_tested[i]))) for i in
@@ -232,20 +240,21 @@ for bootstrap_ind in range(n_bootstraps):
         # compile each component of the error separately, then add        
         new_tested_err = [
             np.log(tested_jitter[i]) - np.log(new_tested_from_sol[i]) * error_weights[
-                i] for i in bootstrap_indices if i > day_of_100th_case]
+                i] for i in cases_bootstrap_indices]
         new_dead_err = [
             np.log(dead_jitter[i]) - np.log(new_dead_from_sol[i]) * error_weights[
-                i] for i in bootstrap_indices if i > day_of_100th_death]
+                i] for i in deaths_bootstrap_indices]
         
         final_err = new_tested_err + new_dead_err
                 
         return final_err
     
     # after the first fit, use the previous solution as our initial condition
-    if bootstrap_ind == 0:
-        passed_params = [test_params[key] for key in sorted_names]
-    else:
-        passed_params = sorted_params.copy()
+    # if bootstrap_ind == 0:
+    #     passed_params = [test_params[key] for key in sorted_names]
+    # else:
+    #     passed_params = sorted_params.copy()
+    passed_params = [test_params[key] for key in sorted_names]
     
     # NB: define the model constraints (mainly, positive values)
     params = sp.optimize.least_squares(test_errfunc,
@@ -296,7 +305,7 @@ for i in range(len(bootstrap_sols)):
     ax.plot(sol_plot_date_range, [new_dead[i] for i in range(min_plot_pt, max_plot_pt)], 'r', 
             alpha=5/n_bootstraps)
 
-ax.plot(data_plot_date_range data_new_tested, 'g.', label='cases')
+ax.plot(data_plot_date_range, data_new_tested, 'g.', label='cases')
 ax.plot(data_plot_date_range, data_new_dead, 'r.', label='deaths')
 fig.autofmt_xdate()
 
@@ -325,6 +334,6 @@ bootstrap_selection = np.random.choice(len(bootstrap_params))
 solve_and_plot_solution(bootstrap_params[bootstrap_selection])
 
 data = az.convert_to_inference_data(map_name_to_distro)
-az.plot_posterior(data, round_to=2, credible_interval=0.9, show=True, group='posterior', 
+az.plot_posterior(data, round_to=3, credible_interval=0.9, show=True, group='posterior', 
                   var_names=sorted_param_names) # show=True allows for plotting within IDE
 
