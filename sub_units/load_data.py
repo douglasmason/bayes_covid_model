@@ -80,6 +80,6 @@ def get_state_data(state):
     series_data = np.vstack([susceptible, infected, dead]).T
         
     return {'series_data': series_data,
-            'population': population, 
-            'sip_date': map_state_to_series[state]['sip_date'], 
+            'population': population,
+            'sip_date': map_state_to_series[state]['sip_date'],
             'min_date': min_date}
