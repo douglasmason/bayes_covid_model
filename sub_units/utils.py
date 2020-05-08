@@ -456,6 +456,8 @@ class ConvolutionModel:
                                for i in
                                range(len(sol[0]))][min_plot_pt:max_plot_pt]
 
+        print('sol_plot_date_range', sol_plot_date_range)
+
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
         if not path.exists(full_output_filename) or self.opt_force_plot:
             plt.clf()
