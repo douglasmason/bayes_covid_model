@@ -80,6 +80,9 @@ class ConvolutionModel:
         self.plot_filename_base = path.join('state_plots',
                                             f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_opt_walk_True_max_date_{max_date_str.replace('-', '_')}")
 
+
+        if not os.path.exists('state_plots'):
+            os.mkdir('state_plots')
         if not os.path.exists(self.plot_filename_base):
             os.mkdir(self.plot_filename_base)
 
