@@ -3,21 +3,18 @@ import pandas as pd
 # from sampyl import np as sampyl_np # for autograd
 # from jax import numpy as np
 # from jax.experimental.ode import odeint as odeint
-from nuts_local import nuts6, NutsSampler_fn_wrapper
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import scipy as sp
 import joblib
 from os import path
-from functools import partial
 from tqdm import tqdm
 import os
 from scipy.optimize import approx_fprime
 from functools import lru_cache, partial
-
-from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
-from sklearn.neighbors import KernelDensity
+# from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+# from sklearn.neighbors import KernelDensity
 
 plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
@@ -77,6 +74,9 @@ class ConvolutionModel:
                                                                 f"{state_name.lower().replace(' ', '_')}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
                                                                      f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
+        
+        # self.plot_filename_base = path.join(path.join('state_plots',max_date_str.replace('-', '_')),
+        #                                     f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples}")
         self.plot_filename_base = path.join('state_plots',
                                             f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_opt_walk_True_max_date_{max_date_str.replace('-', '_')}")
 
@@ -979,7 +979,7 @@ class ConvolutionModel:
                               f'\n how many samples accepted since last update? {n_accepted_turn} ({n_accepted_turn / n_test_ind_turn * 100:.4g}%)' + \
                               f'\n prev. log likelihood: {ll:.4g}' + \
                               f'\n       log likelihood: {proposed_ll:.4g}' + \
-                              f'\n use_bounds_range_to_sigma_denom {use_bounds_range_to_sigma_denom}' + \
+                              f'\n use_bounds_range_to_sigma_denom: {use_bounds_range_to_sigma_denom}' + \
                               f'\n acceptance ratio: {acceptance_ratio:.4g}' + \
                               ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
                         timer.reset()
