@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import matplotlib.pyplot as plt
+from os import path
 
 #####
 # Set up model
@@ -83,6 +84,7 @@ population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names
 
+
 #####
 # Loop over states
 #####
@@ -94,7 +96,7 @@ def loop_over_over_states(run_states):
         for state_ind, state in enumerate(run_states):
             print(
                 f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
-    
+
             if True:
                 state_model = ConvolutionModel(state,
                                                max_date_str,
@@ -114,16 +116,15 @@ def loop_over_over_states(run_states):
                                                )
                 state_model.run_fits()
                 map_state_name_to_model[state] = state_model
-    
+
             else:
                 print("Error with state", state)
                 continue
-                
+
     else:
         return map_state_name_to_model
-    
+
     return map_state_name_to_model
-        
 
     # commented out bc this takes way too long
     # print(f'Saving {len(map_state_name_to_model)} state models to {state_models_filename}')
@@ -137,7 +138,6 @@ def loop_over_over_states(run_states):
 # map_state_name_to_model = joblib.load(state_models_filename)
 
 def generate_state_report(map_state_name_to_model):
-    
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(population_ranked_state_names):
 
@@ -256,7 +256,7 @@ def generate_state_report(map_state_name_to_model):
             .replace('__', '_')
         new_cols.append(new_col)
     state_report.columns = new_cols
-    
+
     return state_report
 
 
@@ -264,15 +264,26 @@ def generate_state_report(map_state_name_to_model):
 # Make whisker plots
 ####
 
-def generate_whisker_plots(state_report):
+def generate_whisker_plots(state_report, output_filename_format_str=None):
     for param_name in sorted_init_condit_names + sorted_param_names + list(extra_params.keys()):
-        render_whisker_plot(state_report, param_name=param_name)
+        render_whisker_plot(state_report,
+                            param_name=param_name,
+                            output_filename_format_str=output_filename_format_str)
+
 
 def run_everything():
-    global map_state_name_to_model, state_report # setting to global allows us to inspect these objects via monkey-patching
+    # setting intermediate variables to global allows us to inspect these objects via monkey-patching
+    global map_state_name_to_model, state_report
+
     map_state_name_to_model = loop_over_over_states(run_states)
+    example_state = list(map_state_name_to_model.keys())[0]
     state_report = generate_state_report(map_state_name_to_model)
-    generate_whisker_plots(state_report)
+    
+    example_state_model = map_state_name_to_model[example_state]
+    plot_subfolder = example_state_model.plot_subfolder
+    filename = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
+    generate_whisker_plots(state_report, output_filename_format_str=filename)
+
 
 if __name__ == '__main__':
     run_everything()

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-pd.plotting.register_matplotlib_converters() # addresses complaints about Timestamp instead of float for plotting x-values
+
+pd.plotting.register_matplotlib_converters()  # addresses complaints about Timestamp instead of float for plotting x-values
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -70,9 +71,11 @@ class ConvolutionModel:
                                                                 f"{state_name.lower().replace(' ', '_')}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
                                                                      f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
-        
-        self.plot_filename_base = path.join(path.join('state_plots',max_date_str.replace('-', '_')),
-                                            f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples")
+
+        self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
+        self.plot_subfolder = path.join('state_plots', self.plot_subfolder)
+        self.plot_filename_base = path.join(self.plot_subfolder,
+                                            state_name.lower().replace(' ', '_').replace('.',''))
 
         if not os.path.exists('state_bootstraps'):
             os.mkdir('state_bootstraps')
@@ -80,8 +83,8 @@ class ConvolutionModel:
             os.mkdir('state_likelihood_samples')
         if not os.path.exists('state_plots'):
             os.mkdir('state_plots')
-        if not os.path.exists(path.join('state_plots', max_date_str.replace('-', '_'))):
-            os.mkdir(path.join('state_plots', max_date_str.replace('-', '_')))
+        if not os.path.exists(self.plot_subfolder):
+            os.mkdir(self.plot_subfolder)
         if not os.path.exists(self.plot_filename_base):
             os.mkdir(self.plot_filename_base)
 
@@ -153,8 +156,9 @@ class ConvolutionModel:
         self.loaded_bootstraps = False
         self.loaded_likelihood_samples = list()
         self.loaded_MCMC = list()
-        
-        self.extra_params = {key: partial(val, map_name_to_sorted_ind=self.map_name_to_sorted_ind) for key, val in extra_params.items()}
+
+        self.extra_params = {key: partial(val, map_name_to_sorted_ind=self.map_name_to_sorted_ind) for key, val in
+                             extra_params.items()}
 
     @staticmethod
     def norm(x, mu=0, std=0):
@@ -465,11 +469,11 @@ class ConvolutionModel:
             ax.plot(sol_plot_date_range, new_deceased[min_plot_pt: max_plot_pt], 'red', label='deceased')
             ax.plot(data_plot_date_range, self.data_new_tested, 'g.', label='confirmed cases')
             ax.plot(data_plot_date_range, self.data_new_dead, 'r.', label='confirmed deaths')
-    
+
             # this removes the year from the x-axis ticks
             fig.autofmt_xdate()
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-    
+
             plt.yscale('log')
             plt.ylabel('cumulative numbers')
             plt.xlabel('day')
@@ -480,7 +484,7 @@ class ConvolutionModel:
             if title is not None:
                 plt.title(title)
             plt.savefig(full_output_filename, dpi=self.plot_dpi)
-    
+
             # for i in range(len(sol)):
             #     print(f'index: {i}, odeint_value: {sol[i]}, real_value: {[None, series_data[i]]}')
 
@@ -513,8 +517,8 @@ class ConvolutionModel:
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
         if path.exists(full_output_filename) and not self.opt_force_plot:
-            return        
-        
+            return
+
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
         sol = self.bootstrap_sols[0]
         n_bootstraps = len(self.bootstrap_sols)
@@ -830,7 +834,6 @@ class ConvolutionModel:
             self.all_random_walk_log_probs_as_list = [self.all_random_walk_log_probs_as_list[i] for i in shuffled_ind]
             print('...done!')
 
-
     def MCMC(self, p0, opt_walk=True,
              bounds_range_to_sigma_denom=None,
              retry_after_n_seconds=10):
@@ -850,7 +853,7 @@ class ConvolutionModel:
         use_bounds_range_to_sigma_denom = bounds_range_to_sigma_denom
 
         bounds_to_use = self.curve_fit_bounds
-        
+
         def get_bunched_up_on_bounds(input_params, new_val=None):
             if new_val is None:
                 new_val = np.array([input_params[name] for name in self.sorted_names])
@@ -866,15 +869,15 @@ class ConvolutionModel:
                     # print(f'Failed on {param_name} upper: {new_val[param_ind]} > {upper}')
                     bunched_up_on_bounds[param_name] = upper
                     offending_params.append((param_name, 'upper'))
-                    
+
             return bunched_up_on_bounds, offending_params
-        
+
         # check that initial conditions are valid
         _, offending_params = get_bunched_up_on_bounds(p0)
         if len(offending_params) > 0:
             print('Starting point outside of bounds, MCMC won\'t work!')
             return
-        
+
         @lru_cache(maxsize=10)
         def get_propensity_model(bounds_range_to_sigma_denom):
             sigma = {key: (val[1] - val[0]) / bounds_range_to_sigma_denom for key, val in bounds_to_use.items()}
@@ -1114,7 +1117,6 @@ class ConvolutionModel:
 
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_correlation_matrix.png')
         if not path.exists(full_output_filename) or self.opt_force_plot:
-            
             plt.clf()
             ax = sns.heatmap(corr, xticklabels=self.sorted_names, yticklabels=self.sorted_names, cmap='coolwarm',
                              center=0.0)
@@ -1127,7 +1129,6 @@ class ConvolutionModel:
 
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_actual_vs_predicted_vals.png')
         if not path.exists(full_output_filename) or self.opt_force_plot:
-                
             plt.clf()
             plt.plot(np.exp(log_probs), predicted_vals, '.',
                      alpha=max(100 / len(predicted_vals), 0.01))
@@ -1136,7 +1137,7 @@ class ConvolutionModel:
             plt.xscale('log')
             plt.yscale('log')
             plt.savefig(full_output_filename, dpi=self.plot_dpi)
-            
+
             # 
             # plt.clf()
             # plt.plot(weights, [np.exp(x) for x in predicted_vals], '.',
@@ -1248,11 +1249,11 @@ class ConvolutionModel:
 
         data = az.convert_to_inference_data(map_name_to_distro_without_prior)
 
-        full_output_filename = path.join(self.plot_filename_base, '{}_param_distro_without_priors.png'.format(param_type))
+        full_output_filename = path.join(self.plot_filename_base,
+                                         '{}_param_distro_without_priors.png'.format(param_type))
         if not path.exists(full_output_filename) or self.opt_force_plot:
             try:
-                print('Printing...',
-                      path.join(self.plot_filename_base, '{}_param_distro_without_priors.png'.format(param_type)))
+                print('Printing...', full_output_filename)
                 az.plot_posterior(data,
                                   round_to=3,
                                   credible_interval=0.9,
@@ -1315,11 +1316,11 @@ class ConvolutionModel:
 
             data = az.convert_to_inference_data(map_name_to_distro_with_prior)
 
-            full_output_filename = path.join(self.plot_filename_base, '{}_param_distro_with_priors.png'.format(param_type))
+            full_output_filename = path.join(self.plot_filename_base,
+                                             '{}_param_distro_with_priors.png'.format(param_type))
             if not path.exists(full_output_filename) or self.opt_force_plot:
                 try:
-                    print('Printing...',
-                          path.join(self.plot_filename_base, '{}_param_distro_with_priors.png'.format(param_type)))
+                    print('Printing...', full_output_filename)
                     az.plot_posterior(data,
                                       round_to=3,
                                       credible_interval=0.9,
@@ -1388,19 +1389,18 @@ class ConvolutionModel:
         self.render_bootstraps()
 
         # Plot all-data solution 
-        if self.opt_plot_bootstraps:
-            self.solve_and_plot_solution(in_params=self.all_data_params,
-                                         title='All-Data Solution',
-                                         plot_filename_filename='all_data_solution.png')
+        self.solve_and_plot_solution(in_params=self.all_data_params,
+                                     title='All-Data Solution',
+                                     plot_filename_filename='all_data_solution.png')
 
-            # Plot example solutions from bootstrap
-            bootstrap_selection = np.random.choice(self.bootstrap_params)
-            self.solve_and_plot_solution(in_params=bootstrap_selection,
-                                         title='Random Bootstrap Selection',
-                                         plot_filename_filename='random_bootstrap_selection.png')
+        # Plot example solutions from bootstrap
+        bootstrap_selection = np.random.choice(self.bootstrap_params)
+        self.solve_and_plot_solution(in_params=bootstrap_selection,
+                                     title='Random Bootstrap Selection',
+                                     plot_filename_filename='random_bootstrap_selection.png')
 
-            # Plot all bootstraps
-            self.plot_all_solutions()
+        # Plot all bootstraps
+        self.plot_all_solutions()
 
         # Get and plot parameter distributions from bootstraps
         self.render_and_plot_cred_int(param_type='bootstrap', opt_plot=self.opt_plot_bootstraps)
@@ -1589,7 +1589,6 @@ def render_whisker_plot(state_report,
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
-
     plt.close()
     plt.clf()
     fig, ax = plt.subplots()
@@ -1624,7 +1623,7 @@ def render_whisker_plot(state_report,
         Line2D([0], [0], color="green", lw=4),
         Line2D([0], [0], color="blue", lw=4),
     ]
-    plt.legend(custom_lines, ('Bootstraps', 'MCMC'))
+    plt.legend(custom_lines, ('Bootstraps',  'direct samples', 'MCMC'))
 
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')
