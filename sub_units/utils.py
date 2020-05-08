@@ -1489,6 +1489,13 @@ class ConvolutionModel:
 def render_whisker_plot(state_report,
                         param_name='alpha_2',
                         output_filename_format_str='test_boxplot_for_{}_{}.png'):
+    '''
+    Plot all-state box/whiskers for given apram_name
+    :param state_report: full state report as pandas dataframe
+    :param param_name: param name as string
+    :param output_filename_format_str: format string for the output filename, with two open slots
+    :return: None, it saves plots to files
+    '''
     tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == param_name]
     tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['BS_p50'])
 

@@ -156,16 +156,7 @@ for state_ind, state in enumerate(population_ranked_state_names):
             state_model.bootstrap_params,
             state_model.all_random_walk_samples_as_list,
             # state_model.all_samples_as_list,
-
-            # state_model.bootstrap_means_with_priors,
-            # state_model.bootstrap_cred_int_with_priors,
-            # state_model.random_walk_means_with_priors,
-            # state_model.random_walk_cred_int_with_priors,
-            # state_model.likelihood_sample_means_with_priors,
-            # state_model.likelihood_sample_cred_int_with_priors
-        ]
-        # for tmp_dict in vals_to_retrieve:
-        #     state_model.pretty_print_params(tmp_dict)
+            ]
         print('got all vals_to_retrieve')
     except:
         print('Not all vals_to_retrieve present!')
@@ -259,37 +250,9 @@ for col in state_report.columns:
     new_cols.append(new_col)
 state_report.columns = new_cols
 
-
 ####
-# Make whisker plot
+# Make whisker plots
 ####
 
-
-render_whisker_plot(state_report, param_name='alpha_1')
-render_whisker_plot(state_report, param_name='alpha_2')
-render_whisker_plot(state_report, param_name='contagious_to_positive_delay')
-render_whisker_plot(state_report, param_name='contagious_to_deceased_delay')
-render_whisker_plot(state_report, param_name='contagious_to_deceased_mult')
-render_whisker_plot(state_report, param_name='positive_to_deceased_mult')
-render_whisker_plot(state_report, param_name='positive_to_deceased_delay')
-
-bad_states = ['Kentucky', 'South Carolina', 'Delaware', 'Rhode Island', 'Kansas', 'Minnesota']
-
-good_states = [state for state in load_data.map_state_to_population if
-               state in set(state_report['state']) and state not in bad_states]
-for state in sorted(good_states, key=lambda x: -load_data.map_state_to_population[x]):
-    print(state, f'{load_data.map_state_to_population[state]:,}')
-
-null_states = [state for state in load_data.map_state_to_population if state not in set(state_report['state'])]
-for state in sorted(null_states, key=lambda x: -load_data.map_state_to_population[x]):
-    print(state, f'{load_data.map_state_to_population[state]:,}')
-
-for state in sorted(bad_states, key=lambda x: -load_data.map_state_to_population[x]):
-    print(state, f'{load_data.map_state_to_population[state]:,}')
-
-######
-# Future work
-######
-# TODO:
-#   Do I want to make the 90%/95% aspect tunable?
-#   Also, post my RealReal stuff on Github!
+for param_name in sorted_init_condit_names + sorted_param_names + list(extra_params.keys()):
+    render_whisker_plot(state_report, param_name=param_name)
