@@ -269,8 +269,11 @@ def generate_whisker_plots():
     for param_name in sorted_init_condit_names + sorted_param_names + list(extra_params.keys()):
         render_whisker_plot(state_report, param_name=param_name)
 
-
-if __name__ == '__main__':
+def run_everything():
     loop_over_over_states()
     generate_state_report()
     generate_whisker_plots()
+
+
+if __name__ == '__main__':
+    run_everything()
