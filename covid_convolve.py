@@ -95,7 +95,7 @@ run_states = population_ranked_state_names[38:]
 def loop_over_over_states(run_states):
     map_state_name_to_model = dict()
 
-    try:
+    if True:
         for state_ind, state in enumerate(run_states):
             print(
                 f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
@@ -129,7 +129,7 @@ def loop_over_over_states(run_states):
                 print("Error with state", state)
                 continue
                 
-    except:
+    else:
         return map_state_name_to_model
     
     return map_state_name_to_model
