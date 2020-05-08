@@ -457,6 +457,9 @@ class ConvolutionModel:
                                range(len(sol[0]))][min_plot_pt:max_plot_pt]
 
         print('sol_plot_date_range', sol_plot_date_range)
+        print('min_plot_pt', min_plot_pt)
+        print('max_plot_pt', max_plot_pt)
+        print('[sol[0][i] for i in range(min_plot_pt, max_plot_pt)]', [sol[0][i] for i in range(min_plot_pt, max_plot_pt)])
 
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
         if not path.exists(full_output_filename) or self.opt_force_plot:
@@ -1558,48 +1561,6 @@ def render_whisker_plot(state_report,
     fig, ax = plt.subplots()
     fig.set_size_inches(8, 10.5)
 
-    n_groups = 3
-    ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
-    ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
-    ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
-
-    # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-    plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-
-    # fill with colors
-    colors = ['red', 'green', 'blue']
-    for ax, color in zip((ax1, ax2, ax3), colors):
-        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-            for patch in ax[item]:
-                try:
-                    patch.set_facecolor(color)
-                except:
-                    pass
-                patch.set_color(color)
-                # patch.set_markeredgecolor(color)
-
-    # add legend
-    custom_lines = [
-        Line2D([0], [0], color="red", lw=4),
-        Line2D([0], [0], color="green", lw=4),
-        Line2D([0], [0], color="blue", lw=4),
-    ]
-    plt.legend(custom_lines, ('Bootstraps', 'MCMC'))
-
-    # increase left margin
-    output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')
-    plt.subplots_adjust(left=0.2)
-    plt.savefig(output_filename, dpi=300)
-    # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
-
-    plt.close()
-    plt.clf()
-    fig, ax = plt.subplots()
-    fig.set_size_inches(8, 10.5)
-
     n_groups = 2
     ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
                  widths=1.2 / n_groups, patch_artist=True, vert=False)
@@ -1633,6 +1594,49 @@ def render_whisker_plot(state_report,
 
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'without_direct_samples')
+    plt.subplots_adjust(left=0.2)
+    plt.savefig(output_filename, dpi=300)
+    # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
+
+
+    plt.close()
+    plt.clf()
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8, 10.5)
+
+    n_groups = 3
+    ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
+                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+    ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
+                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+    ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
+                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+
+    # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+    plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
+
+    # fill with colors
+    colors = ['red', 'green', 'blue']
+    for ax, color in zip((ax1, ax2, ax3), colors):
+        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+            for patch in ax[item]:
+                try:
+                    patch.set_facecolor(color)
+                except:
+                    pass
+                patch.set_color(color)
+                # patch.set_markeredgecolor(color)
+
+    # add legend
+    custom_lines = [
+        Line2D([0], [0], color="red", lw=4),
+        Line2D([0], [0], color="green", lw=4),
+        Line2D([0], [0], color="blue", lw=4),
+    ]
+    plt.legend(custom_lines, ('Bootstraps', 'MCMC'))
+
+    # increase left margin
+    output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')
     plt.subplots_adjust(left=0.2)
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
