@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+pd.plotting.register_matplotlib_converters()
 # from sampyl import np as sampyl_np # for autograd
 # from jax import numpy as np
 # from jax.experimental.ode import odeint as odeint
