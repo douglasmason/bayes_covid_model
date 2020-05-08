@@ -100,7 +100,7 @@ def loop_over_over_states(run_states):
             print(
                 f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
     
-            try:
+            if True:
                 state_model = ConvolutionModel(state,
                                                max_date_str,
                                                n_bootstraps=n_bootstraps,
@@ -125,9 +125,10 @@ def loop_over_over_states(run_states):
     
                 map_state_name_to_model[state] = state_model
     
-            except:
+            else:
                 print("Error with state", state)
                 continue
+                
     except:
         return map_state_name_to_model
     
