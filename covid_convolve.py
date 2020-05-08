@@ -96,38 +96,44 @@ def loop_over_over_states():
                                            key=lambda x: -load_data.map_state_to_population[x])
     run_states = population_ranked_state_names[38:]
 
-    for state_ind, state in enumerate(run_states):
-        print(
-            f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
-
-        if True:
-            state_model = ConvolutionModel(state,
-                                           max_date_str,
-                                           n_bootstraps=n_bootstraps,
-                                           n_likelihood_samples=n_likelihood_samples,
-                                           load_data_obj=load_data,
-                                           sorted_param_names=sorted_param_names,
-                                           sorted_init_condit_names=sorted_init_condit_names,
-                                           curve_fit_bounds=curve_fit_bounds,
-                                           priors=priors,
-                                           test_params=test_params,
-                                           static_params=static_params,
-                                           opt_calc=opt_calc,
-                                           opt_force_plot=opt_force_plot,
-                                           logarithmic_params=logarithmic_params,
-                                           extra_params=extra_params
-                                           )
-            state_model.run_fits()
-
-            test_params = state_model.fit_curve_via_likelihood(state_model.all_data_params)
-            state_model.solve_and_plot_solution(test_params)
-            state_model.get_log_likelihood(test_params)
-
-            map_state_name_to_model[state] = state_model
-
-        else:
-            print("Error with state", state)
-            continue
+    try:
+        for state_ind, state in enumerate(run_states):
+            print(
+                f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
+    
+            try:
+                state_model = ConvolutionModel(state,
+                                               max_date_str,
+                                               n_bootstraps=n_bootstraps,
+                                               n_likelihood_samples=n_likelihood_samples,
+                                               load_data_obj=load_data,
+                                               sorted_param_names=sorted_param_names,
+                                               sorted_init_condit_names=sorted_init_condit_names,
+                                               curve_fit_bounds=curve_fit_bounds,
+                                               priors=priors,
+                                               test_params=test_params,
+                                               static_params=static_params,
+                                               opt_calc=opt_calc,
+                                               opt_force_plot=opt_force_plot,
+                                               logarithmic_params=logarithmic_params,
+                                               extra_params=extra_params
+                                               )
+                state_model.run_fits()
+    
+                test_params = state_model.fit_curve_via_likelihood(state_model.all_data_params)
+                state_model.solve_and_plot_solution(test_params)
+                state_model.get_log_likelihood(test_params)
+    
+                map_state_name_to_model[state] = state_model
+    
+            except:
+                print("Error with state", state)
+                continue
+    except:
+        return map_state_name_to_model
+    
+    return map_state_name_to_model
+        
 
     # commented out bc this takes way too long
     # print(f'Saving {len(map_state_name_to_model)} state models to {state_models_filename}')
@@ -140,7 +146,8 @@ def loop_over_over_states():
 
 # map_state_name_to_model = joblib.load(state_models_filename)
 
-def generate_state_report():
+def generate_state_report(map_state_name_to_model):
+    
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(population_ranked_state_names):
 
@@ -259,21 +266,22 @@ def generate_state_report():
             .replace('__', '_')
         new_cols.append(new_col)
     state_report.columns = new_cols
+    
+    return state_report
 
 
 ####
 # Make whisker plots
 ####
 
-def generate_whisker_plots():
+def generate_whisker_plots(state_report):
     for param_name in sorted_init_condit_names + sorted_param_names + list(extra_params.keys()):
         render_whisker_plot(state_report, param_name=param_name)
 
 def run_everything():
-    loop_over_over_states()
-    generate_state_report()
-    generate_whisker_plots()
-
+    map_state_name_to_model = loop_over_over_states()
+    state_report = generate_state_report(map_state_name_to_model)
+    generate_whisker_plots(state_report)
 
 if __name__ == '__main__':
     run_everything()
