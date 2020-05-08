@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
 pd.plotting.register_matplotlib_converters() # addresses complaints about Timestamp instead of float for plotting x-values
-# from sampyl import np as sampyl_np # for autograd
-# from jax import numpy as np
-# from jax.experimental.ode import odeint as odeint
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -14,8 +11,6 @@ from tqdm import tqdm
 import os
 from scipy.optimize import approx_fprime
 from functools import lru_cache, partial
-# from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
-# from sklearn.neighbors import KernelDensity
 
 plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
@@ -79,6 +74,10 @@ class ConvolutionModel:
         self.plot_filename_base = path.join(path.join('state_plots',max_date_str.replace('-', '_')),
                                             f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples")
 
+        if not os.path.exists('state_bootstraps'):
+            os.mkdir('state_bootstraps')
+        if not os.path.exists('state_likelihood_samples'):
+            os.mkdir('state_likelihood_samples')
         if not os.path.exists('state_plots'):
             os.mkdir('state_plots')
         if not os.path.exists(path.join('state_plots', max_date_str.replace('-', '_'))):
@@ -586,9 +585,9 @@ class ConvolutionModel:
             all_data_params = bootstrap_dict['all_data_params']
             all_data_sol = bootstrap_dict['all_data_sol']
             success = True
-            self.loaded_bootstraps = True or self.opt_force_plot
+            self.loaded_bootstraps = True
         except:
-            self.loaded_bootstraps = False or self.opt_force_plot
+            self.loaded_bootstraps = False
 
         if not success and self.opt_calc:
 
@@ -1216,10 +1215,6 @@ class ConvolutionModel:
             prior_weights = self.bootstrap_weights
         elif param_type == 'likelihood_sample':
             params, _, weights, _ = self._get_weighted_samples()
-            # from scipy.interpolate import Rbf
-            # rbfi = Rbf(*all_samples_as_array.T, [np.exp(x) for x in all_log_probs])
-            # bandwidth = [(x[1] - x[0]) / 1000 for x in bounds_to_use.values()]
-            # kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(all_samples_as_array)
             prior_weights = [1] * len(params)
         elif param_type == 'random_walk':
             print('Since this is a random walk, ignoring weights when fitting NVM...')

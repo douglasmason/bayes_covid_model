@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # Set up model
 #####
 
-n_bootstraps = 10
+n_bootstraps = 100
 n_likelihood_samples = 20000
 max_date_str = '2020-05-06'
 opt_calc = True
@@ -82,7 +82,6 @@ priors = {'I_0': (1e-12, 1e2),  # starting infections
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names
-run_states = ['Wyoming']
 
 #####
 # Loop over states
