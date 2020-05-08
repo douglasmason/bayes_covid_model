@@ -76,10 +76,10 @@ class ConvolutionModel:
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
                                                                      f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
         
-        # self.plot_filename_base = path.join(path.join('state_plots',max_date_str.replace('-', '_')),
-        #                                     f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples}")
-        self.plot_filename_base = path.join('state_plots',
-                                            f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_opt_walk_True_max_date_{max_date_str.replace('-', '_')}")
+        self.plot_filename_base = path.join(path.join('state_plots',max_date_str.replace('-', '_')),
+                                            f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples}")
+        # self.plot_filename_base = path.join('state_plots',
+        #                                     f"{state_name.lower().replace(' ', '_')}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_opt_walk_True_max_date_{max_date_str.replace('-', '_')}")
 
 
         if not os.path.exists('state_plots'):
