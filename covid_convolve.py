@@ -1,99 +1,84 @@
-from sub_units.utils import ConvolutionModel # want to make an instance of this class for each state / set of params
-import sub_units.load_data as load_data # only want to load this once, so import as singleton pattern
+from sub_units.utils import ConvolutionModel  # want to make an instance of this class for each state / set of params
+from sub_units.utils import render_whisker_plot # for plotting the report across all states
+import sub_units.load_data as load_data  # only want to load this once, so import as singleton pattern
 import pandas as pd
 import numpy as np
+import joblib
+import matplotlib.pyplot as plt
 
 #####
 # Set up model
 #####
 
-n_bootstraps = 1000
-n_likelihood_samples = 1000
-max_date_str = '2020-05-01'
+n_bootstraps = 10
+n_likelihood_samples = 20000
+max_date_str = '2020-05-06'
+opt_calc = True
+opt_force_plot = False
+
+state_models_filename = f'state_models_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+state_report_filename = f'state_report_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
 
 # fixing parameters I don't want to train for saves a lot of computer power
 static_params = {'contagious_to_positive_width': 7,
                  'contagious_to_deceased_width': 7}
-
+logarithmic_params = ['I_0', 'contagious_to_deceased_mult']
 sorted_init_condit_names = ['I_0']
-sorted_param_names = [ 'alpha_1',
-                       'alpha_2',
-                       'contagious_to_positive_delay',
-                       'contagious_to_positive_width',
-                       #'contagious_to_positive_mult',
-                       'contagious_to_deceased_delay',
-                       'contagious_to_deceased_width',
-                       'contagious_to_deceased_mult'
+sorted_param_names = ['alpha_1',
+                      'alpha_2',
+                      'contagious_to_positive_delay',
+                      'contagious_to_positive_width',
+                      # 'contagious_to_positive_mult',
+                      'contagious_to_deceased_delay',
+                      'contagious_to_deceased_width',
+                      'contagious_to_deceased_mult'
                       ]
 
-curve_fit_bounds = {'I_0': (-100.0, 100.0),  # starting infections
-           'alpha_1': (-1, 2),
-           'alpha_2': (-1, 2),
-           'contagious_to_positive_delay': (-14, 21),
-           'contagious_to_positive_width': (0, 14),
-           #'contagious_to_positive_mult': (0, 2),
-           'contagious_to_deceased_delay': (-14, 42),
-           'contagious_to_deceased_width': (0, 14),
-           'contagious_to_deceased_mult': (0, 1),
-           }
+def get_positive_to_deceased_delay(x, map_name_to_sorted_ind=None):
+    return x[map_name_to_sorted_ind['contagious_to_deceased_delay']] - x[
+        map_name_to_sorted_ind['contagious_to_positive_delay']]
+def get_positive_to_deceased_mult(x, map_name_to_sorted_ind=None):
+    return x[map_name_to_sorted_ind['contagious_to_deceased_mult']] / 0.1
 
+extra_params = {
+    'positive_to_deceased_delay': get_positive_to_deceased_delay,
+    'positive_to_deceased_mult': get_positive_to_deceased_mult
+}
+
+curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
+                    'alpha_1': (-1, 2),
+                    'alpha_2': (-1, 2),
+                    'contagious_to_positive_delay': (-14, 21),
+                    'contagious_to_positive_width': (0, 14),
+                    # 'contagious_to_positive_mult': (0, 2),
+                    'contagious_to_deceased_delay': (-14, 42),
+                    'contagious_to_deceased_width': (0, 14),
+                    'contagious_to_deceased_mult': (1e-12, 1),
+                    }
 
 test_params = {'I_0': 2e-3,  # starting infections
                'alpha_1': 0.23,
                'alpha_2': 0.01,
                'contagious_to_positive_delay': 9,
                'contagious_to_positive_width': 7,
-               #'contagious_to_positive_mult': 0.1,
+               # 'contagious_to_positive_mult': 0.1,
                'contagious_to_deceased_delay': 15,
                'contagious_to_deceased_width': 7,
                'contagious_to_deceased_mult': 0.01,
                }
 
 # uniform priors with bounds:
-priors = {'I_0': (-10.0, 10.0),  # starting infections
+priors = {'I_0': (1e-12, 1e2),  # starting infections
           'alpha_1': (0, 1),
           'alpha_2': (-0.5, 0.5),
           'contagious_to_positive_delay': (-10, 20),
-          'contagious_to_positive_width': (1, 14),
+          'contagious_to_positive_width': (-2, 14),
           # 'contagious_to_positive_mult': (0, 2),
           'contagious_to_deceased_delay': (-10, 30),
           'contagious_to_deceased_width': (1, 17),
-          'contagious_to_deceased_mult': (0, 0.05),
+          'contagious_to_deceased_mult': (1e-6, 0.1),
           }
 
-
-tight_bounds = {'I_0': (1e-6, 1e-4),  # starting infections
-          'alpha_1': (0.2, 0.4),
-          'alpha_2': (-0.05, 0.05),
-          'contagious_to_positive_delay': (6, 12),
-          'contagious_to_positive_width': (1, 10),
-          # 'contagious_to_positive_mult': (0, 2),
-          'contagious_to_deceased_delay': (14, 20),
-          'contagious_to_deceased_width': (1, 12),
-          'contagious_to_deceased_mult': (0.005, 0.01),
-          }
-
-medium_bounds = {'I_0': (1e-3, 1e-3),  # starting infections
-          'alpha_1': (0.1, 0.5),
-          'alpha_2': (-0.1, 0.1),
-          'contagious_to_positive_delay': (3, 15),
-          'contagious_to_positive_width': (1, 20),
-          # 'contagious_to_positive_mult': (0, 2),
-          'contagious_to_deceased_delay': (5, 30),
-          'contagious_to_deceased_width': (1, 30),
-          'contagious_to_deceased_mult': (0.002, 0.02),
-          }
-
-loose_bounds = {'I_0': (-100.0, 100.0),  # starting infections
-           'alpha_1': (-1, 2),
-           'alpha_2': (-1, 2),
-           'contagious_to_positive_delay': (0, 100),
-           'contagious_to_positive_width': (0, 20),
-           #'contagious_to_positive_mult': (0, 2),
-           'contagious_to_deceased_delay': (0, 100),
-           'contagious_to_deceased_width': (0, 20),
-           'contagious_to_deceased_mult': (0, 1),
-           }
 
 #####
 # Loop over states
@@ -102,12 +87,15 @@ loose_bounds = {'I_0': (-100.0, 100.0),  # starting infections
 map_state_name_to_model = dict()
 
 # cycle over most populous states first
-population_ranked_state_names = sorted(load_data.map_state_to_population.keys(), key=lambda x: -load_data.map_state_to_population[x])
+population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
+                                       key=lambda x: -load_data.map_state_to_population[x])
+run_states = population_ranked_state_names[38:]
 
-for state_ind, state in enumerate(population_ranked_state_names):
-    print(f'\n----\nProcessing {state} ({state_ind} of {len(population_ranked_state_names)}, pop. {load_data.map_state_to_population[state]:,})...\n----')
-    
-    try:
+for state_ind, state in enumerate(run_states):
+    print(
+        f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
+
+    if True:
         state_model = ConvolutionModel(state,
                                        max_date_str,
                                        n_bootstraps=n_bootstraps,
@@ -116,78 +104,192 @@ for state_ind, state in enumerate(population_ranked_state_names):
                                        sorted_param_names=sorted_param_names,
                                        sorted_init_condit_names=sorted_init_condit_names,
                                        curve_fit_bounds=curve_fit_bounds,
-                                       tight_bounds=tight_bounds,
-                                       medium_bounds=medium_bounds,
-                                       loose_bounds=loose_bounds,
                                        priors=priors,
                                        test_params=test_params,
-                                       static_params=static_params
+                                       static_params=static_params,
+                                       opt_calc=opt_calc,
+                                       opt_force_plot=opt_force_plot,
+                                       logarithmic_params=logarithmic_params,
+                                       extra_params=extra_params
                                        )
-        
         state_model.run_fits()
-        
-    except Exception as ee:
-        print("Whoops! An error occurred:")
-        print(ee)
-        state_model = None
 
-    map_state_name_to_model[state] = state_model
+        test_params = state_model.fit_curve_via_likelihood(state_model.all_data_params)
+        state_model.solve_and_plot_solution(test_params)
+        state_model.get_log_likelihood(test_params)
 
+        map_state_name_to_model[state] = state_model
+
+    else:
+        print("Error with state", state)
+        continue
+
+# commented out bc this takes way too long
+# print(f'Saving {len(map_state_name_to_model)} state models to {state_models_filename}')
+# joblib.dump(map_state_name_to_model, state_models_filename)
+
+#####
+# Now post-process
+#####
+
+# map_state_name_to_model = joblib.load(state_models_filename)
 
 state_report_as_list_of_dicts = list()
-for state in population_ranked_state_names:
-    
+for state_ind, state in enumerate(population_ranked_state_names):
+
     if state in map_state_name_to_model:
         state_model = map_state_name_to_model[state]
     else:
         print(f'Skipping {state}!')
         continue
-    
+
     try:
-        frac_bootstraps_used_after_prior = sum(state_model.bootstrap_weights)/state_model.n_bootstraps
+        frac_bootstraps_used_after_prior = sum(state_model.bootstrap_weights) / state_model.n_bootstraps
     except:
         frac_bootstraps_used_after_prior = -1
-        
-    print(f'\n----\nResults for {state} ({state_ind} of {len(population_ranked_state_names)}, pop. {load_data.map_state_to_population[state]:,}, {frac_bootstraps_used_after_prior*100:.4g} bootstraps used after prior applied)...\n----')
-    
+
+    print(
+        f'\n----\nResults for {state} ({state_ind} of {len(population_ranked_state_names)}, pop. {load_data.map_state_to_population[state]:,}, {frac_bootstraps_used_after_prior * 100:.4g} bootstraps used after prior applied)...\n----')
+
     try:
         vals_to_retrieve = [
-            state_model.bootstrap_means_with_priors,
-            state_model.bootstrap_cred_int_with_priors,
-            state_model.GMM_means,
-            state_model.GMM_confidence_intervals]
-        for tmp_dict in vals_to_retrieve:
-            state_model.pretty_print_params(tmp_dict)
+            state_model.bootstrap_params,
+            state_model.all_random_walk_samples_as_list,
+            # state_model.all_samples_as_list,
+
+            # state_model.bootstrap_means_with_priors,
+            # state_model.bootstrap_cred_int_with_priors,
+            # state_model.random_walk_means_with_priors,
+            # state_model.random_walk_cred_int_with_priors,
+            # state_model.likelihood_sample_means_with_priors,
+            # state_model.likelihood_sample_cred_int_with_priors
+        ]
+        # for tmp_dict in vals_to_retrieve:
+        #     state_model.pretty_print_params(tmp_dict)
+        print('got all vals_to_retrieve')
     except:
         print('Not all vals_to_retrieve present!')
-    
+        continue
+
     if state_model is not None:
-        for param_name in state_model.sorted_names:
+
+        try:
+            LS_params, _, _, _ = state_model._get_weighted_samples()
+        except:
+            LS_params = [0]
+
+        for param_name in state_model.sorted_names + list(state_model.extra_params.keys()):
+            if param_name in state_model.sorted_names:
+                BS_vals = [state_model.bootstrap_params[i][param_name] for i in
+                           range(len(state_model.bootstrap_params))]
+                LS_vals = [LS_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in range(len(LS_params))]
+                MCMC_vals = [
+                    state_model.all_random_walk_samples_as_list[i][state_model.map_name_to_sorted_ind[param_name]] for i
+                    in
+                    range(len(state_model.all_random_walk_samples_as_list))]
+            else:
+                BS_vals = [state_model.extra_params[param_name](
+                    [state_model.bootstrap_params[i][key] for key in state_model.sorted_names]) for i in
+                           range(len(state_model.bootstrap_params))]
+                LS_vals = [state_model.extra_params[param_name](LS_params[i]) for i
+                           in range(len(LS_params))]
+                MCMC_vals = [state_model.extra_params[param_name](state_model.all_random_walk_samples_as_list[i]) for i
+                             in range(len(state_model.all_random_walk_samples_as_list))]
+
             dict_to_add = {'state': state,
-                           'param': param_name,
-                           'bootstrap_mean_with_priors': state_model.bootstrap_means_with_priors[param_name],
-                           'bootstrap_p5_with_priors': state_model.bootstrap_cred_int_with_priors[param_name][0],
-                           'bootstrap_p95_with_priors': state_model.bootstrap_cred_int_with_priors[param_name][1],
-                           'GMM_mean_with_priors': state_model.GMM_means[param_name],
-                           'GMM_p5_with_priors': state_model.GMM_confidence_intervals[param_name][0],
-                           'GMM_p95_with_priors': state_model.GMM_confidence_intervals[param_name][1],
+                           'param': param_name
                            }
+
+            try:
+                dict_to_add.update({
+                    'bootstrap_mean_with_priors': np.average(BS_vals),
+                    'bootstrap_p50_with_priors': np.percentile(BS_vals, 50),
+                    'bootstrap_p25_with_priors':
+                        np.percentile(BS_vals, 25),
+                    'bootstrap_p75_with_priors':
+                        np.percentile(BS_vals, 75),
+                    'bootstrap_p5_with_priors': np.percentile(BS_vals, 5),
+                    'bootstrap_p95_with_priors': np.percentile(BS_vals, 95)
+                })
+            except:
+                pass
+            try:
+                dict_to_add.update({
+                    'random_walk_mean_with_priors': np.average(MCMC_vals),
+                    'random_walk_p50_with_priors': np.percentile(MCMC_vals, 50),
+                    'random_walk_p5_with_priors': np.percentile(MCMC_vals, 5),
+                    'random_walk_p95_with_priors': np.percentile(MCMC_vals, 95),
+                    'random_walk_p25_with_priors':
+                        np.percentile(MCMC_vals, 25),
+                    'random_walk_p75_with_priors':
+                        np.percentile(MCMC_vals, 75)
+                })
+            except:
+                pass
+            try:
+                dict_to_add.update({
+                    'likelihood_samples_mean_with_priors': np.average(LS_vals),
+                    'likelihood_samples_p50_with_priors': np.percentile(LS_vals, 50),
+                    'likelihood_samples_p5_with_priors':
+                        np.percentile(LS_vals, 5),
+                    'likelihood_samples_p95_with_priors':
+                        np.percentile(LS_vals, 95),
+                    'likelihood_samples_p25_with_priors':
+                        np.percentile(LS_vals, 25),
+                    'likelihood_samples_p75_with_priors':
+                        np.percentile(LS_vals, 75)
+                })
+            except:
+                pass
             state_report_as_list_of_dicts.append(dict_to_add)
 
 state_report = pd.DataFrame(state_report_as_list_of_dicts)
+print('Saving state report to {}'.format(state_report_filename))
+joblib.dump(state_report, state_report_filename)
+n_states = len(set(state_report['state']))
+print(n_states)
 
-tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == 'alpha_2']
-tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['bootstrap_mean_with_priors'])
-small_state_report = state_report.iloc[tmp_ind]
-small_state_report.to_csv('state_report_alpha_2.csv')
+new_cols = list()
+for col in state_report.columns:
+    new_col = col.replace('bootstrap', 'BS') \
+        .replace('_with_priors', '') \
+        .replace('likelihood_samples', 'LS') \
+        .replace('random_walk', 'MCMC') \
+        .replace('__', '_')
+    new_cols.append(new_col)
+state_report.columns = new_cols
 
 
+####
+# Make whisker plot
+####
+
+
+render_whisker_plot(state_report, param_name='alpha_1')
+render_whisker_plot(state_report, param_name='alpha_2')
+render_whisker_plot(state_report, param_name='contagious_to_positive_delay')
+render_whisker_plot(state_report, param_name='contagious_to_deceased_delay')
+render_whisker_plot(state_report, param_name='contagious_to_deceased_mult')
+render_whisker_plot(state_report, param_name='positive_to_deceased_mult')
+render_whisker_plot(state_report, param_name='positive_to_deceased_delay')
+
+bad_states = ['Kentucky', 'South Carolina', 'Delaware', 'Rhode Island', 'Kansas', 'Minnesota']
+
+good_states = [state for state in load_data.map_state_to_population if
+               state in set(state_report['state']) and state not in bad_states]
+for state in sorted(good_states, key=lambda x: -load_data.map_state_to_population[x]):
+    print(state, f'{load_data.map_state_to_population[state]:,}')
+
+null_states = [state for state in load_data.map_state_to_population if state not in set(state_report['state'])]
+for state in sorted(null_states, key=lambda x: -load_data.map_state_to_population[x]):
+    print(state, f'{load_data.map_state_to_population[state]:,}')
+
+for state in sorted(bad_states, key=lambda x: -load_data.map_state_to_population[x]):
+    print(state, f'{load_data.map_state_to_population[state]:,}')
 
 ######
 # Future work
 ######
 # TODO:
-#   collect the confidence/credible intervals into a table
 #   Do I want to make the 90%/95% aspect tunable?
-#   Do I want confidence intervals after applying priors?
 #   Also, post my RealReal stuff on Github!

@@ -79,7 +79,12 @@ def get_state_data(state):
     dead = [x for x in map_state_to_series[state]['deaths_series'].values]
     series_data = np.vstack([susceptible, infected, dead]).T
         
+    if 'sip_date' in map_state_to_series:
+        sip_date = map_state_to_series[state]['sip_date']
+    else:
+        sip_date = None
+        
     return {'series_data': series_data,
             'population': population,
-            'sip_date': map_state_to_series[state]['sip_date'],
+            'sip_date': sip_date,
             'min_date': min_date}
