@@ -118,11 +118,6 @@ def loop_over_over_states(run_states):
                                                extra_params=extra_params
                                                )
                 state_model.run_fits()
-    
-                test_params = state_model.fit_curve_via_likelihood(state_model.all_data_params)
-                state_model.solve_and_plot_solution(test_params)
-                state_model.get_log_likelihood(test_params)
-    
                 map_state_name_to_model[state] = state_model
     
             else:
