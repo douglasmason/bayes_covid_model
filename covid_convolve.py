@@ -21,16 +21,14 @@ state_report_filename = f'state_report_{n_bootstraps}_bootstraps_{n_likelihood_s
 
 # fixing parameters I don't want to train for saves a lot of computer power
 static_params = {'contagious_to_positive_width': 7,
-                 'contagious_to_deceased_width': 7}
+                 'contagious_to_deceased_width': 7,
+                 'contagious_to_positive_mult': 0.1}
 logarithmic_params = ['I_0', 'contagious_to_deceased_mult']
 sorted_init_condit_names = ['I_0']
 sorted_param_names = ['alpha_1',
                       'alpha_2',
                       'contagious_to_positive_delay',
-                      'contagious_to_positive_width',
-                      # 'contagious_to_positive_mult',
                       'contagious_to_deceased_delay',
-                      'contagious_to_deceased_width',
                       'contagious_to_deceased_mult'
                       ]
 
@@ -54,7 +52,6 @@ curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
                     'alpha_2': (-1, 2),
                     'contagious_to_positive_delay': (-14, 21),
                     'contagious_to_positive_width': (0, 14),
-                    # 'contagious_to_positive_mult': (0, 2),
                     'contagious_to_deceased_delay': (-14, 42),
                     'contagious_to_deceased_width': (0, 14),
                     'contagious_to_deceased_mult': (1e-12, 1),
@@ -65,7 +62,6 @@ test_params = {'I_0': 2e-3,  # starting infections
                'alpha_2': 0.01,
                'contagious_to_positive_delay': 9,
                'contagious_to_positive_width': 7,
-               # 'contagious_to_positive_mult': 0.1,
                'contagious_to_deceased_delay': 15,
                'contagious_to_deceased_width': 7,
                'contagious_to_deceased_mult': 0.01,
@@ -77,7 +73,6 @@ priors = {'I_0': (1e-12, 1e2),  # starting infections
           'alpha_2': (-0.5, 0.5),
           'contagious_to_positive_delay': (-10, 20),
           'contagious_to_positive_width': (-2, 14),
-          # 'contagious_to_positive_mult': (0, 2),
           'contagious_to_deceased_delay': (-10, 30),
           'contagious_to_deceased_width': (1, 17),
           'contagious_to_deceased_mult': (1e-6, 0.1),
@@ -86,7 +81,7 @@ priors = {'I_0': (1e-12, 1e2),  # starting infections
 # cycle over most populous states first
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
-run_states = population_ranked_state_names[38:]
+run_states = population_ranked_state_names
 run_states = ['Wyoming']
 
 #####
@@ -275,6 +270,7 @@ def generate_whisker_plots(state_report):
         render_whisker_plot(state_report, param_name=param_name)
 
 def run_everything():
+    global map_state_name_to_model, state_report # setting to global allows us to inspect these objects via monkey-patching
     map_state_name_to_model = loop_over_over_states(run_states)
     state_report = generate_state_report(map_state_name_to_model)
     generate_whisker_plots(state_report)

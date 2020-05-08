@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-pd.plotting.register_matplotlib_converters()
+pd.plotting.register_matplotlib_converters() # addresses complaints about Timestamp instead of float for plotting x-values
 # from sampyl import np as sampyl_np # for autograd
 # from jax import numpy as np
 # from jax.experimental.ode import odeint as odeint
@@ -456,11 +456,6 @@ class ConvolutionModel:
         sol_plot_date_range = [self.min_date - datetime.timedelta(days=self.burn_in) + datetime.timedelta(days=1) * i
                                for i in
                                range(len(sol[0]))][min_plot_pt:max_plot_pt]
-
-        print('sol_plot_date_range', sol_plot_date_range)
-        print('min_plot_pt', min_plot_pt)
-        print('max_plot_pt', max_plot_pt)
-        print('[sol[0][i] for i in range(min_plot_pt, max_plot_pt)]', [sol[0][i] for i in range(min_plot_pt, max_plot_pt)])
 
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
         if not path.exists(full_output_filename) or self.opt_force_plot:
@@ -1512,6 +1507,7 @@ def render_whisker_plot(state_report,
     small_state_report.to_csv('state_report_{}.csv'.format(param_name))
 
     latex_str = small_state_report[['BS_p5', 'BS_p50', 'BS_p95']].to_latex(index=False, float_format="{:0.4f}".format)
+    print(param_name)
     print(latex_str)
 
     BS_boxes = list()
