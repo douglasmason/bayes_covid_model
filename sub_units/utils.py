@@ -84,7 +84,7 @@ class ConvolutionModel:
 
         if not os.path.exists('state_plots'):
             os.mkdir('state_plots')
-        if not os.path.exists(self.plot_filename_base):
+        if not os.path.exists(path.join('state_plots', self.plot_filename_base)):
             os.mkdir(self.plot_filename_base)
 
         if load_data_obj is None:
