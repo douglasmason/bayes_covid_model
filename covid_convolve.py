@@ -83,18 +83,17 @@ priors = {'I_0': (1e-12, 1e2),  # starting infections
           'contagious_to_deceased_mult': (1e-6, 0.1),
           }
 
+# cycle over most populous states first
+population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
+                                       key=lambda x: -load_data.map_state_to_population[x])
+run_states = population_ranked_state_names[38:]
 
 #####
 # Loop over states
 #####
 
-def loop_over_over_states():
+def loop_over_over_states(run_states):
     map_state_name_to_model = dict()
-
-    # cycle over most populous states first
-    population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
-                                           key=lambda x: -load_data.map_state_to_population[x])
-    run_states = population_ranked_state_names[38:]
 
     try:
         for state_ind, state in enumerate(run_states):
@@ -279,7 +278,7 @@ def generate_whisker_plots(state_report):
         render_whisker_plot(state_report, param_name=param_name)
 
 def run_everything():
-    map_state_name_to_model = loop_over_over_states()
+    map_state_name_to_model = loop_over_over_states(run_states)
     state_report = generate_state_report(map_state_name_to_model)
     generate_whisker_plots(state_report)
 
