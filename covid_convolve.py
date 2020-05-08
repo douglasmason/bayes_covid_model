@@ -87,6 +87,7 @@ priors = {'I_0': (1e-12, 1e2),  # starting infections
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names[38:]
+run_states = ['Wyoming']
 
 #####
 # Loop over states
