@@ -12,7 +12,7 @@ from os import path
 #####
 
 n_bootstraps = 100
-n_likelihood_samples = 20000
+n_likelihood_samples = 100000
 max_date_str = '2020-05-06'
 opt_calc = True
 opt_force_plot = False
@@ -92,12 +92,12 @@ run_states = population_ranked_state_names
 def loop_over_over_states(run_states):
     map_state_name_to_model = dict()
 
-    if True:
+    try:
         for state_ind, state in enumerate(run_states):
             print(
                 f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
 
-            if True:
+            try:
                 state_model = ConvolutionModel(state,
                                                max_date_str,
                                                n_bootstraps=n_bootstraps,
@@ -117,11 +117,11 @@ def loop_over_over_states(run_states):
                 state_model.run_fits()
                 map_state_name_to_model[state] = state_model
 
-            else:
+            except:
                 print("Error with state", state)
                 continue
 
-    else:
+    except:
         return map_state_name_to_model
 
     return map_state_name_to_model
