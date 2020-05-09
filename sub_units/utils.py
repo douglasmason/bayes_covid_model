@@ -75,7 +75,7 @@ class ConvolutionModel:
         self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
         self.plot_subfolder = path.join('state_plots', self.plot_subfolder)
         self.plot_filename_base = path.join(self.plot_subfolder,
-                                            state_name.lower().replace(' ', '_').replace('.',''))
+                                            state_name.lower().replace(' ', '_').replace('.', ''))
 
         if not os.path.exists('state_bootstraps'):
             os.mkdir('state_bootstraps')
@@ -207,7 +207,8 @@ class ConvolutionModel:
         contagious = np.array(contagious)
 
         # then use convolution to simulate transition to positive
-        convolution_kernel = self.norm(np.linspace(0, 100, 100), mu=params['contagious_to_positive_delay'],
+        convolution_kernel = self.norm(np.linspace(0, len(self.t_vals), len(self.t_vals) + 1),
+                                       mu=params['contagious_to_positive_delay'],
                                        std=params['contagious_to_positive_width'])
         convolution_kernel /= sum(convolution_kernel)
         convolution_kernel = np.array(convolution_kernel)
@@ -215,7 +216,8 @@ class ConvolutionModel:
                                convolution_kernel) * 0.1  # params['contagious_to_positive_mult']
 
         # then use convolution to simulate transition to positive
-        convolution_kernel = self.norm(np.linspace(0, 100, 100), mu=params['contagious_to_deceased_delay'],
+        convolution_kernel = self.norm(np.linspace(0, len(self.t_vals), len(self.t_vals) + 1),
+                                       mu=params['contagious_to_deceased_delay'],
                                        std=params['contagious_to_deceased_width'])
         convolution_kernel /= sum(convolution_kernel)
         convolution_kernel = np.array(convolution_kernel)
@@ -1623,7 +1625,7 @@ def render_whisker_plot(state_report,
         Line2D([0], [0], color="green", lw=4),
         Line2D([0], [0], color="blue", lw=4),
     ]
-    plt.legend(custom_lines, ('Bootstraps',  'direct samples', 'MCMC'))
+    plt.legend(custom_lines, ('Bootstraps', 'direct samples', 'MCMC'))
 
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')

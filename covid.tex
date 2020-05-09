@@ -1,0 +1,476 @@
+%% LyX 2.3.4.2 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin9]{inputenc}
+\usepackage{amstext}
+\usepackage{graphicx}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage{tabularx}
+
+\usepackage{authblk}
+
+\makeatother
+
+\usepackage{babel}
+\begin{document}
+\title{Bayesian ODE/Convolution Models for Estimating Underlying Growth of
+COVID-19 and its Uncertainty }
+\author{Douglas Mason\thanks{Koyote Science LLC and Nexus iR\&D Laboratory, San Francisco, CA},
+Robert Martinez\thanks{Harvard University, Cambridge College, and Nexus iR\&D Laboratory,
+Boston, MA}}
+\date{May 8, 2020}
+
+\maketitle
+We model universal curves of reported COVID-19 daily reported infections
+and related deaths using a modified epidemiological Susceptible-Exposed-Infectious-Recovered
+(SEIR) Model\cite{original-SEIR-model,more-SEIR,even-more-SEIR}.
+Using currently available data, we determine optimized constants and
+apply this framework to reproducing the infection and death curves
+for California (the state with the largest population), New York (the
+state with highest population density), and U.S. totals, and provide
+supplementary results for the remaining 50 states and Washington D.C.
+Source code used to produce these results can be found at the companion
+website\cite{companion}. Data is sourced from the New York Times\cite{nyt-data}. 
+
+\section{Model Definition}
+
+It is helpful to define various sets that appear in the model as time-dependent
+variables. In the early stages of an epidemic or pandemic, the vast
+majority of individuals are susceptible to infection, while few individuals
+have recovered from an infection, and for this reason we can approximate
+the S and R values to 100\% and 0\% respectively. In addition, the
+SEIR model treats transitions from one group to the next as emissions
+with fixed (or possibly time-varying rates), which may be accurate
+over long time periods, but does not reflect the dynamics we attempt
+to model. Rather, while the growth of contagious individuals is well-described
+by time-varying growth rates (which can be solved by integrating a
+single ordinary differential equation), the transition to other measurable
+states (such as being tested and confirmed positive, or subsequently
+dying) likely exhibits an average time-delay with a measurable variance
+and an overall multiplier. For example, a person who has just become
+contagious will likely not show symptoms for up to a week, and then
+show symptoms, and then go to the hospital and be tested, and then
+have a probability of being confirmed positive. 
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{static_figures/delayed_gaussian_diagram}
+
+\caption{\label{fig:Delayed-gaussian-diagram}The convolution kernel (defined
+only for t > 0) provides a time delay, width, and multiplier describing
+the transition from the contagious pool to the confirmed and the deceased
+pools with different parameter values.}
+\end{figure}
+All transitions can be modeled by the three numbers, as shown in Figure
+\ref{fig:Delayed-gaussian-diagram}: 
+\begin{itemize}
+\item Average time delay ($\mu$) 
+\item Variance in time delay ($\sigma^{2}$) 
+\item Overall multiplier ($M$), i.e., how many people in total transition
+from one state to the next)
+\end{itemize}
+Note that in a usual system of ODEs (as in the SIR/SEIR models), each
+transition is modeled not by three by just one single parameter, the
+transition rate. This means that our system of parameters is over-determined
+compared to a system of ODEs (see below for how we address those concerns
+using domain knowledge). However, these ODE systems are better-suited
+to the assumptions of molecular dynamics rather than disease spread
+over short time scales. For example, a person who becomes contagious
+has zero chance of being immediately tested and confirmed positive,
+but this is possible in a rate-based model. Moreover, to account for
+the shapes of the data that we have, such systems need to postulate
+at least one intermediate stage between Contagious and Positive or
+Deceased, rendering them unjustifiably complex, to allow people to
+transmit from the contagious pool and aggregate in intermediate pools
+before emitting into the positive and deceased pools. 
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{static_figures/state_transitions}
+
+\caption{\label{fig:State-flow}Diagram of the states modeled: people enter
+the contagious and emit to the Positive and to the Deceased state
+by delayed-Guassian emission with different delays, widths, and multipliers.
+However, the Contagious pool itself grows with instantaneous emissions
+dependent on the total size of the pool. We model emission to the
+Recovered pool as having the same delay and width as the learned parameters
+for emission to the Deceased pool, with a multiplier set so all members
+of the Contagious pool either recover or die. While the Recovered
+and Deceased pool are mutually exclusive, the Positive pool overlaps
+with both. Our model only concerns itself with new Positive and Deceased
+entrants, rather than their cumulative numbers.}
+\end{figure}
+We describe our model according to Figure \ref{fig:State-flow} based
+on two observables (confirmed positive cases and deaths) and one non-observable
+(the number of newly contagious individuals). Because our model is
+a directed acyclic graph, we can start with a hypothetical profile
+of the newly Contagious pool and use convolution to determine the
+Positive and Deceased pools. To obtain the Contagious profile, we
+integrate the simple ODE below. 
+
+\[
+\frac{dC}{dt}=\alpha(t)C
+\]
+
+\[
+\alpha(t)=\frac{\alpha_{2}-\alpha_{1}}{1+\exp(t_{0}-t)}+\alpha_{2}
+\]
+
+To define $\alpha(t)$, we use a logistic function in time with fixed
+width parameter set to 1 day to interpolate between two extremal constant
+values 1 and 2 for the infectivity rate before and after a Shelter-in-
+Place order $t_{0}$. The difference in the two infection rates indicates
+the effectiveness of the order on reducing the growth of new infections.
+The above ODE produces a profile of C(t) that has two growth rates
+connected using a fixed-width logistic transition between the two
+growth rates. 
+
+The transition of a single individual from the Contagious to Positive
+and Deceased pools is modeled by a different gaussian kernel for each
+transition: 
+
+\[
+K(t,t')=\theta(t,t')\frac{M}{\sigma\sqrt{(2\pi}}\exp\left[-\left(\frac{t-t'-\mu}{\sigma}\right)^{2}\right]
+\]
+where $\theta(t,t')$ is a step function returning 1 for $t'>t$ and
+0 otherwise. The kernel is normalized to unit area so that M gives
+the total number of people who transition from one state to the next.
+The value provides the average delay between one state and the next,
+and the value indicates the variance in time delays between one state
+and the next. 
+
+\section{Handling Transient Perturbations Around Shelter-in-Place }
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{\string"/Users/kayote/Downloads/COVID-19 Model/images/image27\string".png}
+
+\caption{\label{fig:Convolution-diagram}Diagram describing the convolution
+process. A function with a disjoint derivative (blue, on left), when
+convolved with a delayed Gaussian kernel (black, middle) produces
+a smooth curve that will be shifted to the right and be changed in
+magnitude (green, right).}
+\end{figure}
+Our model explicitly does not model the Recovered pool, which means
+that the initial and final growth rates $\alpha_{1}$ and $\alpha_{2}$
+are effective growth rates that account for emission into the Recovered
+pool. In fact, the growth rate drawing new people into the Contagious
+pool (the \textquotedblleft leading front\textquotedblright ) is slightly
+higher than the effective growth rate, since it must compensate against
+the loss of individuals to the Recovered pool. In Figure \ref{fig:Convolution-diagram},
+we show an example of how this works: Individuals enter the Contagious
+pool, then emit either into the Recovered or Deceased pools with a
+delayed Gaussian probability with values for the delay, width, and
+multiplier based on fits to the Deceased curve for U.S. totals ($\mu=19$,
+$\sigma=10$, $M=0.01$). On the other hand, new individuals enter
+the Contagious pool in proportion to the total size of the pool and
+this occurs with an instantaneous growth rate without delay. 
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{static_figures/transients}
+
+\caption{\label{fig:Effective-growth-rate}Example solution showing the Contagious,
+Positive, and Deceased curves for a model incorporating the Recovered
+emissions. We find that considering the Recovered pool pulls down
+the \textquotedblleft leading front\textquotedblright{} growth rate
+into effective growth rates that match the growth rates in our data.
+Details about emission may or may not produce a visible hump in the
+unobserved Contagious pool around the time of shelter-in-place, which
+is then smoothed out through emissions into the Positive and Deceased
+pools. This is how pools which have reached a flat effective growth
+rate continue to draw in new individuals, since the raw growth rate
+for new Contagious individuals is actually slightly higher than what
+we observe to compensate for loss to the Recovered pool.}
+\end{figure}
+As shown in Figure \ref{fig:Effective-growth-rate}, the effective
+growth is demonstrated to be less than the original growth by a fixed
+amount related to the emission parameters, with an artifact occuring
+during the change in growth rates that appears as a temporary hump.
+However, after that hump has been smoothed out by the Gaussian emission
+into the Positive and Deceased pools, it is no longer visible. The
+parameters we describe in this document refer to the solid blue curve,
+which we approximate without the transient artifacts around shelter-in-place.
+We provide an example solution in Figure 3 against the U.S. totals. 
+
+\section{Reducing Model Parameters Using Domain Knowledge }
+
+The following parameters are determined by the data:
+\begin{itemize}
+\item The slope of positive cases at the beginning and at the end of the
+shelter-in-place order (after a delay, of course) determine the two
+growth rates 1 and 2. The value of 2 may not be precisely known until
+more time has passed to collect more data. 
+\item The change in the slope of positive cases indicates the likely delay
+between becoming contagious and testing positive. However, if the
+transition width is sufficiently large, this delay may become ambiguous. 
+\item Similar arguments apply for the parameters describing transitions
+from the Contagious to the Deceased pools. 
+\end{itemize}
+In addition, there are also ambiguities in the model since it is overdetermined.
+In particular, two parameters together describe the relative magnitude
+of the Contagious and Positive curves. Therefore, we recommend fixing
+one of these two values:
+\begin{itemize}
+\item The initial conditions (hypothetical \# of newly contagious people)
+at time ($t_{0}$) (Note, this can also be equivalently described
+as the time in the past that the first individual entered the Contagious
+pool.)
+\item The contagious-to-positive multiplier 
+\end{itemize}
+Since there is no means of knowing the initial conditions, we recommend
+fixing the contagious-to- positive multiplier to an approximate value
+supported by evidence, and set the value to 10\%. Note that the degeneracy
+in describing initial conditions (number of newly contagious individuals
+at a fixed date, or the time in the past that the first individual
+became contagious) imply that the fraction of contagious individuals
+who are tested and confirmed necessarily goes down the earlier in
+the past that the first individual became contagious. 
+
+Another ambiguity arises regarding the three parameters:
+\begin{itemize}
+\item The contagious-to-positive delay width 
+\item The contagious-to-positive delay 
+\item The final contagious growth rate
+\end{itemize}
+This is because the data supports two groups of solutions: 
+\begin{itemize}
+\item Ones with shorter delays and delay widths and with a more-positive
+final growth rate 
+\item Ones with longer delays and delay widths and with a more-negative
+final growth rate
+\end{itemize}
+which is also true for the contagious-to-deceased transition, where
+the lower data counts (and therefore greater measurement ambiguity)
+support the second solution more strongly. However, we can use domain
+knowledge to identify that since the values supporting the first hypothesis
+are more-closely aligned with realistic numbers (we doubt that the
+delay is over a month or that there is over 20 days of variance in
+the delay). 
+
+There are three approaches for handling this ambiguity: 
+\begin{enumerate}
+\item Fix some parameters to reduce the expressivity of the model (and increase
+speed of optimization)
+\item Apply priors that rule out undesirable solutions
+\item Add terms to the loss function to penalize undesirable solutions
+\end{enumerate}
+We apply all three techniques (see the next section) and, in particular,
+fix the contagious-to-positive and contagious-to-deceased emission
+widths to the approximate values for the U.S. totals: 7 days, or 1
+week, for both.
+
+\section{Likelihood Approximation and Incorporating Prior Beliefs }
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_1000_bootstraps_100000_likelihood_samples/total/bootstrap_solutions_with_priors}
+
+\caption{\label{fig:US-curves-with-spread}Model Curves and Experimental Data
+of U.S. COVID-19 Daily Reported Cases and Related Deaths in the U.S.}
+\end{figure}
+We utilize two approximations to the full likelihood distribution
+across our parameters, given our observations. The first approximates
+the likelihood as the distribution of maximum-likelihood-estimates
+(MLEs) of the parameters on bootstraps of our data, using least-squares
+error on the difference in the expected and measured log values of
+confirmed cases and casualties. We consider measurement uncertainty
+by noting that we expect newly reported cases and deaths to vary up
+to $\sqrt{N}$ from their underlying values since such counts can
+be modeled as a Poisson process, whose variance is equal to its measured
+mean, although the resulting variance ignores other systematic influences
+on our data such as time-varying testing rates or imperfect tests.
+Thus, we sample training data with replacement and add samples from
+a normal distribution with a standard deviation of $\sqrt{N}$ to
+the recorded values, run our simulation using a discrete ODE solver
+and convolution library, and minimize the least-squares error over
+newly confirmed cases and deaths after the 100th case and death has
+been identified, respectively. We show an example set of solutions
+for U.S. totals in Figure \ref{fig:US-curves-with-spread}. From the
+resulting parameter estimates, the bootstrapping technique has been
+shown to accurately describe the distributions up to second-order
+statistics (and possibly higher)\cite{efron2003,efron1979,rubin1981}.
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_100_bootstraps_100000_likelihood_samples/total/MVN_random_walk_actual_vs_predicted_vals}
+
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_100_bootstraps_100000_likelihood_samples/total/MVN_samples_actual_vs_predicted_vals}
+
+\caption{\label{fig:US-MVN-approx}Actual vs. predicted values for the likelihood
+function for U.S. totals as modeled by a multivariate normal distribution,
+as sampled using the MCMC algorithm (top) and direct likelihood samples
+(bottom). The two sources of likelihood samples in the bottom figure
+are apparent in the two ``comet tails'' emerging from the most-likely
+points at the upper-right. The MCMC algorithm discards roughly 90\%
+of proposed samples resulting in the thinner cloud of points.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_100_bootstraps_100000_likelihood_samples/total/MVN_random_walk_correlation_matrix}
+
+\caption{\label{fig:US-MVN-approx-correlation-matrix}Correlation matrix for
+model parameters for U.S. totals after being fit to a multivariate
+norm with a full covariance matrix. We see that $\alpha_{1}$ is strongly
+anti-correlated with the two delays.}
+\end{figure}
+In the second approximation method, we sample the likelihood function
+at many points, then resample based on the propensity of those choices
+and their likelihood, and finally compute aggregate statistics (means
+and covariance matrix) on the resampled parameters, as well as highest
+probability density credibility intervals. We also have two methods
+for generating our samples: the first samples from a normal distribution
+around the MLE with corresponding propensities coming from the multivariate
+norm probability density function (PDF), and the second employs the
+random walk Markov chain Monte Carlo Metropolis-Hastings algorithm\cite{metropolois-hastings}
+with constant propensity, since the resulting distribution should
+match the underlying probability density directly. This likelihood
+function is calculated as the product of the PDF of norms centered
+at each observed data point ($N$), with standard deviation $\sqrt{N}$,
+evaluated at the values returned by our simulation. From these samples,
+we then re-sample based on the likelihood values (normalized to one
+over all samples) multiplied by their inverse propensities, and run
+aggregate statistics on the resampled points to create a multivariate
+norm (MVN) distribution that is representative of our data. In Figure
+\ref{fig:US-MVN-approx}, we show the predicted and actual values
+of the likelihood for U.S. totals and show that the MVN and MCMC approximations
+demonstrate reasonable accuracy. Moreover, adding the additional parameters
+by going from a diagonal to a full covariance matrix further improves
+the fit. In Figure \ref{fig:US-MVN-approx-correlation-matrix}, we
+show the full correlation matrix for the model parameters. We see
+that $\alpha_{1}$ is strongly correlated with the two delays, which
+will explain deviation from the bootstrap approximation in subsequent
+analysis.
+
+Both approximation methods contribute hyperparameters to our models:
+the number of bootstraps (100), the number of likelihood samples (20k),
+the number of likelihood re-samples (20k), the number of MCMC samples
+(16k), and the number of burn-in (discarded) MCMC samples (4k).
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_1000_bootstraps_100000_likelihood_samples/total/bootstrap_param_distro_with_priors}
+
+\caption{\label{fig:US-params}Model Parameter Estimates for U.S. totals after
+incorporating priors}
+\end{figure}
+Once the likelihood distribution has been approximated, according
+to Bayes theorem,
+
+\[
+\text{posterior}\propto\text{likelihood}\times\text{prior}
+\]
+incorporating priors on our parameters is as easy as multiplying the
+two functions element-wise and normalizing a posteriori. In Figure
+\ref{fig:US-params}, we show the full likelihood approximation (or,
+equivalently, the posterior with uniform priors), and discuss the
+physicality of parts of the distributions, which the reader can either
+incorporate or discount based on their intuition. Updates to the distributions
+of all parameters based on assumed priors can be obtained by weighted
+sampling of the bootstraps according to those individual priors on
+each parameter, since, for example, ruling out overly long delays
+between becoming contagious and being confirmed positive will also
+rule out other parameter distributions, such as overly long variances
+in the delay. We employ the following priors, using uniform distributions
+(so their shapes don\textquoteright t affect the posterior distribution)
+with the following bounds: 
+\begin{itemize}
+\item 0 < $\alpha_{1}$< 1.0 
+\item -0.5 < $\alpha_{2}$ < 0.5 
+\item 0 < contagious-to-positive delay < 20 
+\item 5 < contagious-to-deceased delay < 40
+\item 0 < contagious-to-deceased multiplier < 0.1
+\end{itemize}
+Note that if we rely on using our priors to filter out undesirable
+solutions, we can waste a substantial amount of computational resources
+producing undesirable candidates in our approximations which we only
+later discard. Worse, it is possible to create unphysical results
+with our simulations, and these unphysical results can be reached
+through the optimization methods we employ even when they start with
+valid parameters. In particular, unphysical results occur when the
+parameters can produce negative numbers of confirmed cases and deaths,
+and when the parameters give a later contagious-to-positive than contagious-to-deceased
+delay. To avoid computing such solutions, we add a term to our loss
+function which sums the negative value of all predicted values that
+are below zero, and another term which provides the difference between
+the contagious-to-positive and contagious-to-deceased delays when
+the former is larger than the latter. These loss functions have a
+zero derivative when parameters are valid and push parameters back
+to the valid range when they are invalid, thus avoiding skewing our
+results while enforcing physicality. The remaining contributors to
+the loss function remain the same, however we only contribute terms
+when the simulation provides positive counts, since the loss function
+is based on distances from the log results of our simulations, which
+is undefined for negative values. 
+
+\section{Results}
+
+Examining the parameter estimates in Figures \ref{fig:US-params},
+\ref{fig:NY-params}, and \ref{fig:Cali-params}, we see that California
+shows a much greater response delay to the shelter-in-place order
+than in New York (March 19th and 20th, respectively) at 12 days compared
+to 4.2 days (with U.S. totals in the middle at 9.2 days). In addition,
+the relative ordering of the original growth rates (California = 22.7\%
+< U.S. = 27.8\% < New York = 36.9\%) reflect the strong population
+density in New York. However, this ordering is reversed in the final
+growth rates (New York = +0.435\% < California = 1.01\% == U.S. =
+1.01\%) suggesting that New York has dramatically reduced spread.
+
+All three datasets show a similar relative delay between being a case
+being positively confirmed and a resulting death at approximately
+one week (7-8 days). When looking at the relative multiplier between
+the positive and deceased numbers, which acts as an analog to the
+case fatality rate, we find that California's estimates are much lower
+(4.7\% for California vs. 6.21\% for the U.S. and 6.45\% for New York).
+If tests are limited and reserved only for the most severely ill,
+we would expect the relative multiplier to increase, suggesting that
+New York and the U.S. may be capping testing more severely than California. 
+
+In Figures \ref{fig:State-Report-Alpha-2} and \ref{fig:State-Report-CFR}
+we provide results for all 50 states, Washington D.C., and U.S. totals
+for the final growth rate and the relative multiplier between the
+positive and deceased pools, and for both the bootstrapping and MCMC
+approximations. We find agreement between the two approximations in
+most cases, and see a wide disparity among the different regions,
+which the reader is encouraged to interpret.
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_100_bootstraps_100000_likelihood_samples/boxplot_for_alpha_2_without_direct_samples}
+
+\caption{\label{fig:State-Report-Alpha-2}Model parameter estimates for $\alpha_{2}$
+(the current growth rate of COVID-19) for each of 50 U.S. states,
+Washington D.C., and U.S. totals with 5\%, 25\%, 50\%, 75\%, and 95\%
+percentiles, ranked from highest to lowest median, and shown with
+both the bootstrap and the MCMC approximations. We find that both
+approximation methods agree with each other. We see strongest growth
+in Nebraska, Minnesota, and Iowa, and lowest growth in Alaska, Montana,
+and Hawaii.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_100_bootstraps_100000_likelihood_samples/boxplot_for_positive_to_deceased_mult_without_direct_samples}
+
+\caption{\label{fig:State-Report-CFR}Model parameter estimates for the positive-to-deceased
+multiplier, which is an analog to the case fatality rate and an indicator
+of testing restrictions when the value is high. We provide results
+for each of 50 U.S. states, Washington D.C., and U.S. totals with
+5\%, 25\%, 50\%, 75\%, and 95\% percentiles, ranked from highest to
+lowest median, and shown with both the bootstrap and the MCMC approximations.
+We find that the bootstrap method gives us larger variances, and fails
+to find variance for states with very low death counts (Wyoming, Alaska,
+Montana, and Hawaii) and only returns the initial value (10\%). Overall,
+we see a strong skew towards East Coast states with higher estimations. }
+\end{figure}
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_1000_bootstraps_100000_likelihood_samples/new_york/bootstrap_param_distro_with_priors}
+
+\caption{\label{fig:NY-params}Model Parameter Estimates for New York after
+incorporating priors}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{state_plots/2020_05_06_date_1000_bootstraps_100000_likelihood_samples/california/bootstrap_param_distro_without_priors}
+
+\caption{\label{fig:Cali-params}Model Parameter Estimates for California after
+incorporating priors}
+\end{figure}
+
+\bibliographystyle{plain}
+\bibliography{covid_biblio}
+
+\end{document}
