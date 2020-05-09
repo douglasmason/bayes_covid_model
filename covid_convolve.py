@@ -11,7 +11,7 @@ from os import path
 # Set up model
 #####
 
-n_bootstraps = 100
+n_bootstraps = 1000
 n_likelihood_samples = 100000
 max_date_str = '2020-05-06'
 opt_calc = True
