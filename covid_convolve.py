@@ -12,8 +12,8 @@ from os import path
 #####
 
 n_bootstraps = 1000
-n_likelihood_samples = 100000
-max_date_str = '2020-05-06'
+n_likelihood_samples = 200000
+max_date_str = '2020-05-08'
 opt_calc = True
 opt_force_plot = False
 
