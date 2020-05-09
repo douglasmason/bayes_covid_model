@@ -4,6 +4,8 @@
 
 *We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*
 
+*In the future we would like to host a directory of figures on Amazon S3 for each state on a daily basis. If you would like to help design an interface for people to easily find their state, please contact the contributors.*
+
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a modified epidemiological Susceptible-Exposed-Infectious- Recovered (SEIR) Model[4, 1, 5]. Using currently available data, we determine optimized constants and apply this framework to reproducing the infection and death curves for California (the state with the largest population), New York (the state with highest population density), U.S. totals, and supplimentary results for the remaining 50 states and Washington D.C.
 
 ![boxplot](/test_boxplot_for_alpha_2_without_direct_samples.png)
