@@ -2,6 +2,8 @@
 
 **Full write-up at [PDF version](https://covid-figures.s3-us-west-2.amazonaws.com/covid.pdf)**
 
+**Per-state results provided at [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser/index.html)**
+
 *We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*
 
 *In the future we would like to host a directory of figures on Amazon S3 for each state on a daily basis. If you would like to help design an interface for people to easily find their state, please contact the contributors.*
