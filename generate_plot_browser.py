@@ -35,7 +35,10 @@ for state in alphabetical_states:
     state_lc = state.lower().replace(' ', '_')
     doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
     
+    doc.asis('<!DOCTYPE html>')
     with tag('html'):
+        with tag('head'):
+            pass
         with tag('body'):
             with tag('div', id='photo-container'):
                 with tag('ul'):
@@ -63,8 +66,13 @@ for state in map_state_to_html:
         f.write(map_state_to_html[state])
 
 with open(path.join(plot_browser_dir, 'index.html'), 'w') as f:
+    
     doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
+
+    doc.asis('<!DOCTYPE html>')
     with tag('html'):
+        with tag('head'):
+            pass
         with tag('body'):
             with tag('ul'):
                 for state in alphabetical_states:
