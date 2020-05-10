@@ -20,6 +20,7 @@ alphabetical_states = ['total'] + alphabetical_states
 list_of_figures = [
     'all_data_solution.png',
     'bootstrap_solutions.png',
+    'bootstrap_param_distro_without_priors.png',
     'likelihood_sample_param_distro_without_priors.png',
     'MVN_samples_actual_vs_predicted_vals.png',
     'mean_of_MVN_samples_solution.png',
