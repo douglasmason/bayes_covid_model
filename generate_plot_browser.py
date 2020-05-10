@@ -4,8 +4,9 @@ from os import path
 import os
 
 base_url_dir = 'https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_06_date_100_bootstraps_100000_likelihood_samples/'
-
+github_url = 'https://github.com/douglasmason/covid_model'
 plot_browser_dir = 'plot_browser'
+
 if not path.exists(plot_browser_dir):
     os.mkdir(plot_browser_dir)
 
@@ -76,7 +77,7 @@ with open(path.join(plot_browser_dir, 'index.html'), 'w') as f:
         with tag('body'):
             with tag('ul'):
                 with tag('li'):
-                    with tag("a", href='https://github.com/douglasmason/covid_model'):
+                    with tag("a", href=github_url):
                         text('<-- Back to repository') 
                 for state in alphabetical_states:
                     state_lc = state.lower().replace(' ', '_')
