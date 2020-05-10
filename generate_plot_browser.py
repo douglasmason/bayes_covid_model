@@ -75,6 +75,9 @@ with open(path.join(plot_browser_dir, 'index.html'), 'w') as f:
             pass
         with tag('body'):
             with tag('ul'):
+                with tag('li'):
+                    with tag("a", href='https://github.com/douglasmason/covid_model'):
+                        text('<-- Back to repository') 
                 for state in alphabetical_states:
                     state_lc = state.lower().replace(' ', '_')
                     tmp_url = state_lc + '/index.html'
