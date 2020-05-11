@@ -6,7 +6,7 @@
 
 *We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*
 
-*In the future we would like to host a directory of figures on Amazon S3 for each state on a daily basis. If you would like to help design an interface for people to easily find their state, please contact the contributors.*
+*We've currently implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to easily find their state and the metrics that matter to them, please contact the contributors.*
 
 *To run the code, clone repo and execute `import covid_convolve; covid_convolve.run_everything()`*
 
