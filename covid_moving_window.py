@@ -7,8 +7,8 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 # Set up model
 #####
 
-n_bootstraps = 100
-n_likelihood_samples = 100000
+n_bootstraps = 10
+n_likelihood_samples = 10000
 moving_window_size = 21  # three weeks
 max_date_str = '2020-05-11'
 opt_calc = True
@@ -23,7 +23,8 @@ static_params = {'day0_positive_multiplier': 1,
                  'day0_deceased_multiplier': 1}
 logarithmic_params = ['positive_intercept',
                       'deceased_intercept',
-                      'sigma',
+                      'sigma_positive',
+                      'sigma_deceased'
                       'day0_positive_multiplier',
                       'day1_positive_multiplier',
                       'day2_positive_multiplier',
@@ -43,14 +44,16 @@ plot_param_names = ['positive_slope',
                     'positive_intercept',
                     'deceased_slope',
                     'deceased_intercept',
-                    'sigma'
+                    'sigma_positive',
+                    'sigma_deceased'
                     ]
 sorted_init_condit_names = list()
 sorted_param_names = ['positive_slope',
                       'positive_intercept',
                       'deceased_slope',
                       'deceased_intercept',
-                      'sigma',
+                    'sigma_positive',
+                    'sigma_deceased',
                       # 'day0_positive_multiplier',
                       'day1_positive_multiplier',
                       'day2_positive_multiplier',
@@ -70,7 +73,8 @@ curve_fit_bounds = {'positive_slope': (-10, 10),
                     'positive_intercept': (0, 1000000),
                     'deceased_slope': (-10, 10),
                     'deceased_intercept': (0, 1000000),
-                    'sigma': (0, 100),
+                    'sigma_positive': (0, 100),
+                    'sigma_deceased': (0, 100),
                     # 'day0_positive_multiplier': (0, 10),
                     'day1_positive_multiplier': (0, 10),
                     'day2_positive_multiplier': (0, 10),
@@ -86,11 +90,12 @@ curve_fit_bounds = {'positive_slope': (-10, 10),
                     'day5_deceased_multiplier': (0, 10),
                     'day6_deceased_multiplier': (0, 10)
                     }
-test_params = {'positive_slope': -0.015,
-               'positive_intercept': 25000,
-               'deceased_slope': -0.016,
-               'deceased_intercept': 2500,
-               'sigma': 0.1,
+test_params = {'positive_slope': 0,
+               'positive_intercept': 2500,
+               'deceased_slope': 0,
+               'deceased_intercept': 250,
+               'sigma_positive': 0.05,
+               'sigma_deceased': 0.1,
                # 'day0_positive_multiplier': 1,
                'day1_positive_multiplier': 1,
                'day2_positive_multiplier': 1,

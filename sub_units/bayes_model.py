@@ -222,18 +222,22 @@ class BayesModel(ABC):
         if precursor_func is None:
             precursor_func = self._get_log_likelihood_precursor
 
-        dists, other_errs, sol, vals = precursor_func(
+        positive_dists, deceased_dists, other_errs, sol, positive_vals, deceased_vals = precursor_func(
             in_params,
             data_new_tested=data_new_tested,
             data_new_dead=data_new_dead,
             cases_bootstrap_indices=cases_bootstrap_indices,
             deaths_bootstrap_indices=deaths_bootstrap_indices)
-        
-        sigmas = [1 for _ in vals] # least squares optimization doesn't care about the sigmas, it's just looking for the mode
+
+        dists = positive_dists + deceased_dists
+        vals = positive_vals + deceased_vals
+
+        sigmas = [1 for _ in
+                  vals]  # least squares optimization doesn't care about the sigmas, it's just looking for the mode
         coeffs = [1 / x for x in sigmas]
         new_dists = [
             np.sqrt(dist ** 2 / (2 * sigma ** 2)) for dist, sigma, coeff in zip(dists, sigmas, coeffs)]
-        
+
         # new_dists = [dists[i] / np.sqrt(2 * np.log(np.sqrt(vals[i]))) for i in range(len(dists))]
         # new_dists = [dists[i] / np.sqrt(2 * in_params[self.map_name_to_sorted_ind['sigma']]) for i in range(len(dists))]
 
@@ -262,11 +266,11 @@ class BayesModel(ABC):
             params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
         else:
             params = in_params.copy()
-            
+
         if precursor_func is None:
             precursor_func = self._get_log_likelihood_precursor
 
-        dists, other_errs, sol, vals = precursor_func(
+        dists_positive, dists_deceased, other_errs, sol, vals_positive, vals_deceased = precursor_func(
             params,
             data_new_tested=data_new_tested,
             data_new_dead=data_new_dead,
@@ -274,11 +278,20 @@ class BayesModel(ABC):
             deaths_bootstrap_indices=deaths_bootstrap_indices)
 
         # sigmas = [1 / np.sqrt(x) for x in vals] # using the rule that log(x) - log(x - y) => 1/y for x >> y, and here y = sqrt(x)
-        sigmas = [params['sigma'] for _ in vals]
-        coeffs = [1 / x for x in sigmas]
-        return_val = sum(
-            -dist ** 2 / (2 * sigma ** 2) + np.log(coeff) for dist, sigma, coeff in zip(dists, sigmas, coeffs)) - sum(
-            x ** 2 for x in other_errs)
+        sigmas_positive = [params['sigma_positive'] for _ in vals_positive]
+        sigmas_deceased = [params['sigma_deceased'] for _ in vals_deceased]
+
+        coeffs_positive = [1 / x for x in sigmas_positive]
+        coeffs_deceased = [1 / x for x in sigmas_deceased]
+        return_val_positive = sum(
+            -dist ** 2 / (2 * sigma ** 2) + np.log(coeff) for dist, sigma, coeff in
+            zip(dists_positive, sigmas_positive, coeffs_positive))
+        return_val_deceased = sum(
+            -dist ** 2 / (2 * sigma ** 2) + np.log(coeff) for dist, sigma, coeff in
+            zip(dists_deceased, sigmas_deceased, coeffs_deceased))
+        return_val_other = - sum(x ** 2 for x in other_errs)
+
+        return_val = return_val_positive + return_val_deceased + return_val_other
 
         if opt_return_sol:
             return return_val, sol
@@ -320,14 +333,15 @@ class BayesModel(ABC):
         # new_positive = sol[1]
         # new_deceased = sol[2]
         # params_as_dict['sigma'] = 0.06 # quick hack
-        
+
         return params_as_dict
 
     def fit_curve_via_likelihood(self,
                                  in_params,
                                  tested_indices=None,
                                  deaths_indices=None,
-                                 method='SLSQP'
+                                 method='SLSQP', # 'Nelder-Mead
+                                 print_success=False
                                  ):
         '''
         Given initial parameters, fit the curve by minimizing log likelihood using measure error Gaussian PDFs
@@ -352,7 +366,8 @@ class BayesModel(ABC):
 
         bounds_to_use = [self.curve_fit_bounds[name] for name in self.sorted_names]
         results = sp.optimize.minimize(get_neg_log_likelihood, p0, bounds=bounds_to_use, method=method)
-        # print(f'success? {results.success}')
+        if print_success:
+            print(f'success? {results.success}')
         params_as_list = results.x
         params_as_dict = {key: params_as_list[i] for i, key in enumerate(self.sorted_names)}
 
@@ -436,7 +451,7 @@ class BayesModel(ABC):
             # for i in range(len(sol)):
             #     print(f'index: {i}, odeint_value: {sol[i]}, real_value: {[None, series_data[i]]}')
 
-    def plot_all_solutions(self, n_samples=10000, key='bootstrap', n_sols_to_plot=1000):
+    def plot_all_solutions(self, n_samples=1000, key='bootstrap', n_sols_to_plot=1000):
         '''
         Plot all the bootstrap simulation solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
@@ -680,9 +695,18 @@ class BayesModel(ABC):
 
             print('\n----\nRendering bootstrap model fits... starting with the all-data one...\n----')
 
+            # This is kind of a kludge, I find more reliabel fits with fit_curve_exactly_with_jitter
+            #   But it doesn't fit the observation error, which I need for likelihood samples
+            #   So I use it to fit everything BUT observation error, then insert the test_params entries for the sigmas,
+            #   and re-fit using the jankier (via_likelihood) method that fits the observation error
+            #   TODO: make the sigma substitutions empirical, rather than hacky the way I've done it
             test_params_as_list = [self.test_params[key] for key in self.sorted_names]
-            #all_data_params = self.fit_curve_exactly_with_jitter(test_params_as_list)  # fit_curve_via_likelihood
-            all_data_params = self.fit_curve_via_likelihood(test_params_as_list)  # fit_curve_via_likelihood
+            all_data_params = self.fit_curve_exactly_with_jitter(test_params_as_list)
+            all_data_params['sigma_positive'] = self.test_params['sigma_positive']
+            all_data_params['sigma_deceased'] = self.test_params['sigma_deceased']
+            print('refitting all-data params')
+            all_data_params = self.fit_curve_via_likelihood(all_data_params,
+                                                            print_success=True)  # fit_curve_via_likelihood
             all_data_sol = self.run_simulation(all_data_params)
 
             print('\nParameters when trained on all data (this is our starting point for optimization):')
@@ -710,7 +734,7 @@ class BayesModel(ABC):
                 if True:
                     test_params_as_list = [self.test_params[key] for key in self.sorted_names]
                     all_data_params2 = self.fit_curve_via_likelihood(test_params_as_list,
-                                                                     method=method)  # fit_curve_via_likelihood
+                                                                     method=method, print_success=True)
 
                     print('\nParameters when trained on all data (this is our starting point for optimization):')
                     [print(f'{key}: {val:.4g}') for key, val in all_data_params2.items()]
@@ -743,11 +767,11 @@ class BayesModel(ABC):
                 # NB: define the model constraints (mainly, positive values)
                 # This is the old version in which it still attempts to fit exactly on jittered data
                 params_as_dict = self.fit_curve_via_likelihood(starting_point_as_list,
-                                                                    # data_tested=tested_jitter,
-                                                                    # data_dead=dead_jitter,
-                                                                    tested_indices=cases_bootstrap_indices,
-                                                                    deaths_indices=deaths_bootstrap_indices
-                                                                    )
+                                                               # data_tested=tested_jitter,
+                                                               # data_dead=dead_jitter,
+                                                               tested_indices=cases_bootstrap_indices,
+                                                               deaths_indices=deaths_bootstrap_indices
+                                                               )
 
                 # This is the new version which just uses the scalar likelihood
                 # params_as_dict = self.fit_curve_via_likelihood(starting_point_as_list,
@@ -1685,13 +1709,14 @@ class ConvolutionModel(BayesModel):
 
     # add model_type_str to kwargs when instantiating super
     def __init__(self, *args, **kwargs):
-        kwargs.update({'model_type_name': 'convolution'})
+        kwargs.update({'model_type_name': 'convolution',
+                       'min_sol_date': None, # TODO: find a better way to set this attribute
+                       })
         super(ConvolutionModel, self).__init__(*args, **kwargs)
         cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
         deaths_indices = list(range(self.day_of_threshold_met_death, len(self.series_data)))
         self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
         self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
-        return self
 
     @staticmethod
     def _ODE_system(y, t, *p):
@@ -1808,11 +1833,11 @@ class ConvolutionModel(BayesModel):
         err_from_reversed_delays = val1 - val2 if val1 > val2 else 0
 
         dists = new_tested_dists + new_dead_dists
-        vals = [data_new_tested[i] for i in cases_bootstrap_indices]
-        vals += [data_new_dead[i] for i in deaths_bootstrap_indices]
+        tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
+        deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
         other_errs = [err_from_reversed_delays]
 
-        return dists, other_errs, sol, vals
+        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
 
 
 class MovingWindowModel(BayesModel):
@@ -1957,9 +1982,8 @@ class MovingWindowModel(BayesModel):
             (np.log(data_new_dead[i]) - np.log(new_deceased_from_sol[i + self.burn_in]))
             for i in deaths_bootstrap_indices]
 
-        dists = new_tested_dists + new_dead_dists
-        vals = [data_new_tested[i] for i in cases_bootstrap_indices]
-        vals += [data_new_dead[i] for i in deaths_bootstrap_indices]
+        tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
+        deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
         other_errs = list()
 
-        return dists, other_errs, sol, vals
+        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals

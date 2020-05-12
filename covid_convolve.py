@@ -7,9 +7,9 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 # Set up model
 #####
 
-n_bootstraps = 1000
-n_likelihood_samples = 100000
-max_date_str = '2020-05-09'
+n_bootstraps = 10
+n_likelihood_samples = 10000
+max_date_str = '2020-05-11'
 opt_calc = True
 opt_force_plot = False
 
@@ -22,14 +22,16 @@ static_params = {'contagious_to_positive_width': 7,
                  'contagious_to_positive_mult': 0.1}
 logarithmic_params = ['I_0',
                       'contagious_to_deceased_mult',
-                      'sigma']
+                      'sigma_positive',
+                      'sigma_deceased']
 sorted_init_condit_names = ['I_0']
 sorted_param_names = ['alpha_1',
                       'alpha_2',
                       'contagious_to_positive_delay',
                       'contagious_to_deceased_delay',
                       'contagious_to_deceased_mult',
-                      'sigma'
+                      'sigma_positive',
+                      'sigma_deceased'
                       ]
 plot_param_names = ['alpha_1',
                     'alpha_2',
@@ -55,6 +57,8 @@ extra_params = {
 curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
                     'alpha_1': (-1, 2),
                     'alpha_2': (-1, 2),
+                    'sigma_positive': (0, 100),
+                    'sigma_deceased': (0, 100),
                     'contagious_to_positive_delay': (-14, 21),
                     'contagious_to_positive_width': (0, 14),
                     'contagious_to_deceased_delay': (-14, 42),
@@ -65,6 +69,8 @@ curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
 test_params = {'I_0': 2e-3,  # starting infections
                'alpha_1': 0.23,
                'alpha_2': 0.01,
+               'sigma_positive': 0.05,
+               'sigma_deceased': 0.1,
                'contagious_to_positive_delay': 9,
                'contagious_to_positive_width': 7,
                'contagious_to_deceased_delay': 15,
@@ -73,15 +79,7 @@ test_params = {'I_0': 2e-3,  # starting infections
                }
 
 # uniform priors with bounds:
-priors = {'I_0': (1e-12, 1e2),  # starting infections
-          'alpha_1': (0, 1),
-          'alpha_2': (-0.5, 0.5),
-          'contagious_to_positive_delay': (-10, 20),
-          'contagious_to_positive_width': (-2, 14),
-          'contagious_to_deceased_delay': (-10, 30),
-          'contagious_to_deceased_width': (1, 17),
-          'contagious_to_deceased_mult': (1e-6, 0.1),
-          }
+priors = curve_fit_bounds
 
 # cycle over most populous states first
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
@@ -97,9 +95,8 @@ def run_everything():
                                    ConvolutionModel,
                                    max_date_str,
                                    load_data,
-                                   sorted_init_condit_names,
-                                   sorted_param_names,
-                                   extra_params,
+                                   state_models_filename=state_models_filename,
+                                   state_report_filename=state_report_filename,
                                    n_bootstraps=n_bootstraps,
                                    n_likelihood_samples=n_likelihood_samples,
                                    load_data_obj=load_data,
