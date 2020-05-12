@@ -27,12 +27,14 @@ class Stopwatch:
 
 def render_whisker_plot(state_report,
                         param_name='alpha_2',
-                        output_filename_format_str='test_boxplot_for_{}_{}.png'):
+                        output_filename_format_str='test_boxplot_for_{}_{}.png',
+                        opt_log=False):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
     :param param_name: param name as string
     :param output_filename_format_str: format string for the output filename, with two open slots
+    :param opt_log: boolean for log-transform x-axis
     :return: None, it saves plots to files
     '''
     tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == param_name]
@@ -127,6 +129,9 @@ def render_whisker_plot(state_report,
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'without_direct_samples')
     plt.subplots_adjust(left=0.2)
+    
+    if opt_log:
+        plt.xscale('log')
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
@@ -164,55 +169,32 @@ def render_whisker_plot(state_report,
         Line2D([0], [0], color="green", lw=4),
         Line2D([0], [0], color="blue", lw=4),
     ]
-    plt.legend(custom_lines, ('Bootstraps', 'direct samples', 'MCMC'))
+    plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC'))
 
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')
     plt.subplots_adjust(left=0.2)
+    if opt_log:
+        plt.xscale('log')
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
-def generate_whisker_plots(state_report, output_filename_format_str=None):
-    for param_name in sorted_init_condit_names + sorted_param_names + list(extra_params.keys()):
+def generate_whisker_plots(state_report,
+                           output_filename_format_str=None,
+                           param_names=None,
+                           logarithmic_params=list()):
+    for param_name in param_names:
         render_whisker_plot(state_report,
                             param_name=param_name,
-                            output_filename_format_str=output_filename_format_str)
+                            output_filename_format_str=output_filename_format_str,
+                            opt_log=param_name in logarithmic_params)
 
 
-def loop_over_states(run_states,
-                     model_class,
-                     max_date_str,
-                     **kwargs
-                     ):
-    map_state_name_to_model = dict()
-
-    try:
-        for state_ind, state in enumerate(run_states):
-            print(
-                f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
-
-            try:
-                state_model = model_class(state,
-                                          max_date_str,
-                                          **kwargs
-                                          )
-                state_model.run_fits()
-                map_state_name_to_model[state] = state_model
-
-            except:
-                print("Error with state", state)
-                continue
-
-    except:
-        return map_state_name_to_model
-
-    return map_state_name_to_model
-
-
-def generate_state_report(map_state_name_to_model):
+def generate_state_report(map_state_name_to_model,
+                          state_report_filename=None):
     state_report_as_list_of_dicts = list()
-    for state_ind, state in enumerate(population_ranked_state_names):
+    for state_ind, state in enumerate(map_state_name_to_model):
 
         if state in map_state_name_to_model:
             state_model = map_state_name_to_model[state]
@@ -220,13 +202,13 @@ def generate_state_report(map_state_name_to_model):
             print(f'Skipping {state}!')
             continue
 
-        try:
-            frac_bootstraps_used_after_prior = sum(state_model.bootstrap_weights) / state_model.n_bootstraps
-        except:
-            frac_bootstraps_used_after_prior = -1
+        # try:
+        #     frac_bootstraps_used_after_prior = sum(state_model.bootstrap_weights) / state_model.n_bootstraps
+        # except:
+        #     frac_bootstraps_used_after_prior = -1
 
-        print(
-            f'\n----\nResults for {state} ({state_ind} of {len(population_ranked_state_names)}, pop. {load_data.map_state_to_population[state]:,}, {frac_bootstraps_used_after_prior * 100:.4g} bootstraps used after prior applied)...\n----')
+        # print(
+        #     f'\n----\nResults for {state} ({state_ind} of {len(map_state_name_to_model)}, pop. {load_data.map_state_to_population[state]:,}, {frac_bootstraps_used_after_prior * 100:.4g} bootstraps used after prior applied)...\n----')
 
         try:
             _ = [
@@ -333,17 +315,52 @@ def generate_state_report(map_state_name_to_model):
     return state_report
 
 
-def run_everything(*args,
+def run_everything(run_states,
+                   model_class,
+                   max_date_str,
+                   load_data,
+                   sorted_init_condit_names=None,
+                   sorted_param_names=None,
+                   extra_params=None,
+                   state_models_filename=None,
+                   state_report_filename=None,
+                   logarithmic_params=list(),
+                   plot_param_names=None,
                    **kwargs):
-    
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
     global map_state_name_to_model, state_report
 
-    map_state_name_to_model = loop_over_states(*args, **kwargs)
-    example_state = list(map_state_name_to_model.keys())[0]
-    state_report = generate_state_report(map_state_name_to_model)
+    map_state_name_to_model = dict()
 
-    example_state_model = map_state_name_to_model[example_state]
-    plot_subfolder = example_state_model.plot_subfolder
-    filename = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-    generate_whisker_plots(state_report, output_filename_format_str=filename)
+    for state_ind, state in enumerate(run_states):
+        print(
+            f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
+
+        if True:
+            print('Building model with the following args...')
+            for key in sorted(kwargs.keys()):
+                print(f'{key}: {kwargs[key]}')
+            state_model = model_class(state,
+                                      max_date_str,
+                                      sorted_init_condit_names=sorted_init_condit_names,
+                                      sorted_param_names=sorted_param_names,
+                                      extra_params=extra_params,
+                                      logarithmic_params=logarithmic_params,
+                                      plot_param_names=plot_param_names,
+                                      **kwargs
+                                      )
+            state_model.run_fits()
+            map_state_name_to_model[state] = state_model
+
+        else:
+            print("Error with state", state)
+            continue
+
+        state_report = generate_state_report(map_state_name_to_model,
+                                             state_report_filename=state_report_filename)
+
+        plot_subfolder = state_model.plot_subfolder
+        param_names = sorted_init_condit_names + sorted_param_names + list(extra_params.keys())
+        filename = path.join(plot_subfolder, f'boxplot_for_{{}}_{{}}.png')
+        generate_whisker_plots(state_report, output_filename_format_str=filename,
+                               param_names=plot_param_names, logarithmic_params=logarithmic_params)
