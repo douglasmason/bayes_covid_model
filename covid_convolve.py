@@ -20,17 +20,22 @@ state_report_filename = f'state_report_convolution_{n_bootstraps}_bootstraps_{n_
 static_params = {'contagious_to_positive_width': 7,
                  'contagious_to_deceased_width': 7,
                  'contagious_to_positive_mult': 0.1}
-logarithmic_params = ['I_0', 'contagious_to_deceased_mult']
+logarithmic_params = ['I_0',
+                      'contagious_to_deceased_mult',
+                      'sigma']
 sorted_init_condit_names = ['I_0']
 sorted_param_names = ['alpha_1',
                       'alpha_2',
                       'contagious_to_positive_delay',
                       'contagious_to_deceased_delay',
-                      'contagious_to_deceased_mult'
+                      'contagious_to_deceased_mult',
+                      'sigma'
                       ]
-plot_param_names = ['alpha_1', 'alpha_2', 'contagious_to_positive_delay',
-                                           'positive_to_deceased_delay',
-                                           'positive_to_deceased_mult']
+plot_param_names = ['alpha_1',
+                    'alpha_2',
+                    'contagious_to_positive_delay',
+                    'positive_to_deceased_delay',
+                    'positive_to_deceased_mult']
 
 
 def get_positive_to_deceased_delay(x, map_name_to_sorted_ind=None):
