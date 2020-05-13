@@ -494,7 +494,11 @@ class BayesModel(ABC):
         :param n_sols_to_plot: how many simulations should we sample for the plot?
         :return: None
         '''
-
+        full_output_filename = path.join(self.plot_filename_base, f'{key}_solutions_discrete.png')
+        full_output_filename2 = path.join(self.plot_filename_base, f'{key}_solutions_filled_quantiles.png')
+        if path.exists(full_output_filename) and path.exists(full_output_filename2) and not self.opt_force_plot:
+            return
+        
         if key == 'bootstrap':
             params = self.bootstrap_params
             param_inds_to_plot = list(range(len(params)))
@@ -520,6 +524,7 @@ class BayesModel(ABC):
         param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
                                               replace=False)
         sols_to_plot = [self.run_simulation(in_params=params[param_ind]) for param_ind in tqdm(param_inds_to_plot)]
+        
         self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
                                                                plot_filename_filename=f'{key}_solutions_discrete.png')
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,

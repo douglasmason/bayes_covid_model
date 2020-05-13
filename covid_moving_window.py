@@ -12,7 +12,7 @@ n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
 max_date_str = '2020-05-12'
 opt_calc = True
-opt_force_plot = True
+opt_force_plot = False
 opt_simplified = True # just do statsmodels as a simplified service
 
 state_models_filename = f'state_models_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
@@ -51,9 +51,7 @@ plot_param_names = ['positive_slope',
                     ]
 if opt_simplified:
     plot_param_names = ['positive_slope',
-                    'positive_intercept',
-                    'deceased_slope',
-                    'deceased_intercept']
+                    'deceased_slope',]
 sorted_init_condit_names = list()
 sorted_param_names = ['positive_slope',
                       'positive_intercept',
@@ -126,7 +124,6 @@ priors = curve_fit_bounds
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names
-
 
 def run_everything():
     return run_everything_imported(run_states,

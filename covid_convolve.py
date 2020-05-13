@@ -9,7 +9,7 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 
 n_bootstraps = 100
 n_likelihood_samples = 100000
-max_date_str = '2020-05-11'
+max_date_str = '2020-05-12'
 opt_calc = True
 opt_force_plot = False
 

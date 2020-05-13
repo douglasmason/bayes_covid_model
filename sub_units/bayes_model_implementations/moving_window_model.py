@@ -149,7 +149,7 @@ class MovingWindowModel(BayesModel):
 
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
 
-    def render_statsmodels_fit(self):
+    def render_statsmodels_fit(self, opt_simplified=False):
         '''
         Performs fit using statsmodels, since this is a standard linear regression. This model gives us standard errors.
         :return: 
@@ -203,7 +203,7 @@ class MovingWindowModel(BayesModel):
         # Do fit on positive curve
         #####
 
-        model_positive = smf.ols(formula='np.log(new_positive) ~ x + DOW', data=data)
+        model_positive = smf.ols(formula='np.log(new_positive + 0.1) ~ x + DOW', data=data)
         results_positive = model_positive.fit()
         print(results_positive.summary())
         params_positive = results_positive.params
@@ -227,7 +227,8 @@ class MovingWindowModel(BayesModel):
         # Do fit on deceased curve
         #####
 
-        model_deceased = smf.ols(formula='np.log(new_deceased) ~ x + DOW', data=data)
+        # add 0.1 so you don't bonk on log(0)
+        model_deceased = smf.ols(formula='np.log(new_deceased + 0.1) ~ x + DOW', data=data)
         results_deceased = model_deceased.fit()
         print(results_deceased.summary())
         params_deceased = dict(results_deceased.params)
@@ -250,7 +251,9 @@ class MovingWindowModel(BayesModel):
         print('means_as_list:', means_as_list)
         self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
-        self.render_and_plot_cred_int(param_type='statsmodels')
+        if not opt_simplified:
+            self.render_and_plot_cred_int(param_type='statsmodels')
+        
         self.plot_all_solutions(key='statsmodels')
 
     def get_weighted_samples_via_statsmodels(self, n_samples=10000, ):
@@ -293,4 +296,4 @@ class MovingWindowModel(BayesModel):
         '''
 
         # Do statsmodels. Yes. It's THAT simplified.
-        self.render_statsmodels_fit()
+        self.render_statsmodels_fit(opt_simplified=True)

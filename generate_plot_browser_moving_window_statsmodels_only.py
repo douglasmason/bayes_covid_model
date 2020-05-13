@@ -21,9 +21,7 @@ list_of_figures = [
 
 list_of_figures_full_report = [
     'simplified_boxplot_for_positive_slope__statsmodels.png',
-    'simplified_boxplot_for_positive_intercept__statsmodels.png',
-    'simplified_boxplot_for_deceased_slope__statsmodels.png',
-    'simplified_boxplot_for_deceased_intercept__statsmodels.png'
+    'simplified_boxplot_for_deceased_slope__statsmodels.png'
 ]
 
 #####
