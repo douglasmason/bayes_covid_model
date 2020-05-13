@@ -2,7 +2,7 @@
 
 **Full write-up at [PDF version](https://covid-figures.s3-us-west-2.amazonaws.com/covid.pdf)**
 
-**Per-state results provided at [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only/index.html)**
+**Per-state results provided at [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only/index.html) and tabulated within the [CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/simplified_state_report.csv)**
 
 *We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*
 
