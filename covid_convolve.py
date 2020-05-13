@@ -7,8 +7,8 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 # Set up model
 #####
 
-n_bootstraps = 10
-n_likelihood_samples = 10000
+n_bootstraps = 100
+n_likelihood_samples = 100000
 max_date_str = '2020-05-11'
 opt_calc = True
 opt_force_plot = False
