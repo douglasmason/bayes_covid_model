@@ -1406,7 +1406,7 @@ class BayesModel(ABC):
         valid_ind = [i for i, x in enumerate(weights) if np.isfinite(x)]
 
         param_inds = np.random.choice(len(valid_ind), n_samples, p=[weights[i] for i in valid_ind], replace=True)
-        param_inds = [param_inds[i] for i in valid_ind]
+        param_inds = [valid_ind[param_inds[i]] for i in param_inds]
         weight_sampled_params = [params[i] for i in param_inds]
 
         max_weight_ind = np.argmax(weights)
