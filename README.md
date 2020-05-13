@@ -14,12 +14,12 @@ We model universal curves of reported COVID-19 daily reported infections and rel
 
 ![boxplot](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/simplified_boxplot_for_positive_slope__statsmodels.png)
 
-Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. We see strongest growth in Nebraska, Minnesota, and Iowa, and lowest growth in Alaska, Montana, and Hawaii.
+Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. We see strongest growth in Minnesota, Main, and South Dakota, and lowest growth in Montana, Arkansas, and Virginia.
 
 [1] R.M. Anderson and R.M. May. Infectious Diseases of Humans: Dynamics and Control. Dynamics and Control. OUP Oxford, 1992.
 
 [4] William Ogilvy Kermack, A. G. McKendrick, and Gilbert Thomas Walker. A contribution to the mathematical theory of epidemics. Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character, 115(772):700–721, 1927.
 
-[5] Eduardo Massad. An introduction to infectious diseases modelling. by e. vyn- nycky and r. white (400 pp.; Â£29.95; isbn 978-0-19-856576-5 pb). oxford: Oxford university press, 2010. Epidemiology and Infection, 139(7):1126– 1126, 2011.
+[5] Eduardo Massad. An introduction to infectious diseases modelling. by E. Vyn-Nycky and R. White. Oxford university press, 2010. Epidemiology and Infection, 139(7):1126– 1126, 2011.
 
 This work has not been peer reviewed.
