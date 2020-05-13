@@ -590,13 +590,13 @@ class BayesModel(ABC):
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=.3),
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
                         )
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=.6),
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
                         edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
                         )
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
@@ -615,13 +615,13 @@ class BayesModel(ABC):
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=.3),
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.3),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
         )
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=.3),
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.6),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
         )
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
