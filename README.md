@@ -8,7 +8,7 @@
 
 *We've currently implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to easily find their state and the metrics that matter to them, please contact the contributors.*
 
-*To run the code, clone repo and execute `import covid_convolve as covid; covid.run_everything()` or `import covid_moving_window as covid; covid.run_everything()` *
+*To run the code, clone repo and execute `import covid_convolve as covid; covid.run_everything()` or `import covid_moving_window as covid; covid.run_everything()`*
 
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a modified epidemiological Susceptible-Exposed-Infectious- Recovered (SEIR) Model[4, 1, 5]. Using currently available data, we determine optimized constants and apply this framework to reproducing the infection and death curves for California (the state with the largest population), New York (the state with highest population density), U.S. totals, and supplimentary results for the remaining 50 states and Washington D.C.
 
