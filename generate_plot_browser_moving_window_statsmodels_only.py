@@ -13,7 +13,7 @@ plot_browser_dir = 'plot_browser_moving_window_statsmodels_only'
 full_report_filename = 'full_us_report.html'
 
 list_of_figures = [
-    'statsmodels_param_distro_without_priors.png'
+    'statsmodels_param_distro_without_priors.png',
     'statsmodels_solutions_discrete.png',
     'statsmodels_solutions_filled_quantiles.png',
 ]
