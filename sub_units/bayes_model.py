@@ -48,6 +48,10 @@ class WhichDistro(Enum):
 
 class BayesModel(ABC):
 
+    # this fella isn't necessary like other abstractmethods, but optional in a subclass that supports statsmodels solutions
+    def render_statsmodels_fit(self):
+        pass
+
     @abstractmethod
     def run_simulation(self, in_params):
         pass
@@ -61,6 +65,37 @@ class BayesModel(ABC):
                                       deaths_bootstrap_indices=None,
                                       ):
         pass
+
+    def convert_params_as_list_to_dict(self, in_params, map_name_to_sorted_ind=None):
+        '''
+        Helper function to convert params as a list to the dictionary form
+        :param in_params: params as list
+        :return: params as dict
+        '''
+
+        if map_name_to_sorted_ind is None:
+            map_name_to_sorted_ind = self.map_name_to_sorted_ind
+
+        # convert from list to dictionary (for compatibility with the least-sq solver
+        if type(in_params) != dict and self.map_name_to_sorted_ind is not None:
+            params = {key: in_params[ind] for key, ind in map_name_to_sorted_ind.items()}
+        else:
+            params = in_params.copy()
+        return params
+
+    def convert_params_as_dict_to_list(self, in_params):
+        '''
+        Helper function to convert params as a dict to the list form
+        :param in_params: params as dict
+        :return: params as list
+        '''
+
+        if type(in_params) == dict:
+            p0 = [in_params[name] for name in self.sorted_names]
+        else:
+            p0 = in_params.copy()
+
+        return p0
 
     def __init__(self,
                  state_name,
@@ -139,9 +174,12 @@ class BayesModel(ABC):
         self.max_date_in_days = (self.max_date - self.min_date).days
         self.series_data = state_data['series_data'][:self.max_date_in_days, :]  # cut off recent days if desired
 
-        self.t_vals = np.linspace(-burn_in, 120, burn_in + 120 + 1)
+        n_t_vals = self.max_date_in_days + 21  # project three weeks into the future
+        self.t_vals = np.linspace(-burn_in, n_t_vals, burn_in + n_t_vals + 1)
+        # print('min_date', self.min_date)
+        # print('max_date_in_days', self.max_date_in_days)
+        # print('t_vals', self.t_vals)
 
-        # misnomer here
         try:
             self.day_of_threshold_met_case = [i for i, x in enumerate(self.series_data[:, 1]) if x >= 20][0]
         except:
@@ -262,10 +300,7 @@ class BayesModel(ABC):
         :return: float: log likelihood
         '''
 
-        if type(in_params) != dict:
-            params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
-        else:
-            params = in_params.copy()
+        params = self.convert_params_as_list_to_dict(in_params)
 
         if precursor_func is None:
             precursor_func = self._get_log_likelihood_precursor
@@ -340,7 +375,7 @@ class BayesModel(ABC):
                                  in_params,
                                  tested_indices=None,
                                  deaths_indices=None,
-                                 method='SLSQP', # 'Nelder-Mead
+                                 method='SLSQP',  # 'Nelder-Mead
                                  print_success=False
                                  ):
         '''
@@ -353,10 +388,7 @@ class BayesModel(ABC):
         :return: optimized parameters as dictionary
         '''
 
-        if type(in_params) == dict:
-            p0 = [in_params[name] for name in self.sorted_names]
-        else:
-            p0 = in_params.copy()
+        p0 = self.convert_params_as_dict_to_list(in_params)
 
         def get_neg_log_likelihood(p):
             return -self.get_log_likelihood(p,
@@ -1167,6 +1199,13 @@ class BayesModel(ABC):
         self._add_samples(samples_as_list[MCMC_burn_in:], log_probs[MCMC_burn_in:], propensities[MCMC_burn_in:],
                           key=samples_key)
 
+    @staticmethod
+    def cov2corr(cov):
+        std_devs_mat = np.diag(np.sqrt(np.diagonal(cov)))
+        cov_inv = np.linalg.inv(std_devs_mat)
+        corr = cov_inv @ cov @ cov_inv
+        return corr
+
     def fit_MVN_to_likelihood(self,
                               cov_type='full',
                               opt_walk=False):
@@ -1228,9 +1267,7 @@ class BayesModel(ABC):
                          aweights=weights)
 
         # convert covariance to correlation matrix
-        std_devs_mat = np.diag(np.sqrt(np.diagonal(cov)))
-        cov_inv = np.linalg.inv(std_devs_mat)
-        corr = cov_inv @ cov @ cov_inv
+        corr = self.cov2corr(cov)
 
         print('cov:', cov)
         model = sp.stats.multivariate_normal(mean=means_as_list, cov=cov, allow_singular=True)
@@ -1370,7 +1407,10 @@ class BayesModel(ABC):
         if n_samples > len(params):
             n_samples = len(params)
 
-        param_inds = np.random.choice(len(params), n_samples, p=weights, replace=True)
+        valid_ind = [i for i, x in enumerate(weights) if np.isfinite(x)]
+
+        param_inds = np.random.choice(len(valid_ind), n_samples, p=[weights[i] for i in valid_ind], replace=True)
+        param_inds = [param_inds[i] for i in valid_ind]
         weight_sampled_params = [params[i] for i in param_inds]
 
         max_weight_ind = np.argmax(weights)
@@ -1396,7 +1436,7 @@ class BayesModel(ABC):
         return weight_sampled_params, params, weights, log_probs
 
     def render_and_plot_cred_int(self,
-                                 param_type=None,  # bootstrap, likelihood_sample, random_walk, MVN_fit
+                                 param_type=None,  # bootstrap, likelihood_sample, random_walk, MVN_fit, statsmodels
                                  ):
         '''
         Use arviz to plot the credible intervals
@@ -1418,6 +1458,9 @@ class BayesModel(ABC):
             prior_weights = [1] * len(params)
         elif param_type == 'MVN_fit':
             params, _, _, _ = self.get_weighted_samples_via_MVN()
+            prior_weights = [1] * len(params)
+        elif param_type == 'statsmodels':
+            params, _, _, _ = self.get_weighted_samples_via_statsmodels()
             prior_weights = [1] * len(params)
         else:
             raise ValueError
@@ -1583,6 +1626,12 @@ class BayesModel(ABC):
         self.solve_and_plot_solution(title='Test Plot with Default Parameters',
                                      plot_filename_filename='test_plot.png')
 
+        # Do statsmodels
+        self.render_statsmodels_fit()
+
+        # Get and plot parameter distributions from bootstraps
+        self.render_and_plot_cred_int(param_type='statsmodels')
+
         # Training Data Bootstraps
         self.render_bootstraps()
 
@@ -1710,7 +1759,7 @@ class ConvolutionModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self, *args, **kwargs):
         kwargs.update({'model_type_name': 'convolution',
-                       'min_sol_date': None, # TODO: find a better way to set this attribute
+                       'min_sol_date': None,  # TODO: find a better way to set this attribute
                        })
         super(ConvolutionModel, self).__init__(*args, **kwargs)
         cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
@@ -1743,12 +1792,8 @@ class ConvolutionModel(BayesModel):
         :param params: dictionary of relevant parameters
         :return: N
         '''
-        if type(in_params) != dict:
-            if self.map_name_to_sorted_ind is None:
-                print("Whoa! I have to create a dictionary but I don't have the proper mapping object")
-            params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
-        else:
-            params = in_params.copy()
+
+        params = self.convert_params_as_list_to_dict(in_params)
 
         params.update(self.static_params)
 
@@ -1798,10 +1843,7 @@ class ConvolutionModel(BayesModel):
         '''
 
         # convert from list to dictionary (for compatibility with the least-sq solver
-        if type(in_params) != dict and self.map_name_to_sorted_ind is not None:
-            params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
-        else:
-            params = in_params.copy()
+        params = self.convert_params_as_list_to_dict(in_params)
 
         if data_new_tested is None:
             data_new_tested = self.data_new_tested
@@ -1867,24 +1909,23 @@ class MovingWindowModel(BayesModel):
         :param params: dictionary of relevant parameters
         :return: N
         '''
-        if type(in_params) != dict:
-            if self.map_name_to_sorted_ind is None:
-                print("Whoa! I have to create a dictionary but I don't have the proper mapping object")
-            params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
-        else:
-            params = in_params.copy()
+
+        params = self.convert_params_as_list_to_dict(in_params)
 
         params.update(self.static_params)
         contagious = np.array([None] * len(self.t_vals))  # this guy doesn't matter for MovingWindowModel
 
-        # set intercept at the end, not the beginning
-        max_t_val = max(self.t_vals) - self.moving_window_size
-        end_positive_count = np.exp(max_t_val * params['positive_slope'])
-        end_deceased_count = np.exp(max_t_val * params['deceased_slope'])
+        # do intercept at the beginning of moving window
+        intercept_t_val = self.max_date_in_days - self.moving_window_size
+        end_positive_count = np.exp(intercept_t_val * params['positive_slope'])
+        end_deceased_count = np.exp(intercept_t_val * params['deceased_slope'])
         positive = np.array(np.exp(self.t_vals * params['positive_slope'])) * np.array(
             params['positive_intercept'] / end_positive_count)
         deceased = np.array(np.exp(self.t_vals * params['deceased_slope'])) * np.array(
             params['deceased_intercept'] / end_deceased_count)
+
+        # positive = np.array(np.exp(self.t_vals * params['positive_slope'])) * params['positive_intercept']
+        # deceased = np.array(np.exp(self.t_vals * params['deceased_slope'])) * params['deceased_intercept']
 
         # for i in range(len(positive)):
         #     if i % 7 == 0:
@@ -1953,10 +1994,7 @@ class MovingWindowModel(BayesModel):
         '''
 
         # convert from list to dictionary (for compatibility with the least-sq solver
-        if type(in_params) != dict and self.map_name_to_sorted_ind is not None:
-            params = {key: in_params[ind] for key, ind in self.map_name_to_sorted_ind.items()}
-        else:
-            params = in_params.copy()
+        params = self.convert_params_as_list_to_dict(in_params)
 
         if data_new_tested is None:
             data_new_tested = self.data_new_tested
@@ -1987,3 +2025,133 @@ class MovingWindowModel(BayesModel):
         other_errs = list()
 
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
+
+    def render_statsmodels_fit(self):
+        '''
+        Performs fit using statsmodels, since this is a standard linear regression. This model gives us standard errors.
+        :return: 
+        '''
+
+        # this only needs to be imported if it's being used...
+        import statsmodels.formula.api as smf
+
+        name_mapping_positive = {'DOW[T.1]': 'day1_positive_multiplier',
+                                 'DOW[T.2]': 'day2_positive_multiplier',
+                                 'DOW[T.3]': 'day3_positive_multiplier',
+                                 'DOW[T.4]': 'day4_positive_multiplier',
+                                 'DOW[T.5]': 'day5_positive_multiplier',
+                                 'DOW[T.6]': 'day6_positive_multiplier',
+                                 'x': 'positive_slope',
+                                 'Intercept': 'positive_intercept'
+                                 }
+
+        name_mapping_deceased = {'DOW[T.1]': 'day1_deceased_multiplier',
+                                 'DOW[T.2]': 'day2_deceased_multiplier',
+                                 'DOW[T.3]': 'day3_deceased_multiplier',
+                                 'DOW[T.4]': 'day4_deceased_multiplier',
+                                 'DOW[T.5]': 'day5_deceased_multiplier',
+                                 'DOW[T.6]': 'day6_deceased_multiplier',
+                                 'x': 'deceased_slope',
+                                 'Intercept': 'deceased_intercept'
+                                 }
+
+        positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
+        deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
+
+        data_new_tested = self.data_new_tested
+        data_new_deceased = self.data_new_dead
+        moving_window_size = self.moving_window_size
+        cases_bootstrap_indices = self.cases_indices[-moving_window_size:]
+        deaths_bootstrap_indices = self.deaths_indices[-moving_window_size:]
+
+        data = pd.DataFrame([{'x': ind,
+                              # add burn_in to orig_ind since simulations start earlier than the data
+                              'orig_ind': i + self.burn_in,
+                              'new_positive': data_new_tested[i],
+                              'new_deceased': data_new_deceased[i],
+                              } for ind, i in
+                             enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
+
+        # need to use orig_ind to align intercept with run_simulation
+        data['DOW'] = [str(x % 7) for x in data['orig_ind']]
+
+        #####
+        # Do fit on positive curve
+        #####
+
+        model_positive = smf.ols(formula='np.log(new_positive) ~ x + DOW', data=data)
+        results_positive = model_positive.fit()
+        print(results_positive.summary())
+        params_positive = results_positive.params
+        for name1, name2 in name_mapping_positive.items():
+            params_positive[name2] = params_positive.pop(name1)
+        # params_positive['positive_intercept'] = np.exp(params_positive['positive_intercept'])
+        bse_positive = dict(results_positive.bse)
+        for name1, name2 in name_mapping_positive.items():
+            bse_positive[name2] = bse_positive.pop(name1)
+        # bse_positive['positive_intercept'] = bse_positive['positive_intercept'] * \
+        #    params_positive['positive_intercept']  # due to A = 1000; B = 0.01; B * np.exp(A) = np.exp(A + B) - np.exp(A)
+        # also, note that we have already applied hte exponential transofrm on A
+        means_as_list = [params_positive[name] for name in positive_names]
+        sigma_as_list = [bse_positive[name] for name in positive_names]
+        print('sigma_as_list:', sigma_as_list)
+        print('means_as_list:', means_as_list)
+        cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+        self.statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+
+        #####
+        # Do fit on deceased curve
+        #####
+
+        model_deceased = smf.ols(formula='np.log(new_deceased) ~ x + DOW', data=data)
+        results_deceased = model_deceased.fit()
+        print(results_deceased.summary())
+        params_deceased = dict(results_deceased.params)
+        for name1, name2 in name_mapping_deceased.items():
+            params_deceased[name2] = params_deceased.pop(name1)
+        # params_deceased['deceased_intercept'] = np.exp(params_deceased['deceased_intercept'])
+        means_as_list = [params_deceased[name] for name in deceased_names]
+        bse_deceased = dict(results_deceased.bse)
+        for name1, name2 in name_mapping_deceased.items():
+            bse_deceased[name2] = bse_deceased.pop(name1)
+        # bse_deceased['deceased_intercept'] = bse_deceased['deceased_intercept'] * \
+        #     params_deceased['deceased_intercept']  # due to A = 1000; B = 0.01; B * np.exp(A) = np.exp(A + B) - np.exp(A)
+        # also, note that we have already applied hte exponential transofrm on A
+        print(bse_deceased)
+        sigma_as_list = [bse_deceased[name] for name in deceased_names]
+
+        cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+
+        print('sigma_as_list:', sigma_as_list)
+        print('means_as_list:', means_as_list)
+        self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+
+        self.render_and_plot_cred_int(param_type='statsmodels')
+
+    def get_weighted_samples_via_statsmodels(self, n_samples=10000, ):
+
+        weight_sampled_params_positive = self.statsmodels_model_positive.rvs(n_samples)
+        weight_sampled_params_deceased = self.statsmodels_model_deceased.rvs(n_samples)
+
+        positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
+        map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
+        deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
+        map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
+
+        weight_sampled_params = list()
+        for i in range(n_samples):
+            positive_dict = self.convert_params_as_list_to_dict(weight_sampled_params_positive[i],
+                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_positive)
+            deceased_dict = self.convert_params_as_list_to_dict(weight_sampled_params_deceased[i],
+                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_deceased)
+            all_dict = positive_dict.copy()
+            all_dict.update(deceased_dict)
+            all_dict['sigma_positive'] = 1
+            all_dict['sigma_deceased'] = 1
+            for name in self.exp_transform_param_names:
+                all_dict[name] = np.exp(all_dict[name])
+            weight_sampled_params.append(self.convert_params_as_dict_to_list(all_dict.copy()))
+
+        log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
+
+        return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs

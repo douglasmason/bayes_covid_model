@@ -7,10 +7,10 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 # Set up model
 #####
 
-n_bootstraps = 10
-n_likelihood_samples = 10000
+n_bootstraps = 100
+n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
-max_date_str = '2020-05-11'
+max_date_str = '2020-05-12'
 opt_calc = True
 opt_force_plot = False
 
@@ -40,6 +40,7 @@ logarithmic_params = ['positive_intercept',
                       'day5_deceased_multiplier',
                       'day6_deceased_multiplier',
                       ]
+exp_transform_param_names = ['positive_intercept', 'deceased_intercept']
 plot_param_names = ['positive_slope',
                     'positive_intercept',
                     'deceased_slope',
@@ -143,6 +144,8 @@ def run_everything():
                                    logarithmic_params=logarithmic_params,
                                    extra_params=extra_params,
                                    plot_param_names=plot_param_names,
+                                   opt_statsmodels=True,
+                                   exp_transform_param_names=exp_transform_param_names
                                    )
 
 

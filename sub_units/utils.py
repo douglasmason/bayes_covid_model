@@ -28,7 +28,8 @@ class Stopwatch:
 def render_whisker_plot(state_report,
                         param_name='alpha_2',
                         output_filename_format_str='test_boxplot_for_{}_{}.png',
-                        opt_log=False):
+                        opt_log=False,
+                        opt_statsmodels=False):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -75,6 +76,20 @@ def render_whisker_plot(state_report,
                 'fliers': []  # Outliers
             }
         LS_boxes.append(new_box)
+    SM_boxes = list()
+    for i in range(len(small_state_report)):
+        row = pd.DataFrame([small_state_report.iloc[i]])
+        new_box = \
+            {
+                'label': 'Statsmodels',
+                'whislo': row['SM_p5'].values[0],  # Bottom whisker position
+                'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
+                'med': row['SM_p50'].values[0],  # Median         (50th percentile)
+                'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
+                'whishi': row['SM_p95'].values[0],  # Top whisker position
+                'fliers': []  # Outliers
+            }
+        SM_boxes.append(new_box)
     MCMC_boxes = list()
     for i in range(len(small_state_report)):
         row = pd.DataFrame([small_state_report.iloc[i]])
@@ -135,6 +150,10 @@ def render_whisker_plot(state_report,
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
+    ######
+    # Plots with MVN
+    ######
+
     plt.close()
     plt.clf()
     fig, ax = plt.subplots()
@@ -180,15 +199,71 @@ def render_whisker_plot(state_report,
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
+    ######
+    # Plots with Statsmodels
+    ######
+    
+    if opt_statsmodels:
+
+        plt.close()
+        plt.clf()
+        fig, ax = plt.subplots()
+        fig.set_size_inches(8, 10.5)
+    
+        n_groups = 4
+        ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+        ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+        ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+        ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+    
+        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+        plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
+    
+        # fill with colors
+        colors = ['red', 'green', 'blue', 'purple']
+        for ax, color in zip((ax1, ax2, ax3, ax4), colors):
+            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+                for patch in ax[item]:
+                    try:
+                        patch.set_facecolor(color)
+                    except:
+                        pass
+                    patch.set_color(color)
+                    # patch.set_markeredgecolor(color)
+    
+        # add legend
+        custom_lines = [
+            Line2D([0], [0], color="red", lw=4),
+            Line2D([0], [0], color="green", lw=4),
+            Line2D([0], [0], color="blue", lw=4),
+            Line2D([0], [0], color="purple", lw=4),
+        ]
+        plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors'))
+    
+        # increase left margin
+        output_filename = output_filename_format_str.format(param_name, 'with_direct_samples_and_statsmodels')
+        plt.subplots_adjust(left=0.2)
+        if opt_log:
+            plt.xscale('log')
+        plt.savefig(output_filename, dpi=300)
+        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
+
+
 def generate_whisker_plots(state_report,
                            output_filename_format_str=None,
                            param_names=None,
-                           logarithmic_params=list()):
+                           logarithmic_params=list(),
+                           opt_statsmodels=False):
     for param_name in param_names:
         render_whisker_plot(state_report,
                             param_name=param_name,
                             output_filename_format_str=output_filename_format_str,
-                            opt_log=param_name in logarithmic_params)
+                            opt_log=param_name in logarithmic_params,
+                            opt_statsmodels=opt_statsmodels)
 
 
 def generate_state_report(map_state_name_to_model,
@@ -227,6 +302,12 @@ def generate_state_report(map_state_name_to_model,
                 LS_params, _, _, _ = state_model.get_weighted_samples()
             except:
                 LS_params = [0]
+                
+
+            try:
+                SM_params, _, _, _ = state_model.get_weighted_samples_via_statsmodels()
+            except:
+                SM_params = [0]
 
             for param_name in state_model.sorted_names + list(state_model.extra_params.keys()):
                 if param_name in state_model.sorted_names:
@@ -234,6 +315,8 @@ def generate_state_report(map_state_name_to_model,
                                range(len(state_model.bootstrap_params))]
                     LS_vals = [LS_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
                                range(len(LS_params))]
+                    SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                               range(len(SM_params))]
                     MCMC_vals = [
                         state_model.all_random_walk_samples_as_list[i][state_model.map_name_to_sorted_ind[param_name]]
                         for i
@@ -245,6 +328,8 @@ def generate_state_report(map_state_name_to_model,
                         range(len(state_model.bootstrap_params))]
                     LS_vals = [state_model.extra_params[param_name](LS_params[i]) for i
                                in range(len(LS_params))]
+                    SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
+                               in range(len(SM_params))]
                     MCMC_vals = [state_model.extra_params[param_name](state_model.all_random_walk_samples_as_list[i])
                                  for i
                                  in range(len(state_model.all_random_walk_samples_as_list))]
@@ -294,6 +379,21 @@ def generate_state_report(map_state_name_to_model,
                     })
                 except:
                     pass
+                try:
+                    dict_to_add.update({
+                        'statsmodels_mean_with_priors': np.average(SM_vals),
+                        'statsmodels_p50_with_priors': np.percentile(SM_vals, 50),
+                        'statsmodels_p5_with_priors':
+                            np.percentile(SM_vals, 5),
+                        'statsmodels_p95_with_priors':
+                            np.percentile(SM_vals, 95),
+                        'statsmodels_p25_with_priors':
+                            np.percentile(SM_vals, 25),
+                        'statsmodels_p75_with_priors':
+                            np.percentile(SM_vals, 75)
+                    })
+                except:
+                    pass
                 state_report_as_list_of_dicts.append(dict_to_add)
 
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
@@ -308,6 +408,7 @@ def generate_state_report(map_state_name_to_model,
             .replace('_with_priors', '') \
             .replace('likelihood_samples', 'LS') \
             .replace('random_walk', 'MCMC') \
+            .replace('statsmodels', 'SM') \
             .replace('__', '_')
         new_cols.append(new_col)
     state_report.columns = new_cols
@@ -322,10 +423,10 @@ def run_everything(run_states,
                    sorted_init_condit_names=None,
                    sorted_param_names=None,
                    extra_params=None,
-                   state_models_filename=None,
                    state_report_filename=None,
                    logarithmic_params=list(),
                    plot_param_names=None,
+                   opt_statsmodels=False,
                    **kwargs):
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
     global map_state_name_to_model, state_report
@@ -363,4 +464,5 @@ def run_everything(run_states,
         param_names = sorted_init_condit_names + sorted_param_names + list(extra_params.keys())
         filename = path.join(plot_subfolder, f'boxplot_for_{{}}_{{}}.png')
         generate_whisker_plots(state_report, output_filename_format_str=filename,
-                               param_names=plot_param_names, logarithmic_params=logarithmic_params)
+                               param_names=plot_param_names, logarithmic_params=logarithmic_params,
+                               opt_statsmodels=opt_statsmodels)
