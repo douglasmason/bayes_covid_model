@@ -256,7 +256,7 @@ class MovingWindowModel(BayesModel):
         
         self.plot_all_solutions(key='statsmodels')
 
-    def get_weighted_samples_via_statsmodels(self, n_samples=10000, ):
+    def get_weighted_samples_via_statsmodels(self, n_samples=1000, ):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
