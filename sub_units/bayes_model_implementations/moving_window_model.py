@@ -249,6 +249,7 @@ class MovingWindowModel(BayesModel):
         self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
         self.render_and_plot_cred_int(param_type='statsmodels')
+        self.plot_all_solutions(key='statsmodels')
 
     def get_weighted_samples_via_statsmodels(self, n_samples=10000, ):
 

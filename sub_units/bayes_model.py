@@ -501,6 +501,9 @@ class BayesModel(ABC):
         elif key == 'MVN_fit':
             params, _, _, log_probs = self.get_weighted_samples_via_MVN()
             param_inds_to_plot = list(range(len(params)))
+        elif key == 'statsmodels':
+            params, _, _, log_probs = self.get_weighted_samples_via_statsmodels()
+            param_inds_to_plot = list(range(len(params)))
         else:
             raise ValueError
 
@@ -527,7 +530,7 @@ class BayesModel(ABC):
             return
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
-        sol = self.bootstrap_sols[0]
+        sol = sols_to_plot[0]
         fig, ax = plt.subplots()
         min_plot_pt = self.burn_in
         max_plot_pt = min(len(sol[0]), len(self.series_data) + 14 + self.burn_in)
@@ -573,11 +576,15 @@ class BayesModel(ABC):
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        color="red", alpha=0.3)
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+                        )
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        color="red", alpha=0.6)
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=.6),
+                        edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
+                        )
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                 color="darkred")
 
@@ -594,11 +601,15 @@ class BayesModel(ABC):
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        color="green", alpha=0.3)
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+        )
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
-                        color="green", alpha=0.6)
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+        )
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                 color="darkgreen")
 
@@ -639,7 +650,7 @@ class BayesModel(ABC):
         sols_to_plot = [sols_to_plot[i] for i in np.random.choice(len(sols_to_plot), n_sols_to_plot, replace=False)]
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
-        sol = self.bootstrap_sols[0]
+        sol = sols_to_plot[0]
         n_sols = len(sols_to_plot)
         fig, ax = plt.subplots()
         min_plot_pt = self.burn_in
