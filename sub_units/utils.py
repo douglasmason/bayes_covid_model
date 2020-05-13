@@ -24,6 +24,88 @@ class Stopwatch:
     def reset(self):
         self.time0 = get_time()
 
+def render_whisker_plot_simplified(state_report,
+                        param_name='alpha_2',
+                        output_filename_format_str='test_boxplot_for_{}_{}.png',
+                        opt_log=False,
+                        opt_statsmodels=False):
+    '''
+    Plot all-state box/whiskers for given apram_name
+    :param state_report: full state report as pandas dataframe
+    :param param_name: param name as string
+    :param output_filename_format_str: format string for the output filename, with two open slots
+    :param opt_log: boolean for log-transform x-axis
+    :return: None, it saves plots to files
+    '''
+    tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == param_name]
+    tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['SM_p50'])
+
+    small_state_report = state_report.iloc[tmp_ind]
+    small_state_report.to_csv('state_report_{}.csv'.format(param_name))
+
+    latex_str = small_state_report[['SM_p5', 'SM_p50', 'SM_p95']].to_latex(index=False, float_format="{:0.4f}".format)
+    print(param_name)
+    print(latex_str)
+    
+    SM_boxes = list()
+    for i in range(len(small_state_report)):
+        row = pd.DataFrame([small_state_report.iloc[i]])
+        new_box = \
+            {
+                'label': 'Statsmodels',
+                'whislo': row['SM_p5'].values[0],  # Bottom whisker position
+                'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
+                'med': row['SM_p50'].values[0],  # Median         (50th percentile)
+                'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
+                'whishi': row['SM_p95'].values[0],  # Top whisker position
+                'fliers': []  # Outliers
+            }
+        SM_boxes.append(new_box)
+        
+    ######
+    # Plots with Statsmodels
+    ######
+
+    if opt_statsmodels:
+
+        plt.close()
+        plt.clf()
+        fig, ax = plt.subplots()
+        fig.set_size_inches(8, 10.5)
+
+        n_groups = 1
+        ax1 = ax.bxp(SM_boxes, showfliers=False, positions=range(1, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+
+        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+        plt.yticks(range(1, len(SM_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
+
+        # fill with colors
+        colors = ['blue']
+        for ax, color in zip((ax1, ), colors):
+            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+                for patch in ax[item]:
+                    try:
+                        patch.set_facecolor(color)
+                    except:
+                        pass
+                    patch.set_color(color)
+                    # patch.set_markeredgecolor(color)
+
+        # add legend
+        # custom_lines = [
+        #     Line2D([0], [0], color="blue", lw=4),
+        # ]
+        # plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors'))
+
+        # increase left margin
+        output_filename = output_filename_format_str.format(param_name, '_statsmodels')
+        plt.subplots_adjust(left=0.2)
+        if opt_log:
+            plt.xscale('log')
+        plt.savefig(output_filename, dpi=300)
+        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
+
 
 def render_whisker_plot(state_report,
                         param_name='alpha_2',
@@ -144,7 +226,7 @@ def render_whisker_plot(state_report,
     # increase left margin
     output_filename = output_filename_format_str.format(param_name, 'without_direct_samples')
     plt.subplots_adjust(left=0.2)
-    
+
     if opt_log:
         plt.xscale('log')
     plt.savefig(output_filename, dpi=300)
@@ -198,18 +280,17 @@ def render_whisker_plot(state_report,
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
-
     ######
     # Plots with Statsmodels
     ######
-    
+
     if opt_statsmodels:
 
         plt.close()
         plt.clf()
         fig, ax = plt.subplots()
         fig.set_size_inches(8, 10.5)
-    
+
         n_groups = 4
         ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
                      widths=1.2 / n_groups, patch_artist=True, vert=False)
@@ -219,10 +300,10 @@ def render_whisker_plot(state_report,
                      widths=1.2 / n_groups, patch_artist=True, vert=False)
         ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
                      widths=1.2 / n_groups, patch_artist=True, vert=False)
-    
+
         # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
         plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-    
+
         # fill with colors
         colors = ['red', 'green', 'blue', 'purple']
         for ax, color in zip((ax1, ax2, ax3, ax4), colors):
@@ -234,7 +315,7 @@ def render_whisker_plot(state_report,
                         pass
                     patch.set_color(color)
                     # patch.set_markeredgecolor(color)
-    
+
         # add legend
         custom_lines = [
             Line2D([0], [0], color="red", lw=4),
@@ -243,7 +324,7 @@ def render_whisker_plot(state_report,
             Line2D([0], [0], color="purple", lw=4),
         ]
         plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors'))
-    
+
         # increase left margin
         output_filename = output_filename_format_str.format(param_name, 'with_direct_samples_and_statsmodels')
         plt.subplots_adjust(left=0.2)
@@ -253,21 +334,12 @@ def render_whisker_plot(state_report,
         # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
-def generate_whisker_plots(state_report,
-                           output_filename_format_str=None,
-                           param_names=None,
-                           logarithmic_params=list(),
-                           opt_statsmodels=False):
-    for param_name in param_names:
-        render_whisker_plot(state_report,
-                            param_name=param_name,
-                            output_filename_format_str=output_filename_format_str,
-                            opt_log=param_name in logarithmic_params,
-                            opt_statsmodels=opt_statsmodels)
 
 
 def generate_state_report(map_state_name_to_model,
-                          state_report_filename=None):
+                          state_report_filename=None,
+                          report_names=None):
+    
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -277,67 +349,76 @@ def generate_state_report(map_state_name_to_model,
             print(f'Skipping {state}!')
             continue
 
-        # try:
-        #     frac_bootstraps_used_after_prior = sum(state_model.bootstrap_weights) / state_model.n_bootstraps
-        # except:
-        #     frac_bootstraps_used_after_prior = -1
-
-        # print(
-        #     f'\n----\nResults for {state} ({state_ind} of {len(map_state_name_to_model)}, pop. {load_data.map_state_to_population[state]:,}, {frac_bootstraps_used_after_prior * 100:.4g} bootstraps used after prior applied)...\n----')
-
-        try:
-            _ = [
-                state_model.bootstrap_params,
-                state_model.all_random_walk_samples_as_list,
-                # state_model.all_samples_as_list,
-            ]
-            print('got all vals to retrieve')
-        except:
-            print('Not all vals to retrieve present!')
-            continue
-
         if state_model is not None:
 
+            if report_names is None:
+                report_names = state_model.sorted_names + list(state_model.extra_params.keys())
+                
             try:
                 LS_params, _, _, _ = state_model.get_weighted_samples()
             except:
                 LS_params = [0]
-                
 
             try:
                 SM_params, _, _, _ = state_model.get_weighted_samples_via_statsmodels()
             except:
                 SM_params = [0]
 
-            for param_name in state_model.sorted_names + list(state_model.extra_params.keys()):
+            for param_name in report_names:
                 if param_name in state_model.sorted_names:
-                    BS_vals = [state_model.bootstrap_params[i][param_name] for i in
-                               range(len(state_model.bootstrap_params))]
-                    LS_vals = [LS_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                               range(len(LS_params))]
-                    SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                               range(len(SM_params))]
-                    MCMC_vals = [
-                        state_model.all_random_walk_samples_as_list[i][state_model.map_name_to_sorted_ind[param_name]]
-                        for i
-                        in
-                        range(len(state_model.all_random_walk_samples_as_list))]
+                    try:
+                        BS_vals = [state_model.bootstrap_params[i][param_name] for i in
+                                   range(len(state_model.bootstrap_params))]
+                    except:
+                        pass
+                    try:
+                        LS_vals = [LS_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                                   range(len(LS_params))]
+                    except:
+                        pass
+                    try:
+                        SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                                   range(len(SM_params))]
+                    except:
+                        pass
+                    try:
+                        MCMC_vals = [
+                            state_model.all_random_walk_samples_as_list[i][
+                                state_model.map_name_to_sorted_ind[param_name]]
+                            for i
+                            in
+                            range(len(state_model.all_random_walk_samples_as_list))]
+                    except:
+                        pass
                 else:
-                    BS_vals = [state_model.extra_params[param_name](
-                        [state_model.bootstrap_params[i][key] for key in state_model.sorted_names]) for i in
-                        range(len(state_model.bootstrap_params))]
-                    LS_vals = [state_model.extra_params[param_name](LS_params[i]) for i
-                               in range(len(LS_params))]
-                    SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
-                               in range(len(SM_params))]
-                    MCMC_vals = [state_model.extra_params[param_name](state_model.all_random_walk_samples_as_list[i])
-                                 for i
-                                 in range(len(state_model.all_random_walk_samples_as_list))]
+                    try:
+                        BS_vals = [state_model.extra_params[param_name](
+                            [state_model.bootstrap_params[i][key] for key in state_model.sorted_names]) for i in
+                            range(len(state_model.bootstrap_params))]
+                    except:
+                        pass
+                    try:
+                        LS_vals = [state_model.extra_params[param_name](LS_params[i]) for i
+                                   in range(len(LS_params))]
+                    except:
+                        pass
+                    try:
+                        SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
+                                   in range(len(SM_params))]
+                    except:
+                        pass
+                    try:
+                        MCMC_vals = [
+                            state_model.extra_params[param_name](state_model.all_random_walk_samples_as_list[i])
+                            for i
+                            in range(len(state_model.all_random_walk_samples_as_list))]
+                    except:
+                        pass
 
                 dict_to_add = {'state': state,
                                'param': param_name
                                }
-
+                
                 try:
                     dict_to_add.update({
                         'bootstrap_mean_with_priors': np.average(BS_vals),
@@ -382,6 +463,7 @@ def generate_state_report(map_state_name_to_model,
                 try:
                     dict_to_add.update({
                         'statsmodels_mean_with_priors': np.average(SM_vals),
+                        'statsmodels_std_err_with_priors': np.std(SM_vals),
                         'statsmodels_p50_with_priors': np.percentile(SM_vals, 50),
                         'statsmodels_p5_with_priors':
                             np.percentile(SM_vals, 5),
@@ -399,6 +481,8 @@ def generate_state_report(map_state_name_to_model,
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
     print('Saving state report to {}'.format(state_report_filename))
     joblib.dump(state_report, state_report_filename)
+    print('Saving state report to {}'.format(state_report_filename.replace('joblib','csv')))
+    joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib','csv'))
     n_states = len(set(state_report['state']))
     print(n_states)
 
@@ -423,10 +507,10 @@ def run_everything(run_states,
                    sorted_init_condit_names=None,
                    sorted_param_names=None,
                    extra_params=None,
-                   state_report_filename=None,
                    logarithmic_params=list(),
                    plot_param_names=None,
                    opt_statsmodels=False,
+                   opt_simplified=False,
                    **kwargs):
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
     global map_state_name_to_model, state_report
@@ -448,21 +532,45 @@ def run_everything(run_states,
                                       extra_params=extra_params,
                                       logarithmic_params=logarithmic_params,
                                       plot_param_names=plot_param_names,
+                                      opt_simplified=opt_simplified,
                                       **kwargs
                                       )
-            state_model.run_fits()
+            if opt_simplified:
+                state_model.run_fits_simplified()
+            else:
+                state_model.run_fits()
             map_state_name_to_model[state] = state_model
 
         else:
             print("Error with state", state)
             continue
-
-        state_report = generate_state_report(map_state_name_to_model,
-                                             state_report_filename=state_report_filename)
-
+            
         plot_subfolder = state_model.plot_subfolder
-        param_names = sorted_init_condit_names + sorted_param_names + list(extra_params.keys())
-        filename = path.join(plot_subfolder, f'boxplot_for_{{}}_{{}}.png')
-        generate_whisker_plots(state_report, output_filename_format_str=filename,
-                               param_names=plot_param_names, logarithmic_params=logarithmic_params,
-                               opt_statsmodels=opt_statsmodels)
+        if opt_simplified:
+            state_report_filename = path.join(plot_subfolder, f'simplified_state_report.csv')
+            filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
+        else:
+            state_report_filename = path.join(plot_subfolder, f'state_report_for_{{}}_{{}}.csv')
+            filename_format_str = path.join(plot_subfolder, f'boxplot_for_{{}}_{{}}.png')
+        
+        if opt_simplified:
+            state_report = generate_state_report(map_state_name_to_model,
+                                                 state_report_filename=state_report_filename,
+                                                 report_names=plot_param_names)
+        else:
+            state_report = generate_state_report(map_state_name_to_model,
+                                                 state_report_filename=state_report_filename)
+
+        for param_name in plot_param_names:
+            if opt_simplified:
+                render_whisker_plot_simplified(state_report,
+                                               param_name=param_name,
+                                               output_filename_format_str=filename_format_str,
+                                               opt_log=param_name in logarithmic_params,
+                                               opt_statsmodels=opt_statsmodels)
+            else:
+                render_whisker_plot(state_report,
+                                    param_name=param_name,
+                                    output_filename_format_str=filename_format_str,
+                                    opt_log=param_name in logarithmic_params,
+                                    opt_statsmodels=opt_statsmodels)

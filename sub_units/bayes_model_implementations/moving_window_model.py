@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import scipy as sp
 
+
 class MovingWindowModel(BayesModel):
 
     # add model_type_str to kwargs when instantiating super
@@ -195,7 +196,8 @@ class MovingWindowModel(BayesModel):
                              enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
 
         # need to use orig_ind to align intercept with run_simulation
-        data['DOW'] = [str(x % 7) for x in data['orig_ind']]
+        ind_offset = 0  # had to hand-tune this to zero
+        data['DOW'] = [str((x + ind_offset) % 7) for x in data['orig_ind']]
 
         #####
         # Do fit on positive curve
@@ -252,6 +254,11 @@ class MovingWindowModel(BayesModel):
         self.plot_all_solutions(key='statsmodels')
 
     def get_weighted_samples_via_statsmodels(self, n_samples=10000, ):
+        '''
+        Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
+        :param n_samples: how many samples to re-sample from the list of likelihood samples
+        :return: tuple of weight_sampled_params, params, weights, log_probs
+        '''
 
         weight_sampled_params_positive = self.statsmodels_model_positive.rvs(n_samples)
         weight_sampled_params_deceased = self.statsmodels_model_deceased.rvs(n_samples)
@@ -271,10 +278,19 @@ class MovingWindowModel(BayesModel):
             all_dict.update(deceased_dict)
             all_dict['sigma_positive'] = 1
             all_dict['sigma_deceased'] = 1
-            for name in self.exp_transform_param_names:
+            for name in self.logarithmic_params:
                 all_dict[name] = np.exp(all_dict[name])
             weight_sampled_params.append(self.convert_params_as_dict_to_list(all_dict.copy()))
 
         log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
 
         return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
+
+    def run_fits_simplified(self):
+        '''
+        Builder that goes through each method in its proper sequence
+        :return: None
+        '''
+
+        # Do statsmodels. Yes. It's THAT simplified.
+        self.render_statsmodels_fit()
