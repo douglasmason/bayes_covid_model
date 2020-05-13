@@ -22,4 +22,4 @@ Model parameter estimates for the current growth rate of COVID- 19 for each of 5
 
 [5] Eduardo Massad. An introduction to infectious diseases modelling. by e. vyn- nycky and r. white (400 pp.; Â£29.95; isbn 978-0-19-856576-5 pb). oxford: Oxford university press, 2010. Epidemiology and Infection, 139(7):1126– 1126, 2011.
 
-This has not been peer reviewed.
+This work has not been peer reviewed.
