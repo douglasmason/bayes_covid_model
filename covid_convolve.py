@@ -60,32 +60,7 @@ curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
                     'alpha_2': (-1, 2),
                     'sigma_positive': (0, 100),
                     'sigma_deceased': (0, 100),
-                    'contagious_to_positive_delay': (-10
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     
-                                                     0, 100),
+                    'contagious_to_positive_delay': (-100, 100),
                     #'contagious_to_positive_width': (0, 14),
                     'contagious_to_deceased_delay': (-100, 100),
                     #'contagious_to_deceased_width': (0, 14),
