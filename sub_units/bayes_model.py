@@ -29,6 +29,7 @@ class ApproxType(Enum):
     likelihood_sample = 'likelihood_sample'
     MVN_fit = 'MVN_fit'
     MCMC = 'MCMC'
+    statsmodels = 'statsmodels'
 
     def __str__(self):
         return str(self.value)

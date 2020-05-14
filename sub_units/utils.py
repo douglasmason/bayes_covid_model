@@ -115,7 +115,8 @@ def render_whisker_plot(state_report,
                         param_name='alpha_2',
                         output_filename_format_str='test_boxplot_for_{}_{}.png',
                         opt_log=False,
-                        opt_statsmodels=False):
+                        opt_statsmodels=False,
+                        boxwidth=0.7):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -184,11 +185,11 @@ def render_whisker_plot(state_report,
 
     n_groups = 2
     ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+                 widths=boxwidth, patch_artist=True, vert=False)
     # ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
     #              widths=1.2 / n_groups, patch_artist=True, vert=False)
     ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(2, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+                 widths=boxwidth, patch_artist=True, vert=False)
 
     # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
     plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
@@ -233,11 +234,11 @@ def render_whisker_plot(state_report,
 
     n_groups = 3
     ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+                 widths=boxwidth, patch_artist=True, vert=False)
     ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+                 widths=boxwidth, patch_artist=True, vert=False)
     ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=1.2 / n_groups, patch_artist=True, vert=False)
+                 widths=boxwidth, patch_artist=True, vert=False)
 
     # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
     plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
@@ -298,13 +299,13 @@ def render_whisker_plot(state_report,
 
         n_groups = 4
         ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+                     widths=boxwidth, patch_artist=True, vert=False)
         ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+                     widths=boxwidth, patch_artist=True, vert=False)
         ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+                     widths=boxwidth, patch_artist=True, vert=False)
         ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+                     widths=boxwidth, patch_artist=True, vert=False)
 
         # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
         plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
