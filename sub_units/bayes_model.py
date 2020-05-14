@@ -146,7 +146,7 @@ class BayesModel(ABC):
             self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{model_type_name}_statsmodels_only'
         else:
             self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{model_type_name}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
-        
+
         self.plot_subfolder = path.join('state_plots', self.plot_subfolder)
         self.plot_filename_base = path.join(self.plot_subfolder,
                                             state_name.lower().replace(' ', '_').replace('.', ''))
@@ -499,7 +499,7 @@ class BayesModel(ABC):
         full_output_filename2 = path.join(self.plot_filename_base, f'{key}_solutions_filled_quantiles.png')
         if path.exists(full_output_filename) and path.exists(full_output_filename2) and not self.opt_force_plot:
             return
-        
+
         if key == 'bootstrap':
             params = self.bootstrap_params
             param_inds_to_plot = list(range(len(params)))
@@ -525,7 +525,7 @@ class BayesModel(ABC):
         param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
                                               replace=False)
         sols_to_plot = [self.run_simulation(in_params=params[param_ind]) for param_ind in tqdm(param_inds_to_plot)]
-        
+
         self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
                                                                plot_filename_filename=f'{key}_solutions_discrete.png')
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,
@@ -618,13 +618,13 @@ class BayesModel(ABC):
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.3),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-        )
+                        )
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.6),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-        )
+                        )
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                 color="darkgreen")
 
@@ -1396,9 +1396,9 @@ class BayesModel(ABC):
                      np.isfinite(self.all_propensities_as_list[i]) and \
                      self.all_propensities_as_list[i] > 0]
 
-        if len(valid_ind)==0:
+        if len(valid_ind) == 0:
             return [], [], [], []
-        
+
         propensities = np.array(self.all_propensities_as_list)[valid_ind]
         log_probs = np.array(self.all_log_probs_as_list)[valid_ind]
         params = np.array(self.all_samples_as_list)[valid_ind]
@@ -1433,8 +1433,8 @@ class BayesModel(ABC):
             n_samples = len(params)
 
         valid_ind = [i for i, x in enumerate(weights) if np.isfinite(x)]
-        
-        if len(valid_ind)==0:
+
+        if len(valid_ind) == 0:
             return [], [], [], []
 
         sampled_valid_inds = np.random.choice(len(valid_ind), n_samples, p=np.array(weights)[valid_ind], replace=True)
@@ -1562,93 +1562,6 @@ class BayesModel(ABC):
             self.random_walk_means_without_priors = map_name_to_mean_without_prior
             self.random_walk_medians_without_priors = map_name_to_median_without_prior
 
-        ####
-        # Now apply priors
-        ####
-
-        if False:
-            print('\n----\nWhat % of samples do we use after applying priors?')
-            print(f'{sum(prior_weights) / len(prior_weights) * 100:.4g}%')
-            print('----')
-    
-            map_name_to_mean_with_prior = None
-            map_name_to_distro_with_prior = None
-            cred_int_with_priors = None
-            inner_cred_int_with_priors = None
-            map_name_to_mean_with_prior = None
-            map_name_to_median_with_prior = None
-    
-            if sum(prior_weights) > 0:
-    
-                map_name_to_distro_with_prior = dict()
-                for param_ind, param_name in enumerate(self.sorted_names):
-                    param_distro = [params[i][param_ind] for i in range(len(params)) if
-                                    prior_weights[i] > 0.5]
-                    map_name_to_distro_with_prior[param_name] = np.array(
-                        [x for x in param_distro if np.isfinite(x) and not np.isnan(x)])
-                for param_name, param_func in self.extra_params.items():
-                    param_distro = [param_func(param_list) for param_list in params if
-                                    np.isfinite(param_func(param_list)) and not np.isnan(param_func(param_list))]
-                    map_name_to_distro_with_prior[param_name] = np.array(param_distro)
-    
-                print('\n----\nMeans/Medians with Priors Applied\n----')
-                map_name_to_mean_with_prior = dict()
-                map_name_to_median_with_prior = dict()
-                for name in calc_param_names:
-                    print(f'{name}: {map_name_to_distro_with_prior[name].mean()}')
-                    map_name_to_mean_with_prior[name] = map_name_to_distro_with_prior[name].mean()
-                    map_name_to_median_with_prior[name] = np.percentile(map_name_to_distro_with_prior[name], 50)
-    
-                # if we want floating-point weights, have to find the common multiple and do discrete sampling
-                # for example, this commented line doesn't change the HDP values, since it just duplicates all values
-                # data = az.convert_to_inference_data({key: np.array(list(val) + list(val)) for key,val in map_name_to_distro.items()})
-    
-                data = az.convert_to_inference_data(map_name_to_distro_with_prior)
-    
-                full_output_filename = path.join(self.plot_filename_base,
-                                                 '{}_param_distro_with_priors.png'.format(param_type))
-                if not path.exists(full_output_filename) or self.opt_force_plot:
-                    try:
-                        print('Printing...', full_output_filename)
-                        az.plot_posterior(data,
-                                          round_to=3,
-                                          credible_interval=0.9,
-                                          group='posterior',
-                                          var_names=self.plot_param_names)  # show=True allows for plotting within IDE
-                        plt.savefig(full_output_filename, dpi=self.plot_dpi)
-                        plt.close()
-                    except:
-                        print(f'Error plotting {param_type} for ', full_output_filename)
-    
-                cred_int_with_priors = dict()
-                inner_cred_int_with_priors = dict()
-                print('\n----\nHighest Probability Density Intervals with Priors Applied\n----')
-                for name in calc_param_names:
-                    cred_int = tuple(az.hpd(data.posterior[name].T, credible_interval=0.9)[0])
-                    cred_int_with_priors[name] = cred_int
-                    print(f'Param {name} 90% HPD: ({cred_int[0]:.4g}, {cred_int[1]:.4g})')
-                    inner_cred_int = tuple(az.hpd(data.posterior[name].T, credible_interval=0.5)[0])
-                    inner_cred_int_with_priors[name] = inner_cred_int
-
-            if param_type == 'bootstrap':
-                self.map_param_name_to_bootstrap_distro_with_prior = map_name_to_distro_with_prior
-                self.bootstrap_cred_int_with_priors = cred_int_with_priors
-                self.bootstrap_inner_cred_int_with_priors = inner_cred_int_with_priors
-                self.bootstrap_means_with_priors = map_name_to_mean_with_prior
-                self.bootstrap_medians_with_priors = map_name_to_median_with_prior
-            if param_type == 'likelihood_sample':
-                self.map_param_name_to_likelihood_sample_distro_with_prior = map_name_to_distro_with_prior
-                self.likelihood_sample_cred_int_with_priors = cred_int_with_priors
-                self.likelihood_sample_inner_cred_int_with_priors = inner_cred_int_with_priors
-                self.likelihood_sample_means_with_priors = map_name_to_mean_with_prior
-                self.likelihood_sample_medians_with_priors = map_name_to_median_with_prior
-            if param_type == 'random_walk':
-                self.map_param_name_to_random_walk_distro_with_prior = map_name_to_distro_with_prior
-                self.random_walk_cred_int_with_priors = cred_int_with_priors
-                self.random_walk_inner_cred_int_with_priors = inner_cred_int_with_priors
-                self.random_walk_means_with_priors = map_name_to_mean_with_prior
-                self.random_walk_medians_with_priors = map_name_to_median_with_prior
-
     def run_fits(self):
         '''
         Builder that goes through each method in its proper sequence
@@ -1668,27 +1581,27 @@ class BayesModel(ABC):
         try:
             # Training Data Bootstraps
             self.render_bootstraps()
-    
+
             # Plot all-data solution 
             self.solve_and_plot_solution(in_params=self.all_data_params,
                                          title='All-Data Solution',
                                          plot_filename_filename='all_data_solution.png')
-    
+
             # Plot example solutions from bootstrap
             bootstrap_selection = np.random.choice(self.bootstrap_params)
             self.solve_and_plot_solution(in_params=bootstrap_selection,
                                          title='Random Bootstrap Selection',
                                          plot_filename_filename='random_bootstrap_selection.png')
-    
+
             # Plot all bootstraps
             self.plot_all_solutions(key='bootstrap')
-            self.plot_all_solutions(key='bootstrap_with_priors')
-    
+            # self.plot_all_solutions(key='bootstrap_with_priors')
+
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(param_type='bootstrap')
         except:
             print('Error calculating and rendering bootstraps')
-            
+
         try:
             # Do random walks around the overall fit
             # print('\nSampling around MLE with wide sigma')
@@ -1703,7 +1616,7 @@ class BayesModel(ABC):
             # print('Sampling around MLE with ultra-narrow sigma')
             # self.MCMC(self.all_data_params, opt_walk=False,
             #           sample_shape_param=1000, which_distro=WhichDistro.norm)
-    
+
             print('Sampling around MLE with medium exponential parameter')
             self.MCMC(self.all_data_params, opt_walk=False,
                       sample_shape_param=100, which_distro=WhichDistro.laplace)
@@ -1713,10 +1626,10 @@ class BayesModel(ABC):
             # print('Sampling around MLE with ultra-narrow exponential parameter')
             # self.MCMC(self.all_data_params, opt_walk=False,
             #           sample_shape_param=1000, which_distro=WhichDistro.laplace)
-    
+
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(param_type='likelihood_sample')
-    
+
             # Plot all solutions...
             self.plot_all_solutions(key='likelihood_samples')
         except:
@@ -1737,13 +1650,13 @@ class BayesModel(ABC):
             # bootstrap_selection = np.random.choice(self.n_bootstraps)
             # starting_point = self.bootstrap_params[bootstrap_selection]
             self.MCMC(self.all_data_params, opt_walk=True)
-    
+
             # print('Sampling via random walk NUTS, starting with MLE')
             # self.NUTS(self.all_data_params)
-    
+
             # Plot all solutions...
             self.plot_all_solutions(key='random_walk')
-    
+
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(param_type='random_walk')
         except:
