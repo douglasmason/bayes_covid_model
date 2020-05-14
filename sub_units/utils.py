@@ -11,6 +11,9 @@ plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
 from time import time as get_time
 from os import path
+import os
+
+from yattag import Doc
 
 
 class Stopwatch:
@@ -24,11 +27,12 @@ class Stopwatch:
     def reset(self):
         self.time0 = get_time()
 
+
 def render_whisker_plot_simplified(state_report,
-                        param_name='alpha_2',
-                        output_filename_format_str='test_boxplot_for_{}_{}.png',
-                        opt_log=False,
-                        opt_statsmodels=False):
+                                   param_name='alpha_2',
+                                   output_filename_format_str='test_boxplot_for_{}_{}.png',
+                                   opt_log=False,
+                                   opt_statsmodels=False):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -46,7 +50,7 @@ def render_whisker_plot_simplified(state_report,
     latex_str = small_state_report[['SM_p5', 'SM_p50', 'SM_p95']].to_latex(index=False, float_format="{:0.4f}".format)
     print(param_name)
     print(latex_str)
-    
+
     SM_boxes = list()
     for i in range(len(small_state_report)):
         row = pd.DataFrame([small_state_report.iloc[i]])
@@ -61,7 +65,7 @@ def render_whisker_plot_simplified(state_report,
                 'fliers': []  # Outliers
             }
         SM_boxes.append(new_box)
-        
+
     ######
     # Plots with Statsmodels
     ######
@@ -82,7 +86,7 @@ def render_whisker_plot_simplified(state_report,
 
         # fill with colors
         colors = ['blue']
-        for ax, color in zip((ax1, ), colors):
+        for ax, color in zip((ax1,), colors):
             for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
                 for patch in ax[item]:
                     try:
@@ -158,20 +162,6 @@ def render_whisker_plot(state_report,
                 'fliers': []  # Outliers
             }
         LS_boxes.append(new_box)
-    SM_boxes = list()
-    for i in range(len(small_state_report)):
-        row = pd.DataFrame([small_state_report.iloc[i]])
-        new_box = \
-            {
-                'label': 'Statsmodels',
-                'whislo': row['SM_p5'].values[0],  # Bottom whisker position
-                'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
-                'med': row['SM_p50'].values[0],  # Median         (50th percentile)
-                'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
-                'whishi': row['SM_p95'].values[0],  # Top whisker position
-                'fliers': []  # Outliers
-            }
-        SM_boxes.append(new_box)
     MCMC_boxes = list()
     for i in range(len(small_state_report)):
         row = pd.DataFrame([small_state_report.iloc[i]])
@@ -286,6 +276,21 @@ def render_whisker_plot(state_report,
 
     if opt_statsmodels:
 
+        SM_boxes = list()
+        for i in range(len(small_state_report)):
+            row = pd.DataFrame([small_state_report.iloc[i]])
+            new_box = \
+                {
+                    'label': 'Statsmodels',
+                    'whislo': row['SM_p5'].values[0],  # Bottom whisker position
+                    'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
+                    'med': row['SM_p50'].values[0],  # Median         (50th percentile)
+                    'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
+                    'whishi': row['SM_p95'].values[0],  # Top whisker position
+                    'fliers': []  # Outliers
+                }
+            SM_boxes.append(new_box)
+            
         plt.close()
         plt.clf()
         fig, ax = plt.subplots()
@@ -334,12 +339,9 @@ def render_whisker_plot(state_report,
         # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
-
-
 def generate_state_report(map_state_name_to_model,
                           state_report_filename=None,
                           report_names=None):
-    
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -353,7 +355,7 @@ def generate_state_report(map_state_name_to_model,
 
             if report_names is None:
                 report_names = state_model.sorted_names + list(state_model.extra_params.keys())
-                
+
             try:
                 LS_params, _, _, _ = state_model.get_weighted_samples()
             except:
@@ -418,7 +420,7 @@ def generate_state_report(map_state_name_to_model,
                 dict_to_add = {'state': state,
                                'param': param_name
                                }
-                
+
                 try:
                     dict_to_add.update({
                         'bootstrap_mean_with_priors': np.average(BS_vals),
@@ -481,8 +483,8 @@ def generate_state_report(map_state_name_to_model,
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
     print('Saving state report to {}'.format(state_report_filename))
     joblib.dump(state_report, state_report_filename)
-    print('Saving state report to {}'.format(state_report_filename.replace('joblib','csv')))
-    joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib','csv'))
+    print('Saving state report to {}'.format(state_report_filename.replace('joblib', 'csv')))
+    joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
     n_states = len(set(state_report['state']))
     print(n_states)
 
@@ -544,38 +546,129 @@ def run_everything(run_states,
         else:
             print("Error with state", state)
             continue
-            
+
         plot_subfolder = state_model.plot_subfolder
+
         if opt_simplified:
             state_report_filename = path.join(plot_subfolder, f'simplified_state_report.csv')
             filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
-        else:
-            state_report_filename = path.join(plot_subfolder, f'state_report_for_{{}}_{{}}.csv')
-            filename_format_str = path.join(plot_subfolder, f'boxplot_for_{{}}_{{}}.png')
-        
-        if opt_simplified:
             if state_ind % 10 == 0 or state_ind == len(run_states) - 1:
                 print('Reporting every 10th state and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names)
-        else:
-            state_report = generate_state_report(map_state_name_to_model,
-                                                 state_report_filename=state_report_filename)
-
-        for param_name in plot_param_names:
-            if opt_simplified:
-                
-                if state_ind % 10 == 0 or state_ind == len(run_states) - 1:
-                    print('Plotting whisker plot every 10th state and at the end')
+                for param_name in state_model.plot_param_names:
                     render_whisker_plot_simplified(state_report,
                                                    param_name=param_name,
                                                    output_filename_format_str=filename_format_str,
                                                    opt_log=param_name in logarithmic_params,
                                                    opt_statsmodels=opt_statsmodels)
-            else:
+        else:
+            state_report_filename = path.join(plot_subfolder, 'state_report.csv')
+            filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
+            state_report = generate_state_report(map_state_name_to_model,
+                                                 state_report_filename=state_report_filename)
+            for param_name in state_model.plot_param_names:
                 render_whisker_plot(state_report,
                                     param_name=param_name,
                                     output_filename_format_str=filename_format_str,
                                     opt_log=param_name in logarithmic_params,
                                     opt_statsmodels=opt_statsmodels)
+
+def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url, full_report_filename, list_of_figures, list_of_figures_full_report):
+    if not path.exists(plot_browser_dir):
+        os.mkdir(plot_browser_dir)
+
+    alphabetical_states = sorted(load_data.map_state_to_population.keys())
+    alphabetical_states.remove('total')
+    alphabetical_states = ['total'] + alphabetical_states
+
+    map_state_to_html = dict()
+    for state in alphabetical_states:
+
+        state_lc = state.lower().replace(' ', '_')
+        doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
+
+        doc.asis('<!DOCTYPE html>')
+        with tag('html'):
+            with tag('head'):
+                pass
+            with tag('body'):
+                with tag('div', id='photo-container'):
+                    with tag('ul'):
+                        with tag('li'):
+                            with tag('a', href='../index.html'):
+                                text('<-- Back')
+                        for figure_name in list_of_figures:
+                            tmp_url = base_url_dir + state_lc + '/' + figure_name
+                            with tag("a", href=tmp_url):
+                                doc.stag('img', src=tmp_url, klass="photo", height="300", width="400")
+                            with tag('li'):
+                                with doc.tag("a", href=tmp_url):
+                                    doc.text(figure_name)
+                            with tag('hr'):
+                                pass
+
+        result = doc.getvalue()
+        map_state_to_html[state] = result
+
+    for state in map_state_to_html:
+        state_lc = state.lower().replace(' ', '_')
+        if not path.exists(path.join(plot_browser_dir, state_lc)):
+            os.mkdir(path.join(plot_browser_dir, state_lc))
+        with open(path.join(plot_browser_dir, path.join(state_lc, 'index.html')), 'w') as f:
+            f.write(map_state_to_html[state])
+
+    #####
+    # Generate state-report page
+    #####
+
+    with open(path.join(plot_browser_dir, full_report_filename), 'w') as f:
+        doc, tag, text = Doc(defaults={'title': f'Plots for Full U.S. Report'}).tagtext()
+        doc.asis('<!DOCTYPE html>')
+        with tag('html'):
+            with tag('head'):
+                pass
+            with tag('body'):
+                with tag('div', id='photo-container'):
+                    with tag('ul'):
+                        with tag('li'):
+                            with tag('a', href='index.html'):
+                                text('<-- Back')
+                        for figure_name in list_of_figures_full_report:
+                            tmp_url = base_url_dir + figure_name
+                            with tag("a", href=tmp_url):
+                                doc.stag('img', src=tmp_url, klass="photo", height="400", width="300")
+                            with tag('li'):
+                                with doc.tag("a", href=tmp_url):
+                                    doc.text(figure_name)
+                            with tag('hr'):
+                                pass
+        f.write(doc.getvalue())
+
+    #####
+    # Generate landing page
+    #####
+
+    with open(path.join(plot_browser_dir, 'index.html'), 'w') as f:
+        doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
+
+        doc.asis('<!DOCTYPE html>')
+        with tag('html'):
+            with tag('head'):
+                pass
+            with tag('body'):
+                with tag('ul'):
+                    with tag('li'):
+                        with tag("a", href=github_url):
+                            text('<-- Back to Repository')
+                    with tag('li'):
+                        with tag("a", href=full_report_filename):
+                            text('Full U.S. Report')
+                    for state in alphabetical_states:
+                        state_lc = state.lower().replace(' ', '_')
+                        tmp_url = state_lc + '/index.html'
+                        with tag('li'):
+                            with tag("a", href=tmp_url):
+                                text(state)
+        f.write(doc.getvalue())
