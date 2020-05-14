@@ -190,8 +190,8 @@ class MovingWindowModel(BayesModel):
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': data_new_tested[i],
-                              'new_deceased': data_new_deceased[i],
+                              'new_positive': data_new_tested[i] + 0.1,
+                              'new_deceased': data_new_deceased[i] + 0.1,
                               } for ind, i in
                              enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
 
@@ -203,7 +203,7 @@ class MovingWindowModel(BayesModel):
         # Do fit on positive curve
         #####
 
-        model_positive = smf.ols(formula='np.log(new_positive + 0.1) ~ x + DOW', data=data)
+        model_positive = smf.ols(formula='np.log(new_positive + 0.1) ~ x + DOW', data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
         print(results_positive.summary())
         params_positive = results_positive.params
@@ -228,7 +228,7 @@ class MovingWindowModel(BayesModel):
         #####
 
         # add 0.1 so you don't bonk on log(0)
-        model_deceased = smf.ols(formula='np.log(new_deceased + 0.1) ~ x + DOW', data=data)
+        model_deceased = smf.ols(formula='np.log(new_deceased + 0.1) ~ x + DOW', data=data) # add 0.1 to avoid log(0)
         results_deceased = model_deceased.fit()
         print(results_deceased.summary())
         params_deceased = dict(results_deceased.params)

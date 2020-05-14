@@ -1396,6 +1396,9 @@ class BayesModel(ABC):
                      np.isfinite(self.all_propensities_as_list[i]) and \
                      self.all_propensities_as_list[i] > 0]
 
+        if len(valid_ind)==0:
+            return [], [], [], []
+        
         propensities = np.array(self.all_propensities_as_list)[valid_ind]
         log_probs = np.array(self.all_log_probs_as_list)[valid_ind]
         params = np.array(self.all_samples_as_list)[valid_ind]
@@ -1430,6 +1433,9 @@ class BayesModel(ABC):
             n_samples = len(params)
 
         valid_ind = [i for i, x in enumerate(weights) if np.isfinite(x)]
+        
+        if len(valid_ind)==0:
+            return [], [], [], []
 
         sampled_valid_inds = np.random.choice(len(valid_ind), n_samples, p=np.array(weights)[valid_ind], replace=True)
         param_inds = [valid_ind[i] for i in sampled_valid_inds]
@@ -1653,85 +1659,101 @@ class BayesModel(ABC):
         self.solve_and_plot_solution(title='Test Plot with Default Parameters',
                                      plot_filename_filename='test_plot.png')
 
-        # Do statsmodels
-        self.render_statsmodels_fit()
+        try:
+            # Do statsmodels
+            self.render_statsmodels_fit()
+        except:
+            print('Error calculating and rendering statsmodels fit')
 
-        # Training Data Bootstraps
-        self.render_bootstraps()
+        try:
+            # Training Data Bootstraps
+            self.render_bootstraps()
+    
+            # Plot all-data solution 
+            self.solve_and_plot_solution(in_params=self.all_data_params,
+                                         title='All-Data Solution',
+                                         plot_filename_filename='all_data_solution.png')
+    
+            # Plot example solutions from bootstrap
+            bootstrap_selection = np.random.choice(self.bootstrap_params)
+            self.solve_and_plot_solution(in_params=bootstrap_selection,
+                                         title='Random Bootstrap Selection',
+                                         plot_filename_filename='random_bootstrap_selection.png')
+    
+            # Plot all bootstraps
+            self.plot_all_solutions(key='bootstrap')
+            self.plot_all_solutions(key='bootstrap_with_priors')
+    
+            # Get and plot parameter distributions from bootstraps
+            self.render_and_plot_cred_int(param_type='bootstrap')
+        except:
+            print('Error calculating and rendering bootstraps')
+            
+        try:
+            # Do random walks around the overall fit
+            # print('\nSampling around MLE with wide sigma')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=1, which_distro='norm')
+            # print('Sampling around MLE with medium sigma')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=10, which_distro='norm')
+            # print('Sampling around MLE with narrow sigma')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=100, which_distro='norm')
+            # print('Sampling around MLE with ultra-narrow sigma')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=1000, which_distro=WhichDistro.norm)
+    
+            print('Sampling around MLE with medium exponential parameter')
+            self.MCMC(self.all_data_params, opt_walk=False,
+                      sample_shape_param=100, which_distro=WhichDistro.laplace)
+            # print('Sampling around MLE with narrow exponential parameter')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=100, which_distro=WhichDistro.laplace)
+            # print('Sampling around MLE with ultra-narrow exponential parameter')
+            # self.MCMC(self.all_data_params, opt_walk=False,
+            #           sample_shape_param=1000, which_distro=WhichDistro.laplace)
+    
+            # Get and plot parameter distributions from bootstraps
+            self.render_and_plot_cred_int(param_type='likelihood_sample')
+    
+            # Plot all solutions...
+            self.plot_all_solutions(key='likelihood_samples')
+        except:
+            print('Error calculating and rendering direct likelihood samples')
 
-        # Plot all-data solution 
-        self.solve_and_plot_solution(in_params=self.all_data_params,
-                                     title='All-Data Solution',
-                                     plot_filename_filename='all_data_solution.png')
+        try:
+            # Next define MVN model on likelihood and fit   
+            self.fit_MVN_to_likelihood(opt_walk=False)
+            # Plot all solutions...
+            self.plot_all_solutions(key='MVN_fit')
+            # Get and plot parameter distributions from bootstraps
+            self.render_and_plot_cred_int(param_type='MVN_fit')
+        except:
+            print('Error calculating and rendering MVN fit to likelihood')
 
-        # Plot example solutions from bootstrap
-        bootstrap_selection = np.random.choice(self.bootstrap_params)
-        self.solve_and_plot_solution(in_params=bootstrap_selection,
-                                     title='Random Bootstrap Selection',
-                                     plot_filename_filename='random_bootstrap_selection.png')
+        try:
+            print('Sampling via random walk MCMC, starting with MLE')  # a random bootstrap selection')
+            # bootstrap_selection = np.random.choice(self.n_bootstraps)
+            # starting_point = self.bootstrap_params[bootstrap_selection]
+            self.MCMC(self.all_data_params, opt_walk=True)
+    
+            # print('Sampling via random walk NUTS, starting with MLE')
+            # self.NUTS(self.all_data_params)
+    
+            # Plot all solutions...
+            self.plot_all_solutions(key='random_walk')
+    
+            # Get and plot parameter distributions from bootstraps
+            self.render_and_plot_cred_int(param_type='random_walk')
+        except:
+            print('Error calculating and rendering random walk')
 
-        # Plot all bootstraps
-        self.plot_all_solutions(key='bootstrap')
-        self.plot_all_solutions(key='bootstrap_with_priors')
-
-        # Get and plot parameter distributions from bootstraps
-        self.render_and_plot_cred_int(param_type='bootstrap')
-
-        # Do random walks around the overall fit
-        # print('\nSampling around MLE with wide sigma')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=1, which_distro='norm')
-        # print('Sampling around MLE with medium sigma')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=10, which_distro='norm')
-        # print('Sampling around MLE with narrow sigma')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=100, which_distro='norm')
-        # print('Sampling around MLE with ultra-narrow sigma')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=1000, which_distro=WhichDistro.norm)
-
-        print('Sampling around MLE with medium exponential parameter')
-        self.MCMC(self.all_data_params, opt_walk=False,
-                  sample_shape_param=100, which_distro=WhichDistro.laplace)
-        # print('Sampling around MLE with narrow exponential parameter')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=100, which_distro=WhichDistro.laplace)
-        # print('Sampling around MLE with ultra-narrow exponential parameter')
-        # self.MCMC(self.all_data_params, opt_walk=False,
-        #           sample_shape_param=1000, which_distro=WhichDistro.laplace)
-
-        # Get and plot parameter distributions from bootstraps
-        self.render_and_plot_cred_int(param_type='likelihood_sample')
-
-        # Plot all solutions...
-        self.plot_all_solutions(key='likelihood_samples')
-
-        # Next define MVN model on likelihood and fit        
-        self.fit_MVN_to_likelihood(opt_walk=False)
-
-        # Plot all solutions...
-        self.plot_all_solutions(key='MVN_fit')
-
-        # Get and plot parameter distributions from bootstraps
-        self.render_and_plot_cred_int(param_type='MVN_fit')
-
-        print('Sampling via random walk MCMC, starting with MLE')  # a random bootstrap selection')
-        # bootstrap_selection = np.random.choice(self.n_bootstraps)
-        # starting_point = self.bootstrap_params[bootstrap_selection]
-        self.MCMC(self.all_data_params, opt_walk=True)
-
-        # print('Sampling via random walk NUTS, starting with MLE')
-        # self.NUTS(self.all_data_params)
-
-        # Plot all solutions...
-        self.plot_all_solutions(key='random_walk')
-
-        # Next define MVN model on likelihood and fit
-        self.fit_MVN_to_likelihood(opt_walk=True)
-
-        # Get and plot parameter distributions from bootstraps
-        self.render_and_plot_cred_int(param_type='random_walk')
+        try:
+            # Next define MVN model on likelihood and fit
+            self.fit_MVN_to_likelihood(opt_walk=True)
+        except:
+            print('Error calculating and rendering MVN fit to random walk')
 
         # Get extra likelihood samples
         # print('Just doing random sampling')

@@ -11,7 +11,7 @@ n_bootstraps = 100
 n_likelihood_samples = 100000
 max_date_str = '2020-05-12'
 opt_calc = True
-opt_force_plot = True
+opt_force_plot = False
 
 state_models_filename = f'state_models_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
 state_report_filename = f'state_report_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'

@@ -12,7 +12,7 @@ n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
 max_date_str = '2020-05-12'
 opt_calc = True
-opt_force_plot = True
+opt_force_plot = False
 opt_simplified = False # just do statsmodels as a simplified service
 
 state_models_filename = f'state_models_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'

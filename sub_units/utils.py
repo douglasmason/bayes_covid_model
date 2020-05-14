@@ -567,14 +567,16 @@ def run_everything(run_states,
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-            state_report = generate_state_report(map_state_name_to_model,
-                                                 state_report_filename=state_report_filename)
-            for param_name in state_model.plot_param_names:
-                render_whisker_plot(state_report,
-                                    param_name=param_name,
-                                    output_filename_format_str=filename_format_str,
-                                    opt_log=param_name in logarithmic_params,
-                                    opt_statsmodels=opt_statsmodels)
+            if state_ind % 10 == 0 or state_ind == len(run_states) - 1:
+                print('Reporting every 10th state and at the end')
+                state_report = generate_state_report(map_state_name_to_model,
+                                                     state_report_filename=state_report_filename)
+                for param_name in state_model.plot_param_names:
+                    render_whisker_plot(state_report,
+                                        param_name=param_name,
+                                        output_filename_format_str=filename_format_str,
+                                        opt_log=param_name in logarithmic_params,
+                                        opt_statsmodels=opt_statsmodels)
 
 def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url, full_report_filename, list_of_figures, list_of_figures_full_report):
     if not path.exists(plot_browser_dir):
