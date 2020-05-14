@@ -8,7 +8,12 @@ import scipy as sp
 class MovingWindowModel(BayesModel):
 
     # add model_type_str to kwargs when instantiating super
-    def __init__(self, state, max_date_str, moving_window_size=14, **kwargs):
+    def __init__(self,
+                 state,
+                 max_date_str,
+                 moving_window_size=14,
+                 optimizer_method='SLSQP',
+                 **kwargs):
         min_sol_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d') - datetime.timedelta(
             days=moving_window_size)
         model_type_name = f'moving_window_{moving_window_size}_days'
@@ -16,15 +21,18 @@ class MovingWindowModel(BayesModel):
         # these kwargs will be added as object attributes
         kwargs.update({'model_type_name': model_type_name,
                        'moving_window_size': moving_window_size,
-                       'min_sol_date': min_sol_date})
+                       'min_sol_date': min_sol_date,
+                       'optimizer_method': optimizer_method})
         super(MovingWindowModel, self).__init__(state, max_date_str, **kwargs)
 
         ind1 = max(self.day_of_threshold_met_case, len(self.series_data) - moving_window_size)
-        cases_indices = list(range(ind1, len(self.series_data)))
+        self.cases_indices = list(range(ind1, len(self.series_data)))
         ind1 = max(self.day_of_threshold_met_death, len(self.series_data) - moving_window_size)
-        deaths_indices = list(range(ind1, len(self.series_data)))
-        self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
-        self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
+        self.deaths_indices = list(range(ind1, len(self.series_data)))
+        
+        # dont need to filter out zero-values since we now add the logarithm offset
+        # self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
+        # self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
 
     def run_simulation(self, in_params):
         '''
@@ -137,10 +145,12 @@ class MovingWindowModel(BayesModel):
         # timer = Stopwatch()
 
         new_tested_dists = [ \
-            (np.log(data_new_tested[i]) - np.log(new_tested_from_sol[i + self.burn_in]))
+            (np.log(data_new_tested[i] + self.log_offset) - np.log(new_tested_from_sol[i + self.burn_in]))
+            # add self.log_offset to avoid log(0)
             for i in cases_bootstrap_indices]
         new_dead_dists = [ \
-            (np.log(data_new_dead[i]) - np.log(new_deceased_from_sol[i + self.burn_in]))
+            (np.log(data_new_dead[i] + self.log_offset) - np.log(new_deceased_from_sol[i + self.burn_in]))
+            # add self.log_offset to avoid log(0)
             for i in deaths_bootstrap_indices]
 
         tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
@@ -190,20 +200,22 @@ class MovingWindowModel(BayesModel):
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': data_new_tested[i] + 0.1,
-                              'new_deceased': data_new_deceased[i] + 0.1,
+                              'new_positive': data_new_tested[i] + self.log_offset,
+                              'new_deceased': data_new_deceased[i] + self.log_offset,
                               } for ind, i in
                              enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
 
         # need to use orig_ind to align intercept with run_simulation
         ind_offset = 0  # had to hand-tune this to zero
         data['DOW'] = [str((x + ind_offset) % 7) for x in data['orig_ind']]
+        data['log_offset'] = self.log_offset
 
         #####
         # Do fit on positive curve
         #####
 
-        model_positive = smf.ols(formula='np.log(new_positive + 0.1) ~ x + DOW', data=data)  # add 0.1 to avoid log(0)
+        model_positive = smf.ols(formula='np.log(new_positive + log_offset) ~ x + DOW',
+                                 data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
         print(results_positive.summary())
         params_positive = results_positive.params
@@ -228,7 +240,8 @@ class MovingWindowModel(BayesModel):
         #####
 
         # add 0.1 so you don't bonk on log(0)
-        model_deceased = smf.ols(formula='np.log(new_deceased + 0.1) ~ x + DOW', data=data) # add 0.1 to avoid log(0)
+        model_deceased = smf.ols(formula='np.log(new_deceased + log_offset) ~ x + DOW',
+                                 data=data)  # add 0.1 to avoid log(0)
         results_deceased = model_deceased.fit()
         print(results_deceased.summary())
         params_deceased = dict(results_deceased.params)
@@ -253,7 +266,7 @@ class MovingWindowModel(BayesModel):
 
         if not opt_simplified:
             self.render_and_plot_cred_int(param_type='statsmodels')
-        
+
         self.plot_all_solutions(key='statsmodels')
 
     def get_weighted_samples_via_statsmodels(self, n_samples=1000, ):

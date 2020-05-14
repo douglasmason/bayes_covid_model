@@ -10,13 +10,14 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 n_bootstraps = 100
 n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
-max_date_str = '2020-05-12'
+max_date_str = '2020-05-13'
 opt_calc = True
 opt_force_plot = False
-opt_simplified = False # just do statsmodels as a simplified service
+opt_simplified = False # set to True to just do statsmodels as a simplified daily service
+override_run_states = None #['Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
-state_models_filename = f'state_models_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-state_report_filename = f'state_report_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+state_models_filename = f'state_models_smoothed_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+state_report_filename = f'state_report_smoothed_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
 
 # fixing parameters I don't want to train for saves a lot of computer power
 extra_params = dict()
@@ -124,6 +125,9 @@ priors = curve_fit_bounds
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names
+
+if override_run_states is not None:
+    run_states = override_run_states
 
 def run_everything():
     return run_everything_imported(run_states,

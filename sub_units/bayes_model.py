@@ -119,13 +119,16 @@ class BayesModel(ABC):
                  model_type_name=None,
                  plot_param_names=None,
                  opt_simplified=False,
+                 log_offset=0.5,
+                 opt_smoothing=True,
                  **kwargs
                  ):
 
         for key, val in kwargs.items():
             print(f'Adding extra params to attributes... {key}: {val}')
             setattr(self, key, val)
-
+        self.opt_smoothing = opt_smoothing # determines whether to smooth results from load_data_obj.get_state_data
+        self.log_offset = log_offset
         self.model_type_name = model_type_name
         self.state_name = state_name
         self.max_date_str = max_date_str
@@ -135,17 +138,22 @@ class BayesModel(ABC):
         self.max_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d')
         self.static_params = static_params
 
+        if self.opt_smoothing:
+            smoothing_str = 'smoothed_'
+        else:
+            smoothing_str = ''
+            
         self.bootstrap_filename = path.join('state_bootstraps',
-                                            f"{state_name.lower().replace(' ', '_')}_{model_type_name}_{n_bootstraps}_bootstraps_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
-                                                                f"{state_name.lower().replace(' ', '_')}_{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                                                f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
-                                                                     f"{state_name.lower().replace(' ', '_')}_{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                                                     f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
 
         if opt_simplified:
-            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{model_type_name}_statsmodels_only'
+            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_statsmodels_only'
         else:
-            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{model_type_name}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
+            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
 
         self.plot_subfolder = path.join('state_plots', self.plot_subfolder)
         self.plot_filename_base = path.join(self.plot_subfolder,
@@ -165,7 +173,7 @@ class BayesModel(ABC):
         if load_data_obj is None:
             from sub_units import load_data as load_data_obj
 
-        state_data = load_data_obj.get_state_data(state_name)
+        state_data = load_data_obj.get_state_data(state_name, opt_smoothing=self.opt_smoothing)
 
         # I replaced this with the U.S. total so everyone's on the same playing field, otherwise: state_data['sip_date']
         self.SIP_date = datetime.datetime.strptime('2020-03-20', '%Y-%m-%d')
@@ -339,12 +347,12 @@ class BayesModel(ABC):
         else:
             return return_val
 
-    def fit_curve_exactly_with_jitter(self,
-                                      p0,
-                                      data_tested=None,
-                                      data_dead=None,
-                                      tested_indices=None,
-                                      deaths_indices=None):
+    def fit_curve_exactly_via_least_squares(self,
+                                            p0,
+                                            data_tested=None,
+                                            data_dead=None,
+                                            tested_indices=None,
+                                            deaths_indices=None):
         '''
         Given initial parameters, fit the curve with MSE
         :param p0: initial parameters
@@ -381,7 +389,7 @@ class BayesModel(ABC):
                                  in_params,
                                  tested_indices=None,
                                  deaths_indices=None,
-                                 method='SLSQP',  # 'Nelder-Mead
+                                 method=None,
                                  print_success=False
                                  ):
         '''
@@ -394,6 +402,9 @@ class BayesModel(ABC):
         :return: optimized parameters as dictionary
         '''
 
+        if method is None:
+            method = self.optimizer_method
+            
         p0 = self.convert_params_as_dict_to_list(in_params)
 
         def get_neg_log_likelihood(p):
@@ -745,6 +756,7 @@ class BayesModel(ABC):
         except:
             self.loaded_bootstraps = False
 
+        # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
         if not success and self.opt_calc:
 
             print('\n----\nRendering bootstrap model fits... starting with the all-data one...\n----')
@@ -755,7 +767,7 @@ class BayesModel(ABC):
             #   and re-fit using the jankier (via_likelihood) method that fits the observation error
             #   TODO: make the sigma substitutions empirical, rather than hacky the way I've done it
             test_params_as_list = [self.test_params[key] for key in self.sorted_names]
-            all_data_params = self.fit_curve_exactly_with_jitter(test_params_as_list)
+            all_data_params = self.fit_curve_exactly_via_least_squares(test_params_as_list)
             all_data_params['sigma_positive'] = self.test_params['sigma_positive']
             all_data_params['sigma_deceased'] = self.test_params['sigma_deceased']
             print('refitting all-data params')
@@ -790,7 +802,7 @@ class BayesModel(ABC):
                     all_data_params2 = self.fit_curve_via_likelihood(test_params_as_list,
                                                                      method=method, print_success=True)
 
-                    print('\nParameters when trained on all data (this is our starting point for optimization):')
+                    print(f'\nParameters when trained on all data using method {method}:')
                     [print(f'{key}: {val:.4g}') for key, val in all_data_params2.items()]
                 else:
                     print(f'method {method} failed!')
@@ -1010,7 +1022,7 @@ class BayesModel(ABC):
 
         # overwrite sigma for values that are strictly positive multipliers of unknown scale
         for param_name in self.logarithmic_params:
-            sigma[param_name] = 1 / sample_scale_param
+            sigma[param_name] = 10 / sample_scale_param # Note that I boost the width by a factor of 10 since it often gets too narrow
         sigma_as_list = [sigma[name] for name in self.sorted_names]
 
         if which_distro == WhichDistro.norm:
@@ -1208,8 +1220,10 @@ class BayesModel(ABC):
                     propensities.append(proposed_propensity)
 
             propensities = [x * len(samples) for x in propensities]
+            print(f'Dumping to {self.likelihood_samples_filename_format_str.format(filename_str)}...')
             joblib.dump({'samples': samples, 'vals': log_probs, 'propensities': propensities},
                         self.likelihood_samples_filename_format_str.format(filename_str))
+            print('...done!')
 
         samples_as_list = [[sample[key] for key in self.sorted_names] for sample in samples]
         MCMC_burn_in = int(MCMC_burn_in_frac * len(samples_as_list))

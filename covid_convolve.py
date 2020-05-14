@@ -9,12 +9,13 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 
 n_bootstraps = 100
 n_likelihood_samples = 100000
-max_date_str = '2020-05-12'
+max_date_str = '2020-05-13'
 opt_calc = True
 opt_force_plot = False
+override_run_states = None #['Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
-state_models_filename = f'state_models_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-state_report_filename = f'state_report_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
 
 # fixing parameters I don't want to train for saves a lot of computer power
 static_params = {'contagious_to_positive_width': 7,
@@ -85,6 +86,8 @@ priors = curve_fit_bounds
 population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
                                        key=lambda x: -load_data.map_state_to_population[x])
 run_states = population_ranked_state_names
+if override_run_states is not None:
+    run_states = override_run_states
 
 
 ####

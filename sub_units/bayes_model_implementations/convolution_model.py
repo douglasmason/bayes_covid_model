@@ -7,15 +7,21 @@ import datetime
 class ConvolutionModel(BayesModel):
 
     # add model_type_str to kwargs when instantiating super
-    def __init__(self, *args, **kwargs):
+    def __init__(self,
+                 *args,
+                 optimizer_method='SLSQP', #'Nelder-Mead', #
+                 **kwargs):
         kwargs.update({'model_type_name': 'convolution',
                        'min_sol_date': None,  # TODO: find a better way to set this attribute
+                       'optimizer_method': optimizer_method
                        })
         super(ConvolutionModel, self).__init__(*args, **kwargs)
-        cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
-        deaths_indices = list(range(self.day_of_threshold_met_death, len(self.series_data)))
-        self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
-        self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
+        self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
+        self.deaths_indices = list(range(self.day_of_threshold_met_death, len(self.series_data)))
+        
+        # dont need to filter out zero-values since we now add the logarithm offset
+        # self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
+        # self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
 
     @staticmethod
     def _ODE_system(y, t, *p):
@@ -113,10 +119,12 @@ class ConvolutionModel(BayesModel):
         # timer = Stopwatch()
 
         new_tested_dists = [ \
-            (np.log(data_new_tested[i]) - np.log(new_tested_from_sol[i + self.burn_in]))
+            (np.log(data_new_tested[i] + self.log_offset) - np.log(new_tested_from_sol[i + self.burn_in]))
+            # add self.log_offset to avoid log(0)
             for i in cases_bootstrap_indices]
         new_dead_dists = [ \
-            (np.log(data_new_dead[i]) - np.log(new_deceased_from_sol[i + self.burn_in]))
+            (np.log(data_new_dead[i] + self.log_offset) - np.log(new_deceased_from_sol[i + self.burn_in]))
+            # add self.log_offset to avoid log(0)
             for i in deaths_bootstrap_indices]
 
         # ensure the two delays are physical
@@ -124,10 +132,8 @@ class ConvolutionModel(BayesModel):
         val2 = params['contagious_to_deceased_delay']
         err_from_reversed_delays = val1 - val2 if val1 > val2 else 0
 
-        dists = new_tested_dists + new_dead_dists
         tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
         deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
         other_errs = [err_from_reversed_delays]
 
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
-
