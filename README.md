@@ -12,10 +12,10 @@
 
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a modified epidemiological Susceptible-Exposed-Infectious- Recovered (SEIR) Model[4, 1, 5]. Using currently available data, we determine optimized constants and apply this framework to reproducing the infection and death curves for California (the state with the largest population), New York (the state with highest population density), U.S. totals, and supplimentary results for the remaining 50 states and Washington D.C.
 
-![boxplot](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/california/statsmodels_solutions_filled_quantiles.png)
+![boxplot](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_13_date_smoothed_moving_window_21_days_statsmodels_only/california/statsmodels_solutions_filled_quantiles.png)
 **Figure 1:** Moving-Window Linear Regression model curves and COVID-19 Daily Reported Cases and Related Deaths in the U.S. 
 
-![boxplot](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/simplified_boxplot_for_positive_slope__statsmodels.png)
+![boxplot](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_13_date_smoothed_moving_window_21_days_statsmodels_only/simplified_boxplot_for_positive_slope__statsmodels.png)
 **Figure 2:** Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. We see strongest growth in Minnesota, Main, and South Dakota, and lowest growth in Montana, Arkansas, and Virginia.
 
 [1] R.M. Anderson and R.M. May. Infectious Diseases of Humans: Dynamics and Control. Dynamics and Control. OUP Oxford, 1992.
