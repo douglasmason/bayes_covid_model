@@ -1155,12 +1155,14 @@ class BayesModel(ABC):
         prev_test_ind = -1
         n_accepted = 0
         n_accepted_turn = 0
+        use_sample_shape_param = sample_shape_param
+        
         if not success and self.opt_calc:
 
             for test_ind in tqdm(range(n_samples)):
 
                 # sub_timer = Stopwatch()
-                proposed_p, proposed_propensity = acquisition_function(prev_p, sample_shape_param)
+                proposed_p, proposed_propensity = acquisition_function(prev_p, use_sample_shape_param)
                 # print(f'acquisition time {sub_timer.elapsed_time() * 1000} ms')
                 # sub_timer = Stopwatch
                 proposed_ll = self.get_log_likelihood(proposed_p)
@@ -1183,7 +1185,7 @@ class BayesModel(ABC):
                               ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
                         timer.reset()
                         if opt_walk:
-                            sample_shape_param = sample_shape_param * 100
+                            use_sample_shape_param = sample_shape_param * 100
 
                     if rand_num <= acceptance_ratio and np.isfinite(acceptance_ratio):
 

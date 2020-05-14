@@ -9,7 +9,7 @@ class ConvolutionModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self,
                  *args,
-                 optimizer_method='SLSQP', #'Nelder-Mead', #
+                 optimizer_method='Nelder-Mead', #'Nelder-Mead', #'SLSQP'
                  **kwargs):
         kwargs.update({'model_type_name': 'convolution',
                        'min_sol_date': None,  # TODO: find a better way to set this attribute

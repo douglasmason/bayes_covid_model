@@ -12,7 +12,7 @@ n_likelihood_samples = 100000
 max_date_str = '2020-05-13'
 opt_calc = True
 opt_force_plot = False
-override_run_states = None #['Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
+override_run_states = None#['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
 state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
 state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
@@ -60,22 +60,22 @@ curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
                     'alpha_2': (-1, 2),
                     'sigma_positive': (0, 100),
                     'sigma_deceased': (0, 100),
-                    'contagious_to_positive_delay': (-14, 21),
-                    'contagious_to_positive_width': (0, 14),
-                    'contagious_to_deceased_delay': (-14, 42),
-                    'contagious_to_deceased_width': (0, 14),
+                    'contagious_to_positive_delay': (-1000, 1000),
+                    #'contagious_to_positive_width': (0, 14),
+                    'contagious_to_deceased_delay': (-1000, 1000),
+                    #'contagious_to_deceased_width': (0, 14),
                     'contagious_to_deceased_mult': (1e-12, 1),
                     }
 
 test_params = {'I_0': 2e-3,  # starting infections
                'alpha_1': 0.23,
                'alpha_2': 0.01,
-               'sigma_positive': 0.05,
-               'sigma_deceased': 0.1,
+               'sigma_positive': 0.01,
+               'sigma_deceased': 0.2,
                'contagious_to_positive_delay': 9,
-               'contagious_to_positive_width': 7,
+               #'contagious_to_positive_width': 7,
                'contagious_to_deceased_delay': 15,
-               'contagious_to_deceased_width': 7,
+               #'contagious_to_deceased_width': 7,
                'contagious_to_deceased_mult': 0.01,
                }
 
