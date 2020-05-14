@@ -524,7 +524,7 @@ def run_everything(run_states,
         print(
             f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
 
-        if True:
+        try:
             print('Building model with the following args...')
             for key in sorted(kwargs.keys()):
                 print(f'{key}: {kwargs[key]}')
@@ -544,7 +544,7 @@ def run_everything(run_states,
                 state_model.run_fits()
             map_state_name_to_model[state] = state_model
 
-        else:
+        except:
             print("Error with state", state)
             continue
 
