@@ -119,6 +119,7 @@ class ConvolutionModel(BayesModel):
         # timer = Stopwatch()
 
         new_tested_dists = [ \
+
             (np.log(data_new_tested[i] + self.log_offset) - np.log(new_tested_from_sol[i + self.burn_in]))
             # add self.log_offset to avoid log(0)
             for i in cases_bootstrap_indices]
