@@ -2,7 +2,7 @@
 
 **Full write-up at [PDF version](https://covid-figures.s3-us-west-2.amazonaws.com/covid.pdf)**
 
-**Per-state results provided at [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only/index.html) and tabulated within the [CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/simplified_state_report.csv)**
+**Latest per-state results provided at [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only/index.html) and tabulated within the [CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_12_date_moving_window_21_days_statsmodels_only/simplified_state_report.csv)**
 
 ~~*We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*~~
 
@@ -10,7 +10,9 @@
 
 *We've currently implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to easily find their state and the metrics that matter to them, please contact the contributors.*
 
-*To run the code, clone repo and execute `import covid_convolve as covid; covid.run_everything()` or `import covid_moving_window as covid; covid.run_everything()`*
+*To run the code that generates the paper figures, clone repo and execute `run_this_to_generate_figures_for_paper.py`*
+
+*To run the code that generates the daily updates, clone repo and execute `daily_cron_job.py`. This script is currently in development*
 
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a modified epidemiological Susceptible-Exposed-Infectious- Recovered (SEIR) Model[4, 1, 5]. Using currently available data, we determine optimized constants and apply this framework to reproducing the infection and death curves for California (the state with the largest population), New York (the state with highest population density), U.S. totals, and supplimentary results for the remaining 50 states and Washington D.C.
 
