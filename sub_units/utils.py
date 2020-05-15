@@ -15,8 +15,6 @@ import os
 
 from yattag import Doc
 
-
-
 class Stopwatch:
 
     def __init__(self):
