@@ -10,9 +10,9 @@
 
 *We've currently implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to easily find their state and the metrics that matter to them, please contact the contributors.*
 
-*To run the code that generates the paper figures, clone repo and execute `paper_figures_convolution.py; paper_figures_moving_window.py`*
+*To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`*
 
-*To run the code that generates the daily updates, clone repo and execute `daily_cron_job.py`. This script is currently in development*
+*To run the code that generates the daily updates, clone repo and execute `python daily_cron_job.py`. This script is currently in development*
 
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a modified epidemiological Susceptible-Exposed-Infectious- Recovered (SEIR) Model[4, 1, 5]. Using currently available data, we determine optimized constants and apply this framework to reproducing the infection and death curves for California (the state with the largest population), New York (the state with highest population density), U.S. totals, and supplimentary results for the remaining 50 states and Washington D.C.
 
