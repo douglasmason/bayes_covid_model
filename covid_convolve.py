@@ -9,92 +9,89 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 
 n_bootstraps = 100
 n_likelihood_samples = 100000
-max_date_str = '2020-05-13'
-opt_calc = True
+max_date_str = '2020-05-14'
 opt_force_plot = False
-override_run_states = None #['North Carolina', 'Michigan', 'Georgia']
-    #None#['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
-
-state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-
-# fixing parameters I don't want to train for saves a lot of computer power
-static_params = {'contagious_to_positive_width': 7,
-                 'contagious_to_deceased_width': 7,
-                 'contagious_to_positive_mult': 0.1}
-logarithmic_params = ['I_0',
-                      'contagious_to_deceased_mult',
-                      'sigma_positive',
-                      'sigma_deceased']
-sorted_init_condit_names = ['I_0']
-sorted_param_names = ['alpha_1',
-                      'alpha_2',
-                      'contagious_to_positive_delay',
-                      'contagious_to_deceased_delay',
-                      'contagious_to_deceased_mult',
-                      'sigma_positive',
-                      'sigma_deceased'
-                      ]
-plot_param_names = ['alpha_1',
-                    'alpha_2',
-                    'contagious_to_positive_delay',
-                    'positive_to_deceased_delay',
-                    'positive_to_deceased_mult']
-
-
-def get_positive_to_deceased_delay(x, map_name_to_sorted_ind=None):
-    return x[map_name_to_sorted_ind['contagious_to_deceased_delay']] - x[
-        map_name_to_sorted_ind['contagious_to_positive_delay']]
-
-
-def get_positive_to_deceased_mult(x, map_name_to_sorted_ind=None):
-    return x[map_name_to_sorted_ind['contagious_to_deceased_mult']] / 0.1
-
-
-extra_params = {
-    'positive_to_deceased_delay': get_positive_to_deceased_delay,
-    'positive_to_deceased_mult': get_positive_to_deceased_mult
-}
-
-curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
-                    'alpha_1': (-1, 2),
-                    'alpha_2': (-1, 2),
-                    'sigma_positive': (0, 100),
-                    'sigma_deceased': (0, 100),
-                    'contagious_to_positive_delay': (-14, 21),
-                    #'contagious_to_positive_width': (0, 14),
-                    'contagious_to_deceased_delay': (-14, 42),
-                    #'contagious_to_deceased_width': (0, 14),
-                    'contagious_to_deceased_mult': (1e-12, 1),
-                    }
-
-test_params = {'I_0': 2e-3,  # starting infections
-               'alpha_1': 0.23,
-               'alpha_2': 0.01,
-               'sigma_positive': 0.01,
-               'sigma_deceased': 0.2,
-               'contagious_to_positive_delay': 9,
-               #'contagious_to_positive_width': 7,
-               'contagious_to_deceased_delay': 15,
-               #'contagious_to_deceased_width': 7,
-               'contagious_to_deceased_mult': 0.01,
-               }
-
-# uniform priors with bounds:
-priors = curve_fit_bounds
-
-# cycle over most populous states first
-population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
-                                       key=lambda x: -load_data.map_state_to_population[x])
-run_states = population_ranked_state_names
-if override_run_states is not None:
-    run_states = override_run_states
-
+opt_force_calc = False
+override_run_states = None
+# ['Kansas', 'New York', 'Alaska', 'South Dakota', 'Wyoming', 'Arkansas', 'Arizona', 'Virginia']  #['New York', 'total'] #['North Carolina', 'Michigan', 'Georgia']
+# ['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
 ####
 # Make whisker plots
 ####
 def run_everything():
+    state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+    state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+
+    # fixing parameters I don't want to train for saves a lot of computer power
+    static_params = {'contagious_to_positive_width': 7,
+                     'contagious_to_deceased_width': 7,
+                     'contagious_to_positive_mult': 0.1}
+    logarithmic_params = ['I_0',
+                          'contagious_to_deceased_mult',
+                          'sigma_positive',
+                          'sigma_deceased']
+    sorted_init_condit_names = ['I_0']
+    sorted_param_names = ['alpha_1',
+                          'alpha_2',
+                          'contagious_to_positive_delay',
+                          'contagious_to_deceased_delay',
+                          'contagious_to_deceased_mult',
+                          'sigma_positive',
+                          'sigma_deceased'
+                          ]
+    plot_param_names = ['alpha_1',
+                        'alpha_2',
+                        'contagious_to_positive_delay',
+                        'positive_to_deceased_delay',
+                        'positive_to_deceased_mult']
+
+    def get_positive_to_deceased_delay(x, map_name_to_sorted_ind=None):
+        return x[map_name_to_sorted_ind['contagious_to_deceased_delay']] - x[
+            map_name_to_sorted_ind['contagious_to_positive_delay']]
+
+    def get_positive_to_deceased_mult(x, map_name_to_sorted_ind=None):
+        return x[map_name_to_sorted_ind['contagious_to_deceased_mult']] / 0.1
+
+    extra_params = {
+        'positive_to_deceased_delay': get_positive_to_deceased_delay,
+        'positive_to_deceased_mult': get_positive_to_deceased_mult
+    }
+
+    curve_fit_bounds = {'I_0': (1e-12, 100.0),  # starting infections
+                        'alpha_1': (-1, 2),
+                        'alpha_2': (-1, 2),
+                        'sigma_positive': (0, 100),
+                        'sigma_deceased': (0, 100),
+                        'contagious_to_positive_delay': (-14, 21),
+                        # 'contagious_to_positive_width': (0, 14),
+                        'contagious_to_deceased_delay': (-14, 42),
+                        # 'contagious_to_deceased_width': (0, 14),
+                        'contagious_to_deceased_mult': (1e-12, 1),
+                        }
+
+    test_params = {'I_0': 2e-3,  # starting infections
+                   'alpha_1': 0.23,
+                   'alpha_2': 0.01,
+                   'sigma_positive': 0.01,
+                   'sigma_deceased': 0.2,
+                   'contagious_to_positive_delay': 9,
+                   # 'contagious_to_positive_width': 7,
+                   'contagious_to_deceased_delay': 15,
+                   # 'contagious_to_deceased_width': 7,
+                   'contagious_to_deceased_mult': 0.01,
+                   }
+
+    # uniform priors with bounds:
+    priors = curve_fit_bounds
+
+    # cycle over most populous states first
+    population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
+                                           key=lambda x: -load_data.map_state_to_population[x])
+    run_states = population_ranked_state_names
+    if override_run_states is not None:
+        run_states = override_run_states
+
     return run_everything_imported(run_states,
                                    ConvolutionModel,
                                    max_date_str,
@@ -110,7 +107,7 @@ def run_everything():
                                    priors=priors,
                                    test_params=test_params,
                                    static_params=static_params,
-                                   opt_calc=opt_calc,
+                                   opt_force_calc=opt_force_calc,
                                    opt_force_plot=opt_force_plot,
                                    logarithmic_params=logarithmic_params,
                                    extra_params=extra_params,

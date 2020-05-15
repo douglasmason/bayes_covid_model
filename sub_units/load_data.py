@@ -6,7 +6,9 @@ import datetime
 data_dir = 'source_data'
 
 # NB: full_count_data is cumulative
-full_count_data = pd.read_csv(os.path.join(data_dir, 'counts.csv'))  # from https://github.com/nytimes/covid-19-data
+full_count_data = pd.read_csv(os.path.join(data_dir, 'counts.csv'))
+# from https://github.com/nytimes/covid-19-data
+# curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
 full_count_data['date'] = full_count_data['date'].astype('datetime64[ns]')
 
 date_range = pd.date_range(min(full_count_data['date']), max(full_count_data['date']))
@@ -106,40 +108,40 @@ def get_state_data(state,
     #         new_dead[i + 1] = borrow_val / 2
     # infected = list(np.cumsum(new_tested))
     # dead = list(np.cumsum(new_dead))
-    
+
     ####
     # Do three-day smoothing
     ####
 
+    new_tested = [infected[0]] + [infected[i] - infected[i - 1] for i in
+                                  range(1, len(infected))]
+    new_dead = [dead[0]] + [dead[i] - dead[i - 1] for i in
+                            range(1, len(dead))]
+    
     if opt_smoothing:
         print('Smoothing the data...')
-        new_tested = [infected[0]] + [infected[i] - infected[i - 1] for i in
-                                      range(1, len(infected))]
         new_vals = [None] * len(new_tested)
         for i in range(len(new_tested)):
-            new_vals[i] = sum(new_tested[slice(max(0, i-1), min(len(new_tested), i+1))]) / 3
-        if new_vals[i] < 1/3:
-            new_vals[i] = 1/3  # put minimum value at one per 3-day window
+            new_vals[i] = sum(new_tested[slice(max(0, i - 1), min(len(new_tested), i + 1))]) / 3
+        if new_vals[i] < 1 / 3:
+            new_vals[i] = 1 / 3  # put minimum value at one per 3-day window
         new_tested = new_vals.copy()
-        new_dead = [dead[0]] + [dead[i] - dead[i - 1] for i in
-                                      range(1, len(dead))]
         new_vals = [None] * len(new_dead)
         for i in range(len(new_dead)):
-            new_vals[i] = sum(new_dead[slice(max(0, i-1), min(len(new_dead), i+1))]) / 3
-        if new_vals[i] < 1/3:
-            new_vals[i] = 1/3  # put minimum value at one per 3-day window
+            new_vals[i] = sum(new_dead[slice(max(0, i - 1), min(len(new_dead), i + 1))]) / 3
+        if new_vals[i] < 1 / 3:
+            new_vals[i] = 1 / 3  # put minimum value at one per 3-day window
         new_dead = new_vals.copy()
     else:
         print('NOT smoothing the data...')
 
     infected = list(np.cumsum(new_tested))
     dead = list(np.cumsum(new_dead))
-    
-    
+
     ####
     # Put it all together
     ####
-    
+
     series_data = np.vstack([susceptible, infected, dead]).T
 
     if 'sip_date' in map_state_to_series:

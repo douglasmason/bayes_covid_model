@@ -3,6 +3,10 @@ import numpy as np
 import pandas as pd
 import datetime
 import scipy as sp
+import pymc3 as pm
+import joblib
+import os
+from os import path
 
 
 class MovingWindowModel(BayesModel):
@@ -13,6 +17,7 @@ class MovingWindowModel(BayesModel):
                  max_date_str,
                  moving_window_size=14,
                  optimizer_method='SLSQP',
+                 simplified_model_param_type=[('SM', 'statsmodels'), ('PyMC3', 'PyMC3')],
                  **kwargs):
         min_sol_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d') - datetime.timedelta(
             days=moving_window_size)
@@ -22,6 +27,7 @@ class MovingWindowModel(BayesModel):
         kwargs.update({'model_type_name': model_type_name,
                        'moving_window_size': moving_window_size,
                        'min_sol_date': min_sol_date,
+                       'simplified_model_param_type': simplified_model_param_type,
                        'optimizer_method': optimizer_method})
         super(MovingWindowModel, self).__init__(state, max_date_str, **kwargs)
 
@@ -29,7 +35,7 @@ class MovingWindowModel(BayesModel):
         self.cases_indices = list(range(ind1, len(self.series_data)))
         ind1 = max(self.day_of_threshold_met_death, len(self.series_data) - moving_window_size)
         self.deaths_indices = list(range(ind1, len(self.series_data)))
-        
+
         # dont need to filter out zero-values since we now add the logarithm offset
         # self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
         # self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
@@ -269,6 +275,18 @@ class MovingWindowModel(BayesModel):
 
         self.plot_all_solutions(key='statsmodels')
 
+    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
+
+        samples = self.all_PyMC3_samples_as_list
+        log_probs = self.all_PyMC3_log_probs_as_list
+        samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
+        
+        sampled_ind = np.random.choice(len(samples), n_samples)
+        samples = [samples[i] for i in sampled_ind]
+        
+        return samples, samples, [1] * len(samples), log_probs
+
+
     def get_weighted_samples_via_statsmodels(self, n_samples=1000, ):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
@@ -310,3 +328,161 @@ class MovingWindowModel(BayesModel):
 
         # Do statsmodels. Yes. It's THAT simplified.
         self.render_statsmodels_fit(opt_simplified=True)
+        self.render_PyMC3_fit(opt_simplified=True)
+
+    
+
+    def render_PyMC3_fit(self, opt_simplified=False):
+
+        success = False
+        print(f'Loading from {self.PyMC3_filename}...')
+        try:
+            PyMC3_dict = joblib.load(self.PyMC3_filename)
+            all_PyMC3_samples_as_list = PyMC3_dict['all_PyMC3_samples_as_list']
+            all_PyMC3_log_probs_as_list = PyMC3_dict['all_PyMC3_log_probs_as_list']
+            success = True
+            self.loaded_PyMC3 = True
+        except:
+            print('...Loading failed!')
+            self.loaded_PyMC3 = False
+
+        # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
+        if (not success and self.opt_calc) or self.opt_force_calc:
+            
+            print('Massaging data into dataframe...')
+    
+            # PyMC3 requires a Pandas dataframe, so let's get cooking!
+            data_as_list_of_dicts = [{'new_tested': self.data_new_tested[i],
+                                      'new_dead': self.data_new_dead[i],
+                                      'log_new_tested': np.log(self.data_new_tested[i] + 0.1),
+                                      'log_new_dead': np.log(self.data_new_dead[i] + 0.1),
+                                      'orig_ind': i + self.burn_in,
+                                      'x': ind,
+                                      } for ind, i in enumerate(
+                range(len(self.data_new_tested) - self.moving_window_size, len(self.data_new_tested)))]
+            
+            data = pd.DataFrame(data_as_list_of_dicts)
+            
+            ind_offset = 0  # had to hand-tune this to zero
+            data['DOW'] = [str((x + ind_offset) % 7) for x in data['orig_ind']]
+            data['day1'] = [1 if (x + ind_offset) % 7 == 1 else 0 for x in data['orig_ind']]
+            data['day2'] = [1 if (x + ind_offset) % 7 == 2 else 0 for x in data['orig_ind']]
+            data['day3'] = [1 if (x + ind_offset) % 7 == 3 else 0 for x in data['orig_ind']]
+            data['day4'] = [1 if (x + ind_offset) % 7 == 4 else 0 for x in data['orig_ind']]
+            data['day5'] = [1 if (x + ind_offset) % 7 == 5 else 0 for x in data['orig_ind']]
+            data['day6'] = [1 if (x + ind_offset) % 7 == 6 else 0 for x in data['orig_ind']]
+    
+            print('Running PyMC3 fit...')
+            with pm.Model() as model_positive:  # model specifications in PyMC3 are wrapped in a with-statement
+    
+                # Define priors
+                intercept = pm.Normal('positive_intercept', 10, sigma=5)
+                x_coeff = pm.Normal('positive_slope', 0, sigma=0.5)
+                sigma = pm.HalfNormal('sigma_positive', sigma=1)
+    
+                day1_mult = pm.Normal('day1_positive_multiplier', 0, sigma=0.5)
+                day2_mult = pm.Normal('day2_positive_multiplier', 0, sigma=0.5)
+                day3_mult = pm.Normal('day3_positive_multiplier', 0, sigma=0.5)
+                day4_mult = pm.Normal('day4_positive_multiplier', 0, sigma=0.5)
+                day5_mult = pm.Normal('day5_positive_multiplier', 0, sigma=0.5)
+                day6_mult = pm.Normal('day6_positive_multiplier', 0, sigma=0.5)
+    
+                # Define likelihood
+                Y_obs = pm.Normal('new_tested', mu=intercept + x_coeff * data['x'] + \
+                                                   day1_mult * data['day1'] + \
+                                                   day2_mult * data['day2'] + \
+                                                   day3_mult * data['day3'] + \
+                                                   day4_mult * data['day4'] + \
+                                                   day5_mult * data['day5'] + \
+                                                   day6_mult * data['day6'],
+                                  sigma=sigma,  # 1/np.exp(data_log['y']),
+                                  observed=data['log_new_tested'])
+    
+                # Inference!
+                print("Searching for MAP...")
+                MAP = pm.find_MAP(model=model_positive)
+                print('...done! MAP:')
+                print(MAP)
+                positive_trace = pm.sample(2000, start=MAP)
+    
+            positive_trace_as_dict = {name: positive_trace.get_values(name) for name in self.sorted_names if
+                                      'positive' in name}
+            positive_trace_as_list_of_dicts = list()
+            for i in range(len(positive_trace.get_values('positive_slope'))):
+                dict_to_add = dict()
+                for name in positive_trace_as_dict:
+                    dict_to_add.update({name: positive_trace_as_dict[name][i]})
+                positive_trace_as_list_of_dicts.append(dict_to_add)
+    
+            with pm.Model() as model_deceased:  # model specifications in PyMC3 are wrapped in a with-statement
+    
+                # Define priors
+                intercept = pm.Normal('deceased_intercept', 10, sigma=5)
+                x_coeff = pm.Normal('deceased_slope', 0, sigma=0.5)
+                sigma = pm.HalfNormal('sigma_deceased', sigma=1)
+    
+                day1_mult = pm.Normal('day1_deceased_multiplier', 0, sigma=0.5)
+                day2_mult = pm.Normal('day2_deceased_multiplier', 0, sigma=0.5)
+                day3_mult = pm.Normal('day3_deceased_multiplier', 0, sigma=0.5)
+                day4_mult = pm.Normal('day4_deceased_multiplier', 0, sigma=0.5)
+                day5_mult = pm.Normal('day5_deceased_multiplier', 0, sigma=0.5)
+                day6_mult = pm.Normal('day6_deceased_multiplier', 0, sigma=0.5)
+    
+                # Define likelihood
+                Y_obs = pm.Normal('new_dead', mu=intercept + x_coeff * data['x'] + \
+                                                 day1_mult * data['day1'] + \
+                                                 day2_mult * data['day2'] + \
+                                                 day3_mult * data['day3'] + \
+                                                 day4_mult * data['day4'] + \
+                                                 day5_mult * data['day5'] + \
+                                                 day6_mult * data['day6'],
+                                  sigma=sigma,  # 1/np.exp(data_log['y']),
+                                  observed=data['log_new_dead'])
+    
+                # Inference!
+                print("Searching for MAP...")
+                MAP = pm.find_MAP(model=model_deceased)
+                print('...done! MAP:')
+                print(MAP)
+                deceased_trace = pm.sample(2000, start=MAP)
+    
+            deceased_trace_as_dict = {name: deceased_trace.get_values(name) for name in self.sorted_names if
+                                      'deceased' in name}
+            deceased_trace_as_list_of_dicts = list()
+            for i in range(len(deceased_trace.get_values('deceased_slope'))):
+                dict_to_add = dict()
+                for name in deceased_trace_as_dict:
+                    dict_to_add.update({name: deceased_trace_as_dict[name][i]})
+                deceased_trace_as_list_of_dicts.append(dict_to_add)
+    
+            trace_as_list_of_dicts = list()
+            for positive_params, deceased_params in zip(positive_trace_as_list_of_dicts, deceased_trace_as_list_of_dicts):
+                dict_to_add = positive_params.copy()
+                dict_to_add.update(deceased_params)
+                trace_as_list_of_dicts.append(dict_to_add)
+    
+            for tmp_dict in trace_as_list_of_dicts:
+                for key in tmp_dict:
+                    if key in self.logarithmic_params:
+                        tmp_dict[key] = np.exp(tmp_dict[key])
+    
+            all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(tmp_dict) for tmp_dict in
+                                              trace_as_list_of_dicts]
+            all_PyMC3_log_probs_as_list = [self.get_log_likelihood(params) for params in trace_as_list_of_dicts]
+            
+            tmp_dict = {'all_PyMC3_samples_as_list': all_PyMC3_samples_as_list,
+                         'all_PyMC3_log_probs_as_list': all_PyMC3_log_probs_as_list}
+
+            print(f'saving PyMC3 trace to {self.PyMC3_filename}...')
+            joblib.dump(tmp_dict, self.PyMC3_filename)
+            print('...done!')
+            
+        self.all_PyMC3_samples_as_list = all_PyMC3_samples_as_list
+        self.all_PyMC3_log_probs_as_list = all_PyMC3_log_probs_as_list
+
+        # Plot all solutions...
+        self.plot_all_solutions(key='PyMC3')
+
+        if not opt_simplified:
+            # Get and plot parameter distributions from bootstraps
+            self.render_and_plot_cred_int(param_type='PyMC3')

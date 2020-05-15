@@ -116,6 +116,7 @@ class BayesModel(ABC):
                  plot_dpi=300,
                  opt_force_plot=True,
                  opt_calc=True,
+                 opt_force_calc=False,
                  model_type_name=None,
                  plot_param_names=None,
                  opt_simplified=False,
@@ -149,6 +150,8 @@ class BayesModel(ABC):
                                                                 f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
                                                                      f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
+        self.PyMC3_filename = path.join('state_PyMC3_traces',
+                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
 
         if opt_simplified:
             self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_statsmodels_only'
@@ -163,6 +166,8 @@ class BayesModel(ABC):
             os.mkdir('state_bootstraps')
         if not os.path.exists('state_likelihood_samples'):
             os.mkdir('state_likelihood_samples')
+        if not os.path.exists('state_PyMC3_traces'):
+            os.mkdir('state_PyMC3_traces')
         if not os.path.exists('state_plots'):
             os.mkdir('state_plots')
         if not os.path.exists(self.plot_subfolder):
@@ -195,11 +200,15 @@ class BayesModel(ABC):
         # print('t_vals', self.t_vals)
 
         try:
-            self.day_of_threshold_met_case = [i for i, x in enumerate(self.series_data[:, 1]) if x >= 20][0]
+            self.threshold_cases = min(20, self.series_data[-1, 1] * 0.1)
+            print(f"Setting cases threshold to {self.threshold_cases} ({self.series_data[-1, 1]} total)")
+            self.day_of_threshold_met_case = [i for i, x in enumerate(self.series_data[:, 1]) if x >=  self.threshold_cases][0]
         except:
             self.day_of_threshold_met_case = len(self.series_data) - 1
         try:
-            self.day_of_threshold_met_death = [i for i, x in enumerate(self.series_data[:, 2]) if x >= 20][0]
+            self.threshold_deaths = min(20, self.series_data[-1, 2] * 0.1)
+            print(f"Setting death threshold to {self.threshold_deaths} ({self.series_data[-1, 2]} total)")
+            self.day_of_threshold_met_death = [i for i, x in enumerate(self.series_data[:, 2]) if x >= self.threshold_deaths][0]
         except:
             self.day_of_threshold_met_death = len(self.series_data) - 1
 
@@ -235,6 +244,7 @@ class BayesModel(ABC):
         self.plot_dpi = plot_dpi
         self.opt_force_plot = opt_force_plot
         self.opt_calc = opt_calc
+        self.opt_force_calc = opt_force_calc
 
         self.loaded_bootstraps = False
         self.loaded_likelihood_samples = list()
@@ -529,8 +539,17 @@ class BayesModel(ABC):
         elif key == 'statsmodels':
             params, _, _, log_probs = self.get_weighted_samples_via_statsmodels()
             param_inds_to_plot = list(range(len(params)))
+        elif key == 'PyMC3':
+            params, _, _, log_probs = self.get_weighted_samples_via_PyMC3()
+            param_inds_to_plot = list(range(len(params)))
         else:
             raise ValueError
+
+        # Put this in to diagnose plotting
+        # distro_list = list()
+        # for param_ind in range(len(params[0])):
+        #     distro_list.append([params[i][param_ind] for i in range(len(params))])
+        #     print(f'{self.sorted_names[param_ind]}: Mean: {np.average(distro_list[param_ind]):.4g}, Std.: {np.std(distro_list[param_ind]):.4g}')
 
         print(f'Rendering solutions for {key}...')
         param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
@@ -757,7 +776,7 @@ class BayesModel(ABC):
             self.loaded_bootstraps = False
 
         # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
-        if not success and self.opt_calc:
+        if (not success and self.opt_calc) or self.opt_force_calc:
 
             print('\n----\nRendering bootstrap model fits... starting with the all-data one...\n----')
 
@@ -912,7 +931,7 @@ class BayesModel(ABC):
         except:
             pass
 
-        if not success and self.opt_calc:
+        if (not success and self.opt_calc) or self.opt_force_calc:
 
             bounds_to_use = self.curve_fit_bounds
 
@@ -1010,13 +1029,13 @@ class BayesModel(ABC):
             print('...done!')
         elif key == 'PyMC3':
             print(f'samples: {len(samples)}, vals: {len(vals)}, propensities: {len(propensities)}')
-            self.all_PYMC3_samples_as_list += samples
-            self.all_PYMC3_log_probs_as_list += vals
+            self.all_PyMC3_samples_as_list += samples
+            self.all_PyMC3_log_probs_as_list += vals
 
             shuffled_ind = list(range(len(self.all_PYMC3_samples_as_list)))
             np.random.shuffle(shuffled_ind)
-            self.all_PYMC3_samples_as_list = [self.all_PYMC3_samples_as_list[i] for i in shuffled_ind]
-            self.all_PYMC3_log_probs_as_list = [self.all_PYMC3_log_probs_as_list[i] for i in shuffled_ind]
+            self.all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(self.all_PYMC3_samples_as_list[i]) for i in shuffled_ind]
+            self.all_PyMC3_log_probs_as_list = [self.all_PYMC3_log_probs_as_list[i] for i in shuffled_ind]
             print('...done!')
 
     @lru_cache(maxsize=10)
@@ -1161,7 +1180,7 @@ class BayesModel(ABC):
         n_accepted_turn = 0
         use_sample_shape_param = sample_shape_param
         
-        if not success and self.opt_calc:
+        if (not success and self.opt_calc) or self.opt_force_calc:
 
             for test_ind in tqdm(range(n_samples)):
 
@@ -1283,30 +1302,32 @@ class BayesModel(ABC):
                                      plot_filename_filename=f'mean_of_{filename_str}_solution.png')
 
         if sum(std_devs_as_list) < 1e-6:
-            print('No variance in our samples... skipping MVN calcs!')
-
-            if opt_walk:
-                self.MVN_random_walk_model = None
-                self.MVN_random_walk_confidence_intervals = None
-                self.MVN_random_walk_means = means
-                self.MVN_random_walk_std_devs = std_devs
-                self.MVN_random_walk_cov = None
-                self.MVN_random_walk_corr = None
-            else:
-                self.MVN_sample_model = None
-                self.MVN_sample_confidence_intervals = None
-                self.MVN_sample_means = means
-                self.MVN_sample_std_devs = std_devs
-                self.MVN_sample_cov = None
-                self.MVN_sample_corr = None
-
-            return
-
-        if cov_type == 'diag':
-            cov = np.diag([x ** 2 for x in std_devs_as_list])
+            #     print('No variance in our samples... skipping MVN calcs!')
+            # 
+            #     if opt_walk:
+            #         self.MVN_random_walk_model = None
+            #         self.MVN_random_walk_confidence_intervals = None
+            #         self.MVN_random_walk_means = means
+            #         self.MVN_random_walk_std_devs = std_devs
+            #         self.MVN_random_walk_cov = None
+            #         self.MVN_random_walk_corr = None
+            #     else:
+            #         self.MVN_sample_model = None
+            #         self.MVN_sample_confidence_intervals = None
+            #         self.MVN_sample_means = means
+            #         self.MVN_sample_std_devs = std_devs
+            #         self.MVN_sample_cov = None
+            #         self.MVN_sample_corr = None
+            # 
+            #     return
+            # 
+            cov = np.diag([1e-8 for _ in std_devs_as_list])
         else:
-            cov = np.cov(np.vstack(params).T,
-                         aweights=weights)
+            if cov_type == 'diag':
+                cov = np.diag([x ** 2 for x in std_devs_as_list])
+            else:
+                cov = np.cov(np.vstack(params).T,
+                             aweights=weights)
 
         # convert covariance to correlation matrix
         corr = self.cov2corr(cov)
@@ -1510,6 +1531,9 @@ class BayesModel(ABC):
         elif param_type == 'statsmodels':
             params, _, _, _ = self.get_weighted_samples_via_statsmodels()
             prior_weights = [1] * len(params)
+        elif param_type == 'PyMC3':
+            params, _, _, _ = self.get_weighted_samples_via_PyMC3()
+            prior_weights = [1] * len(params)
         else:
             raise ValueError
 
@@ -1598,7 +1622,7 @@ class BayesModel(ABC):
         except:
             print('Error calculating and rendering statsmodels fit')
 
-        if True:
+        try:
             # Training Data Bootstraps
             self.render_bootstraps()
 
@@ -1619,7 +1643,7 @@ class BayesModel(ABC):
 
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(param_type='bootstrap')
-        else:
+        except:
             print('Error calculating and rendering bootstraps')
 
         try:

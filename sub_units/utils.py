@@ -16,6 +16,7 @@ import os
 from yattag import Doc
 
 
+
 class Stopwatch:
 
     def __init__(self):
@@ -29,10 +30,10 @@ class Stopwatch:
 
 
 def render_whisker_plot_simplified(state_report,
-                                   param_name='alpha_2',
+                                   plot_param_name='alpha_2',
                                    output_filename_format_str='test_boxplot_for_{}_{}.png',
                                    opt_log=False,
-                                   opt_statsmodels=False):
+                                   opt_param_type=[('SM', 'statsmodels')]):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -41,74 +42,81 @@ def render_whisker_plot_simplified(state_report,
     :param opt_log: boolean for log-transform x-axis
     :return: None, it saves plots to files
     '''
-    tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == param_name]
+    tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == plot_param_name]
     tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['SM_p50'])
 
     small_state_report = state_report.iloc[tmp_ind]
-    small_state_report.to_csv('state_report_{}.csv'.format(param_name))
+    small_state_report.to_csv('simplified_state_report_{}.csv'.format(plot_param_name))
 
-    latex_str = small_state_report[['SM_p5', 'SM_p50', 'SM_p95']].to_latex(index=False, float_format="{:0.4f}".format)
-    print(param_name)
-    print(latex_str)
+    for param_name_abbr, param_name in opt_param_type:
+        latex_str = small_state_report[
+            [f'{param_name_abbr}_p5', f'{param_name_abbr}_p50', f'{param_name_abbr}_p95']].to_latex(index=False,
+                                                                                                    float_format="{:0.4f}".format)
+        print(param_name)
+        print(latex_str)
 
-    SM_boxes = list()
-    for i in range(len(small_state_report)):
-        row = pd.DataFrame([small_state_report.iloc[i]])
-        new_box = \
-            {
-                'label': 'Statsmodels',
-                'whislo': row['SM_p5'].values[0],  # Bottom whisker position
-                'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
-                'med': row['SM_p50'].values[0],  # Median         (50th percentile)
-                'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
-                'whishi': row['SM_p95'].values[0],  # Top whisker position
-                'fliers': []  # Outliers
-            }
-        SM_boxes.append(new_box)
+    map_param_type_to_boxes = dict()
+    for param_type_abbr, param_type in opt_param_type:
+        tmp_list = list()
+        for i in range(len(small_state_report)):
+            row = pd.DataFrame([small_state_report.iloc[i]])
+            new_box = \
+                {
+                    'label': 'param_type',
+                    'whislo': row[f'{param_type_abbr}_p5'].values[0],  # Bottom whisker position
+                    'q1': row[f'{param_type_abbr}_p25'].values[0],  # First quartile (25th percentile)
+                    'med': row[f'{param_type_abbr}_p50'].values[0],  # Median         (50th percentile)
+                    'q3': row[f'{param_type_abbr}_p75'].values[0],  # Third quartile (75th percentile)
+                    'whishi': row[f'{param_type_abbr}_p95'].values[0],  # Top whisker position
+                    'fliers': []  # Outliers
+                }
+            tmp_list.append(new_box)
+        map_param_type_to_boxes[param_type_abbr] = tmp_list
 
-    ######
-    # Plots with Statsmodels
-    ######
+    plt.close()
+    plt.clf()
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8, 10.5)
 
-    if opt_statsmodels:
+    n_groups = len(map_param_type_to_boxes)
+    
+    map_param_type_to_ax = dict()
+    for ind, param_type in enumerate(sorted(map_param_type_to_boxes)):
+        map_param_type_to_ax[param_type] = ax.bxp(map_param_type_to_boxes[param_type], showfliers=False,
+                                                  positions=range(1 + ind, len(map_param_type_to_boxes[param_type]) * (
+                                                              n_groups + 1), (n_groups + 1)),
+                                                  widths=0.7, patch_artist=True, vert=False)
 
-        plt.close()
-        plt.clf()
-        fig, ax = plt.subplots()
-        fig.set_size_inches(8, 10.5)
+    setup_boxes = map_param_type_to_boxes[list(map_param_type_to_boxes.keys())[0]]
 
-        n_groups = 1
-        ax1 = ax.bxp(SM_boxes, showfliers=False, positions=range(1, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=1.2 / n_groups, patch_artist=True, vert=False)
+    # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+    plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
-        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-        plt.yticks(range(1, len(SM_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
+    # fill with colors
+    colors = ['blue', 'red', 'green', 'purple']
+    for param_type, color in zip(sorted(map_param_type_to_ax), colors):
+        ax = map_param_type_to_ax[param_type]
+        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+            for patch in ax[item]:
+                try:
+                    patch.set_facecolor(color)
+                except:
+                    pass
+                patch.set_color(color)
 
-        # fill with colors
-        colors = ['blue']
-        for ax, color in zip((ax1,), colors):
-            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-                for patch in ax[item]:
-                    try:
-                        patch.set_facecolor(color)
-                    except:
-                        pass
-                    patch.set_color(color)
-                    # patch.set_markeredgecolor(color)
+    # add legend
+    custom_lines = [
+        Line2D([0], [0], color=color, lw=4) for param_type, color in zip(sorted(map_param_type_to_ax), colors)
+    ]
+    plt.legend(custom_lines, sorted(map_param_type_to_ax))
 
-        # add legend
-        # custom_lines = [
-        #     Line2D([0], [0], color="blue", lw=4),
-        # ]
-        # plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors'))
-
-        # increase left margin
-        output_filename = output_filename_format_str.format(param_name, '_statsmodels')
-        plt.subplots_adjust(left=0.2)
-        if opt_log:
-            plt.xscale('log')
-        plt.savefig(output_filename, dpi=300)
-        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
+    # increase left margin
+    output_filename = output_filename_format_str.format(plot_param_name, '_'.join(param_type[1] for param_type in opt_param_type))
+    plt.subplots_adjust(left=0.2)
+    if opt_log:
+        plt.xscale('log')
+    plt.savefig(output_filename, dpi=300)
+    # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
 def render_whisker_plot(state_report,
@@ -116,7 +124,9 @@ def render_whisker_plot(state_report,
                         output_filename_format_str='test_boxplot_for_{}_{}.png',
                         opt_log=False,
                         opt_statsmodels=False,
-                        boxwidth=0.7):
+                        opt_PyMC3=False,
+                        boxwidth=0.7,
+                        param_types_to_use=None):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -291,7 +301,7 @@ def render_whisker_plot(state_report,
                     'fliers': []  # Outliers
                 }
             SM_boxes.append(new_box)
-            
+
         plt.close()
         plt.clf()
         fig, ax = plt.subplots()
@@ -339,6 +349,75 @@ def render_whisker_plot(state_report,
         plt.savefig(output_filename, dpi=300)
         # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
+    if opt_PyMC3:
+
+        PyMC3_boxes = list()
+        for i in range(len(small_state_report)):
+            row = pd.DataFrame([small_state_report.iloc[i]])
+            new_box = \
+                {
+                    'label': 'PyMC3',
+                    'whislo': row['PyMC3_p5'].values[0],  # Bottom whisker position
+                    'q1': row['PyMC3_p25'].values[0],  # First quartile (25th percentile)
+                    'med': row['PyMC3_p50'].values[0],  # Median         (50th percentile)
+                    'q3': row['PyMC3_p75'].values[0],  # Third quartile (75th percentile)
+                    'whishi': row['PyMC3_p95'].values[0],  # Top whisker position
+                    'fliers': []  # Outliers
+                }
+            PyMC3_boxes.append(new_box)
+
+        plt.close()
+        plt.clf()
+        fig, ax = plt.subplots()
+        fig.set_size_inches(8, 10.5)
+
+        n_groups = 5
+        ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=boxwidth, patch_artist=True, vert=False)
+        ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=boxwidth, patch_artist=True, vert=False)
+        ax3 = ax.bxp(MCMC_boxes, showfliers=False,
+                     positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=boxwidth, patch_artist=True, vert=False)
+        ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=boxwidth, patch_artist=True, vert=False)
+        ax5 = ax.bxp(PyMC3_boxes, showfliers=False,
+                     positions=range(4, len(PyMC3_boxes) * (n_groups + 1), (n_groups + 1)),
+                     widths=boxwidth, patch_artist=True, vert=False)
+
+        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+        plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
+
+        # fill with colors
+        colors = ['red', 'green', 'blue', 'purple', 'pink']
+        for ax, color in zip((ax1, ax2, ax3, ax4, ax5), colors):
+            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+                for patch in ax[item]:
+                    try:
+                        patch.set_facecolor(color)
+                    except:
+                        pass
+                    patch.set_color(color)
+                    # patch.set_markeredgecolor(color)
+
+        # add legend
+        custom_lines = [
+            Line2D([0], [0], color="red", lw=4),
+            Line2D([0], [0], color="green", lw=4),
+            Line2D([0], [0], color="blue", lw=4),
+            Line2D([0], [0], color="purple", lw=4),
+            Line2D([0], [0], color="pink", lw=4),
+        ]
+        plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors', 'NUTS'))
+
+        # increase left margin
+        output_filename = output_filename_format_str.format(param_name, 'with_direct_samples_and_statsmodels_and_PyMC3')
+        plt.subplots_adjust(left=0.2)
+        if opt_log:
+            plt.xscale('log')
+        plt.savefig(output_filename, dpi=300)
+        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
+
 
 def generate_state_report(map_state_name_to_model,
                           state_report_filename=None,
@@ -367,6 +446,11 @@ def generate_state_report(map_state_name_to_model,
             except:
                 SM_params = [0]
 
+            try:
+                PyMC3_params, _, _, _ = state_model.get_weighted_samples_via_PyMC3()
+            except:
+                PyMC3_params = [0]
+
             for param_name in report_names:
                 if param_name in state_model.sorted_names:
                     try:
@@ -382,6 +466,12 @@ def generate_state_report(map_state_name_to_model,
                     try:
                         SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
                                    range(len(SM_params))]
+                    except:
+                        pass
+
+                    try:
+                        PyMC3_vals = [PyMC3_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                                      range(len(PyMC3_params))]
                     except:
                         pass
                     try:
@@ -408,6 +498,11 @@ def generate_state_report(map_state_name_to_model,
                     try:
                         SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
                                    in range(len(SM_params))]
+                    except:
+                        pass
+                    try:
+                        PyMC3_vals = [state_model.extra_params[param_name](state_model.extra_params[param_name](PyMC3_params[i])) for i
+                                      in range(len(PyMC3_params))]
                     except:
                         pass
                     try:
@@ -479,13 +574,33 @@ def generate_state_report(map_state_name_to_model,
                     })
                 except:
                     pass
+
+                try:
+                    dict_to_add.update({
+                        'PyMC3_mean_with_priors': np.average(PyMC3_vals),
+                        'PyMC3_std_err_with_priors': np.std(PyMC3_vals),
+                        'PyMC3_p50_with_priors': np.percentile(PyMC3_vals, 50),
+                        'PyMC3_p5_with_priors':
+                            np.percentile(PyMC3_vals, 5),
+                        'PyMC3_p95_with_priors':
+                            np.percentile(PyMC3_vals, 95),
+                        'PyMC3_p25_with_priors':
+                            np.percentile(PyMC3_vals, 25),
+                        'PyMC3_p75_with_priors':
+                            np.percentile(PyMC3_vals, 75)
+                    })
+                except:
+                    pass
+
                 state_report_as_list_of_dicts.append(dict_to_add)
 
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
-    print('Saving state report to {}'.format(state_report_filename))
+    print('Saving state report to {}...'.format(state_report_filename))
     joblib.dump(state_report, state_report_filename)
-    print('Saving state report to {}'.format(state_report_filename.replace('joblib', 'csv')))
+    print('...done!')
+    print('Saving state report to {}...'.format(state_report_filename.replace('joblib', 'csv')))
     joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
+    print('...done!')
     n_states = len(set(state_report['state']))
     print(n_states)
 
@@ -524,7 +639,7 @@ def run_everything(run_states,
         print(
             f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
 
-        if True:
+        try:
             print('Building model with the following args...')
             for key in sorted(kwargs.keys()):
                 print(f'{key}: {kwargs[key]}')
@@ -535,7 +650,6 @@ def run_everything(run_states,
                                       extra_params=extra_params,
                                       logarithmic_params=logarithmic_params,
                                       plot_param_names=plot_param_names,
-                                      opt_simplified=opt_simplified,
                                       **kwargs
                                       )
             if opt_simplified:
@@ -544,12 +658,12 @@ def run_everything(run_states,
                 state_model.run_fits()
             map_state_name_to_model[state] = state_model
 
-        else:
+        except:
             print("Error with state", state)
             continue
 
         plot_subfolder = state_model.plot_subfolder
-
+    
         if opt_simplified:
             state_report_filename = path.join(plot_subfolder, f'simplified_state_report.csv')
             filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
@@ -560,14 +674,14 @@ def run_everything(run_states,
                                                      report_names=plot_param_names)
                 for param_name in state_model.plot_param_names:
                     render_whisker_plot_simplified(state_report,
-                                                   param_name=param_name,
+                                                   plot_param_name=param_name,
                                                    output_filename_format_str=filename_format_str,
                                                    opt_log=param_name in logarithmic_params,
-                                                   opt_statsmodels=opt_statsmodels)
+                                                   opt_param_type=state_model.simplified_model_param_type)
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-            if state_ind % 10 == 0 or state_ind == len(run_states) - 1:
+            if state_ind % 10 == 9 or state_ind == len(run_states) - 1:
                 print('Reporting every 10th state and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename)
@@ -578,7 +692,9 @@ def run_everything(run_states,
                                         opt_log=param_name in logarithmic_params,
                                         opt_statsmodels=opt_statsmodels)
 
-def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url, full_report_filename, list_of_figures, list_of_figures_full_report):
+
+def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url, full_report_filename, list_of_figures,
+                          list_of_figures_full_report):
     if not path.exists(plot_browser_dir):
         os.mkdir(plot_browser_dir)
 
