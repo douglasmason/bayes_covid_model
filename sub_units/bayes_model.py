@@ -770,9 +770,13 @@ class BayesModel(ABC):
             all_data_params = self.fit_curve_exactly_via_least_squares(test_params_as_list)
             all_data_params['sigma_positive'] = self.test_params['sigma_positive']
             all_data_params['sigma_deceased'] = self.test_params['sigma_deceased']
-            print('refitting all-data params')
-            all_data_params = self.fit_curve_via_likelihood(all_data_params,
+            print('refitting all-data params to get sigma values')
+            all_data_params_for_sigma = self.fit_curve_via_likelihood(all_data_params,
                                                             print_success=True)  # fit_curve_via_likelihood
+            for key in all_data_params:
+                if 'sigma' in key:
+                    print(f'Stealing value for {key}: {all_data_params_for_sigma[key]}')
+                    all_data_params[key] = all_data_params_for_sigma[key]
             all_data_sol = self.run_simulation(all_data_params)
 
             print('\nParameters when trained on all data (this is our starting point for optimization):')
@@ -830,19 +834,19 @@ class BayesModel(ABC):
                 # here is where we select the all-data parameters as our starting point
                 starting_point_as_list = [all_data_params[key] for key in self.sorted_names]
 
-                # NB: define the model constraints (mainly, positive values)
-                # This is the old version in which it still attempts to fit exactly on jittered data
-                params_as_dict = self.fit_curve_via_likelihood(starting_point_as_list,
+                # params_as_dict = self.fit_curve_via_likelihood(starting_point_as_list,
+                #                                                # data_tested=tested_jitter,
+                #                                                # data_dead=dead_jitter,
+                #                                                tested_indices=cases_bootstrap_indices,
+                #                                                deaths_indices=deaths_bootstrap_indices
+                #                                                )
+
+                params_as_dict = self.fit_curve_exactly_via_least_squares(starting_point_as_list,
                                                                # data_tested=tested_jitter,
                                                                # data_dead=dead_jitter,
                                                                tested_indices=cases_bootstrap_indices,
                                                                deaths_indices=deaths_bootstrap_indices
                                                                )
-
-                # This is the new version which just uses the scalar likelihood
-                # params_as_dict = self.fit_curve_via_likelihood(starting_point_as_list,
-                #                                        tested_indices=cases_bootstrap_indices,
-                #                                        deaths_indices=deaths_bootstrap_indices)
 
                 sol = self.run_simulation(params_as_dict)
                 bootstrap_sols.append(sol)
@@ -1594,7 +1598,7 @@ class BayesModel(ABC):
         except:
             print('Error calculating and rendering statsmodels fit')
 
-        try:
+        if True:
             # Training Data Bootstraps
             self.render_bootstraps()
 
@@ -1615,7 +1619,7 @@ class BayesModel(ABC):
 
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(param_type='bootstrap')
-        except:
+        else:
             print('Error calculating and rendering bootstraps')
 
         try:
