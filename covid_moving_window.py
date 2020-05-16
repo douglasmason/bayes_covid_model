@@ -15,6 +15,8 @@ opt_force_calc = False
 opt_force_plot = False
 opt_simplified = False  # set to True to just do statsmodels as a simplified daily service
 override_run_states = None
+
+
 # ['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
 ###
@@ -136,31 +138,33 @@ def run_everything():
 
     if override_run_states is not None:
         run_states = override_run_states
+
+    plot_subfolder = run_everything_imported(run_states,
+                                             MovingWindowModel,
+                                             max_date_str,
+                                             load_data,
+                                             state_models_filename=state_models_filename,
+                                             state_report_filename=state_report_filename,
+                                             moving_window_size=moving_window_size,
+                                             n_bootstraps=n_bootstraps,
+                                             n_likelihood_samples=n_likelihood_samples,
+                                             load_data_obj=load_data,
+                                             sorted_param_names=sorted_param_names,
+                                             sorted_init_condit_names=sorted_init_condit_names,
+                                             curve_fit_bounds=curve_fit_bounds,
+                                             priors=priors,
+                                             test_params=test_params,
+                                             static_params=static_params,
+                                             opt_force_calc=opt_force_calc,
+                                             opt_force_plot=opt_force_plot,
+                                             logarithmic_params=logarithmic_params,
+                                             extra_params=extra_params,
+                                             plot_param_names=plot_param_names,
+                                             opt_statsmodels=True,
+                                             opt_simplified=opt_simplified
+                                             )
     
-    return run_everything_imported(run_states,
-                                   MovingWindowModel,
-                                   max_date_str,
-                                   load_data,
-                                   state_models_filename=state_models_filename,
-                                   state_report_filename=state_report_filename,
-                                   moving_window_size=moving_window_size,
-                                   n_bootstraps=n_bootstraps,
-                                   n_likelihood_samples=n_likelihood_samples,
-                                   load_data_obj=load_data,
-                                   sorted_param_names=sorted_param_names,
-                                   sorted_init_condit_names=sorted_init_condit_names,
-                                   curve_fit_bounds=curve_fit_bounds,
-                                   priors=priors,
-                                   test_params=test_params,
-                                   static_params=static_params,
-                                   opt_force_calc=opt_force_calc,
-                                   opt_force_plot=opt_force_plot,
-                                   logarithmic_params=logarithmic_params,
-                                   extra_params=extra_params,
-                                   plot_param_names=plot_param_names,
-                                   opt_statsmodels=True,
-                                   opt_simplified=opt_simplified
-                                   )
+    return plot_subfolder
 
 
 if __name__ == '__main__':

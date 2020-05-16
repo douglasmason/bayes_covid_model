@@ -123,20 +123,25 @@ def get_state_data(state,
         new_vals = [None] * len(new_tested)
         for i in range(len(new_tested)):
             new_vals[i] = sum(new_tested[slice(max(0, i - 1), min(len(new_tested), i + 1))]) / 3
-        if new_vals[i] < 1 / 3:
-            new_vals[i] = 1 / 3  # put minimum value at one per 3-day window
+            if new_vals[i] < 1 / 3:
+                new_vals[i] = 1 / 10  # put minimum value at one per 3-day window
         new_tested = new_vals.copy()
         new_vals = [None] * len(new_dead)
         for i in range(len(new_dead)):
             new_vals[i] = sum(new_dead[slice(max(0, i - 1), min(len(new_dead), i + 1))]) / 3
-        if new_vals[i] < 1 / 3:
-            new_vals[i] = 1 / 3  # put minimum value at one per 3-day window
+            if new_vals[i] < 1 / 3:
+                new_vals[i] = 1 / 10  # put minimum value at one per 3-day window
         new_dead = new_vals.copy()
     else:
         print('NOT smoothing the data...')
 
     infected = list(np.cumsum(new_tested))
     dead = list(np.cumsum(new_dead))
+    
+    print('new_tested')
+    print(new_tested)
+    print('new_dead')
+    print(new_dead)
 
     ####
     # Put it all together

@@ -1,4 +1,4 @@
-from sub_units.bayes_model import BayesModel
+from sub_units.bayes_model import BayesModel, ApproxType
 import numpy as np
 import pandas as pd
 import datetime
@@ -17,7 +17,7 @@ class MovingWindowModel(BayesModel):
                  max_date_str,
                  moving_window_size=14,
                  optimizer_method='SLSQP',
-                 simplified_model_param_type=[('SM', 'statsmodels'), ('PyMC3', 'PyMC3')],
+                 simplified_model_param_type=[ApproxType.SM], # ApproxType.PyMC3
                  **kwargs):
         min_sol_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d') - datetime.timedelta(
             days=moving_window_size)
@@ -327,10 +327,12 @@ class MovingWindowModel(BayesModel):
         '''
 
         # Do statsmodels. Yes. It's THAT simplified.
-        self.render_statsmodels_fit(opt_simplified=True)
-        self.render_PyMC3_fit(opt_simplified=True)
+        if ApproxType.SM in self.simplified_model_param_type:
+            self.render_statsmodels_fit(opt_simplified=True)
+        
+        if ApproxType.PyMC3 in self.simplified_model_param_type:
+            self.render_PyMC3_fit(opt_simplified=True)
 
-    
 
     def render_PyMC3_fit(self, opt_simplified=False):
 

@@ -24,12 +24,11 @@ import seaborn as sns
 
 
 class ApproxType(Enum):
-    bootstrap = 'bootstrap'
-    bootstrap_with_priors = 'bootstrap_with_priors'
-    likelihood_sample = 'likelihood_sample'
-    MVN_fit = 'MVN_fit'
-    MCMC = 'MCMC'
-    statsmodels = 'statsmodels'
+    BS = ('BS', 'bootstrap')
+    LS = ('LS', 'likelihood_sample')
+    MCMC = ('MCMC', 'random_walk')
+    SM = ('SM', 'statsmodels')
+    PyMC3 = ('PyMC3', 'PyMC3')
 
     def __str__(self):
         return str(self.value)
@@ -47,6 +46,10 @@ class BayesModel(ABC):
 
     # this fella isn't necessary like other abstractmethods, but optional in a subclass that supports statsmodels solutions
     def render_statsmodels_fit(self):
+        pass
+
+    # this fella isn't necessary like other abstractmethods, but optional in a subclass that supports statsmodels solutions
+    def render_PyMC3_fit(self):
         pass
 
     @abstractmethod
@@ -120,15 +123,17 @@ class BayesModel(ABC):
                  model_type_name=None,
                  plot_param_names=None,
                  opt_simplified=False,
-                 log_offset=0.5,
+                 log_offset=0.0, # this kwarg became redundant after I filled in zeros with 0.1 in load_data, leave at 0
                  opt_smoothing=True,
+                 model_param_type=[ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
                  **kwargs
                  ):
 
         for key, val in kwargs.items():
             print(f'Adding extra params to attributes... {key}: {val}')
             setattr(self, key, val)
-        self.opt_smoothing = opt_smoothing # determines whether to smooth results from load_data_obj.get_state_data
+        self.model_param_type = model_param_type
+        self.opt_smoothing = opt_smoothing  # determines whether to smooth results from load_data_obj.get_state_data
         self.log_offset = log_offset
         self.model_type_name = model_type_name
         self.state_name = state_name
@@ -143,7 +148,7 @@ class BayesModel(ABC):
             smoothing_str = 'smoothed_'
         else:
             smoothing_str = ''
-            
+
         self.bootstrap_filename = path.join('state_bootstraps',
                                             f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
@@ -151,7 +156,7 @@ class BayesModel(ABC):
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
                                                                      f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.PyMC3_filename = path.join('state_PyMC3_traces',
-                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                        f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
 
         if opt_simplified:
             self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_statsmodels_only'
@@ -202,13 +207,15 @@ class BayesModel(ABC):
         try:
             self.threshold_cases = min(20, self.series_data[-1, 1] * 0.1)
             print(f"Setting cases threshold to {self.threshold_cases} ({self.series_data[-1, 1]} total)")
-            self.day_of_threshold_met_case = [i for i, x in enumerate(self.series_data[:, 1]) if x >=  self.threshold_cases][0]
+            self.day_of_threshold_met_case = \
+                [i for i, x in enumerate(self.series_data[:, 1]) if x >= self.threshold_cases][0]
         except:
             self.day_of_threshold_met_case = len(self.series_data) - 1
         try:
             self.threshold_deaths = min(20, self.series_data[-1, 2] * 0.1)
             print(f"Setting death threshold to {self.threshold_deaths} ({self.series_data[-1, 2]} total)")
-            self.day_of_threshold_met_death = [i for i, x in enumerate(self.series_data[:, 2]) if x >= self.threshold_deaths][0]
+            self.day_of_threshold_met_death = \
+                [i for i, x in enumerate(self.series_data[:, 2]) if x >= self.threshold_deaths][0]
         except:
             self.day_of_threshold_met_death = len(self.series_data) - 1
 
@@ -414,7 +421,7 @@ class BayesModel(ABC):
 
         if method is None:
             method = self.optimizer_method
-            
+
         p0 = self.convert_params_as_dict_to_list(in_params)
 
         def get_neg_log_likelihood(p):
@@ -518,7 +525,10 @@ class BayesModel(ABC):
         '''
         full_output_filename = path.join(self.plot_filename_base, f'{key}_solutions_discrete.png')
         full_output_filename2 = path.join(self.plot_filename_base, f'{key}_solutions_filled_quantiles.png')
-        if path.exists(full_output_filename) and path.exists(full_output_filename2) and not self.opt_force_plot:
+        full_output_filename3 = path.join(self.plot_filename_base, f'{key}_solutions_cumulative_discrete.png')
+        full_output_filename4 = path.join(self.plot_filename_base, f'{key}_solutions_cumulative_filled_quantiles.png')
+        if path.exists(full_output_filename) and path.exists(full_output_filename2) and path.exists(
+                full_output_filename3) and path.exists(full_output_filename4) and not self.opt_force_plot:
             return
 
         if key == 'bootstrap':
@@ -560,6 +570,10 @@ class BayesModel(ABC):
                                                                plot_filename_filename=f'{key}_solutions_discrete.png')
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,
                                                       plot_filename_filename=f'{key}_solutions_filled_quantiles.png')
+        self._plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(sols_to_plot,
+                                                                          plot_filename_filename=f'{key}_solutions_cumulative_discrete.png')
+        self._plot_all_solutions_sub_filled_quantiles_cumulative(sols_to_plot,
+                                                                 plot_filename_filename=f'{key}_solutions_cumulative_filled_quantiles.png')
 
     def _plot_all_solutions_sub_filled_quantiles(self,
                                                  sols_to_plot,
@@ -676,6 +690,131 @@ class BayesModel(ABC):
         plt.savefig(full_output_filename, dpi=self.plot_dpi)
         plt.close()
 
+    def _plot_all_solutions_sub_filled_quantiles_cumulative(self,
+                                                            sols_to_plot,
+                                                            plot_filename_filename=None):
+        '''
+        Helper function to plot_all_solutions
+        :param n_sols_to_plot: how many simulations should we sample for the plot?
+        :param plot_filename_filename: string to add to the plot filename
+        :return: None
+        '''
+        full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
+        if path.exists(full_output_filename) and not self.opt_force_plot:
+            return
+
+        print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
+        sol = sols_to_plot[0]
+        fig, ax = plt.subplots()
+        min_plot_pt = self.burn_in
+        max_plot_pt = min(len(sol[0]), len(self.series_data) + 14 + self.burn_in)
+        data_plot_date_range = [self.min_date + datetime.timedelta(days=1) * i for i in
+                                range(len(self.data_new_tested))]
+
+        sol_plot_date_range = [self.min_date - datetime.timedelta(days=self.burn_in) + datetime.timedelta(
+            days=1) * i for i in
+                               range(len(sol[0]))][min_plot_pt:max_plot_pt]
+
+        map_t_val_ind_to_tested_distro = dict()
+        map_t_val_ind_to_deceased_distro = dict()
+        for sol in sols_to_plot:
+            start_ind_data = len(self.data_new_tested) - self.moving_window_size - 1
+            start_ind_sol = len(self.data_new_tested) + self.burn_in - self.moving_window_size
+
+            tested = sol[1]
+            tested_range = np.cumsum(tested[start_ind_sol:])
+
+            dead = sol[2]
+            dead_range = np.cumsum(dead[start_ind_sol:])
+
+            data_tested_at_start = np.cumsum(self.data_new_tested)[start_ind_data]
+            data_dead_at_start = np.cumsum(self.data_new_dead)[start_ind_data]
+
+            tested = [0] * start_ind_sol + [data_tested_at_start + tested_val for tested_val in tested_range]
+            dead = [0] * start_ind_sol + [data_dead_at_start + dead_val for dead_val in dead_range]
+
+            for val_ind, val in enumerate(self.t_vals):
+                if val_ind not in map_t_val_ind_to_tested_distro:
+                    map_t_val_ind_to_tested_distro[val_ind] = list()
+                map_t_val_ind_to_tested_distro[val_ind].append(tested[val_ind])
+                if val_ind not in map_t_val_ind_to_deceased_distro:
+                    map_t_val_ind_to_deceased_distro[val_ind] = list()
+                map_t_val_ind_to_deceased_distro[val_ind].append(dead[val_ind])
+
+        p5_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 5) for val_ind in range(len(self.t_vals))]
+        p25_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 25) for val_ind in
+                     range(len(self.t_vals))]
+        p50_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 50) for val_ind in
+                     range(len(self.t_vals))]
+        p75_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 75) for val_ind in
+                     range(len(self.t_vals))]
+        p95_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 95) for val_ind in
+                     range(len(self.t_vals))]
+
+        min_slice = None
+        if self.min_sol_date is not None:
+            for i in range(len(sol_plot_date_range)):
+                if sol_plot_date_range[i] >= self.min_sol_date:
+                    min_slice = i
+                    break
+        ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
+                        p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+                        )
+        ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
+                        p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
+                        edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
+                        )
+        ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                color="darkred")
+
+        p5_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 5) for val_ind in range(len(self.t_vals))]
+        p25_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 25) for val_ind in
+                     range(len(self.t_vals))]
+        p50_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 50) for val_ind in
+                     range(len(self.t_vals))]
+        p75_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 75) for val_ind in
+                     range(len(self.t_vals))]
+        p95_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 95) for val_ind in
+                     range(len(self.t_vals))]
+
+        ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
+                        p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+                        )
+        ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
+                        p25_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        p75_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.6),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+                        )
+        ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
+                color="darkgreen")
+
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='cases')
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='deaths')
+        fig.autofmt_xdate()
+
+        # this removes the year from the x-axis ticks
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+
+        # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
+        plt.yscale('log')
+        plt.ylabel('cumulative people each day')
+        plt.ylim((0.5, None))
+        plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
+        plt.ylim((1, max(self.data_new_tested) * 100))
+        plt.legend()
+        # plt.title(f'{state} Data (points) and Model Predictions (lines)')
+        plt.savefig(full_output_filename, dpi=self.plot_dpi)
+        plt.close()
+
     def _plot_all_solutions_sub_distinct_lines_with_alpha(self,
                                                           sols_to_plot,
                                                           n_sols_to_plot=1000,
@@ -748,6 +887,88 @@ class BayesModel(ABC):
         plt.savefig(full_output_filename, dpi=self.plot_dpi)
         plt.close()
 
+    def _plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(self,
+                                                                     sols_to_plot,
+                                                                     n_sols_to_plot=1000,
+                                                                     plot_filename_filename=None):
+        '''
+        Helper function to plot_all_solutions
+        :param n_sols_to_plot: how many simulations should we sample for the plot?
+        :param plot_filename_filename: string to add to the plot filename
+        :return: None
+        '''
+        full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
+        if path.exists(full_output_filename) and not self.opt_force_plot:
+            return
+
+        if n_sols_to_plot > len(sols_to_plot):
+            n_sols_to_plot = len(sols_to_plot)
+        sols_to_plot = [sols_to_plot[i] for i in np.random.choice(len(sols_to_plot), n_sols_to_plot, replace=False)]
+
+        print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
+        sol = sols_to_plot[0]
+        n_sols = len(sols_to_plot)
+        fig, ax = plt.subplots()
+        min_plot_pt = self.burn_in
+        max_plot_pt = min(len(sol[0]), len(self.series_data) + 14 + self.burn_in)
+        data_plot_date_range = [self.min_date + datetime.timedelta(days=1) * i for i in
+                                range(len(self.data_new_tested))]
+
+        for sol in sols_to_plot:
+
+            start_ind_data = len(self.data_new_tested) - self.moving_window_size - 1
+            start_ind_sol = len(self.data_new_tested) + self.burn_in - self.moving_window_size
+
+            tested = sol[1]
+            tested_range = np.cumsum(tested[start_ind_sol:])
+
+            dead = sol[2]
+            dead_range = np.cumsum(dead[start_ind_sol:])
+
+            data_tested_at_start = np.cumsum(self.data_new_tested)[start_ind_data]
+            data_dead_at_start = np.cumsum(self.data_new_dead)[start_ind_data]
+
+            tested = [0] * start_ind_sol + [data_tested_at_start + tested_val for tested_val in tested_range]
+            dead = [0] * start_ind_sol + [data_dead_at_start + dead_val for dead_val in dead_range]
+
+            sol_plot_date_range = [self.min_date - datetime.timedelta(days=self.burn_in) + datetime.timedelta(
+                days=1) * i for i in
+                                   range(len(sol[0]))][min_plot_pt:max_plot_pt]
+
+            # ax.plot(plot_date_range[min_plot_pt:], [(sol[i][0]) for i in range(min_plot_pt, len(sol[0))], 'b', alpha=0.1)
+            # ax.plot(plot_date_range[min_plot_pt:max_plot_pt], [(sol[i][1]) for i in range(min_plot_pt, max_plot_pt)], 'g', alpha=0.1)
+
+            min_slice = None
+            if self.min_sol_date is not None:
+                for i in range(len(sol_plot_date_range)):
+                    if sol_plot_date_range[i] >= self.min_sol_date:
+                        min_slice = i
+                        break
+            ax.plot(sol_plot_date_range[slice(min_slice, None)],
+                    tested[min_plot_pt:max_plot_pt][slice(min_slice, None)], 'g',
+                    alpha=5 / n_sols)
+            ax.plot(sol_plot_date_range[slice(min_slice, None)],
+                    dead[min_plot_pt:max_plot_pt][slice(min_slice, None)], 'r',
+                    alpha=5 / n_sols)
+
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='cases')
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='deaths')
+        fig.autofmt_xdate()
+
+        # this removes the year from the x-axis ticks
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+
+        # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
+        plt.yscale('log')
+        plt.ylabel('cumulative people each day')
+        plt.ylim((0.5, None))
+        plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
+        plt.ylim((1, max(self.data_new_tested) * 100))
+        plt.legend()
+        # plt.title(f'{state} Data (points) and Model Predictions (lines)')
+        plt.savefig(full_output_filename, dpi=self.plot_dpi)
+        plt.close()
+
     @staticmethod
     def norm_2d(xv, yv, mu=(0, 0), sigma=(1, 1)):
         arg = -((xv - mu[0]) ** 2 / sigma[0] + (yv - mu[1]) ** 2 / sigma[1])
@@ -791,7 +1012,7 @@ class BayesModel(ABC):
             all_data_params['sigma_deceased'] = self.test_params['sigma_deceased']
             print('refitting all-data params to get sigma values')
             all_data_params_for_sigma = self.fit_curve_via_likelihood(all_data_params,
-                                                            print_success=True)  # fit_curve_via_likelihood
+                                                                      print_success=True)  # fit_curve_via_likelihood
             for key in all_data_params:
                 if 'sigma' in key:
                     print(f'Stealing value for {key}: {all_data_params_for_sigma[key]}')
@@ -861,11 +1082,11 @@ class BayesModel(ABC):
                 #                                                )
 
                 params_as_dict = self.fit_curve_exactly_via_least_squares(starting_point_as_list,
-                                                               # data_tested=tested_jitter,
-                                                               # data_dead=dead_jitter,
-                                                               tested_indices=cases_bootstrap_indices,
-                                                               deaths_indices=deaths_bootstrap_indices
-                                                               )
+                                                                          # data_tested=tested_jitter,
+                                                                          # data_dead=dead_jitter,
+                                                                          tested_indices=cases_bootstrap_indices,
+                                                                          deaths_indices=deaths_bootstrap_indices
+                                                                          )
 
                 sol = self.run_simulation(params_as_dict)
                 bootstrap_sols.append(sol)
@@ -1034,7 +1255,8 @@ class BayesModel(ABC):
 
             shuffled_ind = list(range(len(self.all_PYMC3_samples_as_list)))
             np.random.shuffle(shuffled_ind)
-            self.all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(self.all_PYMC3_samples_as_list[i]) for i in shuffled_ind]
+            self.all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(self.all_PYMC3_samples_as_list[i]) for
+                                              i in shuffled_ind]
             self.all_PyMC3_log_probs_as_list = [self.all_PYMC3_log_probs_as_list[i] for i in shuffled_ind]
             print('...done!')
 
@@ -1045,7 +1267,8 @@ class BayesModel(ABC):
 
         # overwrite sigma for values that are strictly positive multipliers of unknown scale
         for param_name in self.logarithmic_params:
-            sigma[param_name] = 10 / sample_scale_param # Note that I boost the width by a factor of 10 since it often gets too narrow
+            sigma[
+                param_name] = 10 / sample_scale_param  # Note that I boost the width by a factor of 10 since it often gets too narrow
         sigma_as_list = [sigma[name] for name in self.sorted_names]
 
         if which_distro == WhichDistro.norm:
@@ -1179,7 +1402,7 @@ class BayesModel(ABC):
         n_accepted = 0
         n_accepted_turn = 0
         use_sample_shape_param = sample_shape_param
-        
+
         if (not success and self.opt_calc) or self.opt_force_calc:
 
             for test_ind in tqdm(range(n_samples)):
@@ -1616,101 +1839,112 @@ class BayesModel(ABC):
         self.solve_and_plot_solution(title='Test Plot with Default Parameters',
                                      plot_filename_filename='test_plot.png')
 
-        try:
-            # Do statsmodels
-            self.render_statsmodels_fit()
-        except:
-            print('Error calculating and rendering statsmodels fit')
+        if ApproxType.SM in self.model_param_type:
+            try:
+                # Do statsmodels
+                self.render_statsmodels_fit()
+            except:
+                print('Error calculating and rendering statsmodels fit')
 
-        try:
-            # Training Data Bootstraps
-            self.render_bootstraps()
+        if ApproxType.PyMC3 in self.model_param_type:
+            try:
+                # Do statsmodels
+                self.render_PyMC3_fit()
+            except:
+                print('Error calculating and rendering PyMC3 fit')
 
-            # Plot all-data solution 
-            self.solve_and_plot_solution(in_params=self.all_data_params,
-                                         title='All-Data Solution',
-                                         plot_filename_filename='all_data_solution.png')
+        if ApproxType.BS in self.model_param_type:
+            try:
+                # Training Data Bootstraps
+                self.render_bootstraps()
 
-            # Plot example solutions from bootstrap
-            bootstrap_selection = np.random.choice(self.bootstrap_params)
-            self.solve_and_plot_solution(in_params=bootstrap_selection,
-                                         title='Random Bootstrap Selection',
-                                         plot_filename_filename='random_bootstrap_selection.png')
+                # Plot all-data solution 
+                self.solve_and_plot_solution(in_params=self.all_data_params,
+                                             title='All-Data Solution',
+                                             plot_filename_filename='all_data_solution.png')
 
-            # Plot all bootstraps
-            self.plot_all_solutions(key='bootstrap')
-            # self.plot_all_solutions(key='bootstrap_with_priors')
+                # Plot example solutions from bootstrap
+                bootstrap_selection = np.random.choice(self.bootstrap_params)
+                self.solve_and_plot_solution(in_params=bootstrap_selection,
+                                             title='Random Bootstrap Selection',
+                                             plot_filename_filename='random_bootstrap_selection.png')
 
-            # Get and plot parameter distributions from bootstraps
-            self.render_and_plot_cred_int(param_type='bootstrap')
-        except:
-            print('Error calculating and rendering bootstraps')
+                # Plot all bootstraps
+                self.plot_all_solutions(key='bootstrap')
+                # self.plot_all_solutions(key='bootstrap_with_priors')
 
-        try:
-            # Do random walks around the overall fit
-            # print('\nSampling around MLE with wide sigma')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=1, which_distro='norm')
-            # print('Sampling around MLE with medium sigma')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=10, which_distro='norm')
-            # print('Sampling around MLE with narrow sigma')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=100, which_distro='norm')
-            # print('Sampling around MLE with ultra-narrow sigma')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=1000, which_distro=WhichDistro.norm)
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(param_type='bootstrap')
+            except:
+                print('Error calculating and rendering bootstraps')
 
-            print('Sampling around MLE with medium exponential parameter')
-            self.MCMC(self.all_data_params, opt_walk=False,
-                      sample_shape_param=100, which_distro=WhichDistro.laplace)
-            # print('Sampling around MLE with narrow exponential parameter')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=100, which_distro=WhichDistro.laplace)
-            # print('Sampling around MLE with ultra-narrow exponential parameter')
-            # self.MCMC(self.all_data_params, opt_walk=False,
-            #           sample_shape_param=1000, which_distro=WhichDistro.laplace)
+        if ApproxType.LS in self.model_param_type:
+            try:
+                # Do random walks around the overall fit
+                # print('\nSampling around MLE with wide sigma')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=1, which_distro='norm')
+                # print('Sampling around MLE with medium sigma')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=10, which_distro='norm')
+                # print('Sampling around MLE with narrow sigma')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=100, which_distro='norm')
+                # print('Sampling around MLE with ultra-narrow sigma')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=1000, which_distro=WhichDistro.norm)
 
-            # Get and plot parameter distributions from bootstraps
-            self.render_and_plot_cred_int(param_type='likelihood_sample')
+                print('Sampling around MLE with medium exponential parameter')
+                self.MCMC(self.all_data_params, opt_walk=False,
+                          sample_shape_param=100, which_distro=WhichDistro.laplace)
+                # print('Sampling around MLE with narrow exponential parameter')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=100, which_distro=WhichDistro.laplace)
+                # print('Sampling around MLE with ultra-narrow exponential parameter')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=1000, which_distro=WhichDistro.laplace)
 
-            # Plot all solutions...
-            self.plot_all_solutions(key='likelihood_samples')
-        except:
-            print('Error calculating and rendering direct likelihood samples')
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(param_type='likelihood_sample')
 
-        try:
-            # Next define MVN model on likelihood and fit   
-            self.fit_MVN_to_likelihood(opt_walk=False)
-            # Plot all solutions...
-            self.plot_all_solutions(key='MVN_fit')
-            # Get and plot parameter distributions from bootstraps
-            self.render_and_plot_cred_int(param_type='MVN_fit')
-        except:
-            print('Error calculating and rendering MVN fit to likelihood')
+                # Plot all solutions...
+                self.plot_all_solutions(key='likelihood_samples')
+            except:
+                print('Error calculating and rendering direct likelihood samples')
 
-        try:
-            print('Sampling via random walk MCMC, starting with MLE')  # a random bootstrap selection')
-            # bootstrap_selection = np.random.choice(self.n_bootstraps)
-            # starting_point = self.bootstrap_params[bootstrap_selection]
-            self.MCMC(self.all_data_params, opt_walk=True)
+            try:
+                # Next define MVN model on likelihood and fit   
+                self.fit_MVN_to_likelihood(opt_walk=False)
+                # Plot all solutions...
+                self.plot_all_solutions(key='MVN_fit')
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(param_type='MVN_fit')
+            except:
+                print('Error calculating and rendering MVN fit to likelihood')
 
-            # print('Sampling via random walk NUTS, starting with MLE')
-            # self.NUTS(self.all_data_params)
+        if ApproxType.MCMC in self.model_param_type:
+            try:
+                print('Sampling via random walk MCMC, starting with MLE')  # a random bootstrap selection')
+                # bootstrap_selection = np.random.choice(self.n_bootstraps)
+                # starting_point = self.bootstrap_params[bootstrap_selection]
+                self.MCMC(self.all_data_params, opt_walk=True)
 
-            # Plot all solutions...
-            self.plot_all_solutions(key='random_walk')
+                # print('Sampling via random walk NUTS, starting with MLE')
+                # self.NUTS(self.all_data_params)
 
-            # Get and plot parameter distributions from bootstraps
-            self.render_and_plot_cred_int(param_type='random_walk')
-        except:
-            print('Error calculating and rendering random walk')
+                # Plot all solutions...
+                self.plot_all_solutions(key='random_walk')
 
-        try:
-            # Next define MVN model on likelihood and fit
-            self.fit_MVN_to_likelihood(opt_walk=True)
-        except:
-            print('Error calculating and rendering MVN fit to random walk')
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(param_type='random_walk')
+            except:
+                print('Error calculating and rendering random walk')
+
+            try:
+                # Next define MVN model on likelihood and fit
+                self.fit_MVN_to_likelihood(opt_walk=True)
+            except:
+                print('Error calculating and rendering MVN fit to random walk')
 
         # Get extra likelihood samples
         # print('Just doing random sampling')
