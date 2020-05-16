@@ -8,7 +8,7 @@
 
 *Thank You to Digital Ocean and Black Sails Consulting for access to compute resources for this project.*
 
-*We've currently implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to easily find their state and the metrics that matter to them, please contact the contributors.*
+*We've  implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to beautifully and easily find their state and the metrics that matter to them, please contact the contributors.*
 
 *To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`*
 
