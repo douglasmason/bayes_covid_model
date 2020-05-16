@@ -14,8 +14,19 @@ matplotlib.use('Agg')
 from time import time as get_time
 from os import path
 import os
-
+from enum import Enum
 from yattag import Doc
+
+
+class ApproxType(Enum):
+    BS = ('BS', 'bootstrap')
+    LS = ('LS', 'likelihood_sample')
+    MCMC = ('MCMC', 'random_walk')
+    SM = ('SM', 'statsmodels')
+    PyMC3 = ('PyMC3', 'PyMC3')
+
+    def __str__(self):
+        return str(self.value)
 
 
 class Stopwatch:
@@ -34,6 +45,7 @@ def render_whisker_plot_simplified(state_report,
                                    plot_param_name='alpha_2',
                                    output_filename_format_str='test_boxplot_for_{}_{}.png',
                                    opt_log=False,
+                                   boxwidth=0.7,
                                    opt_param_type=[('SM', 'statsmodels')]):
     '''
     Plot all-state box/whiskers for given apram_name
@@ -89,7 +101,7 @@ def render_whisker_plot_simplified(state_report,
         map_param_type_to_ax[param_type] = ax.bxp(map_param_type_to_boxes[param_type], showfliers=False,
                                                   positions=range(1 + ind, len(map_param_type_to_boxes[param_type]) * (
                                                           n_groups + 1), (n_groups + 1)),
-                                                  widths=0.7, patch_artist=True, vert=False)
+                                                  widths=boxwidth, patch_artist=True, vert=False)
 
     setup_boxes = map_param_type_to_boxes[list(map_param_type_to_boxes.keys())[0]]
 
@@ -425,9 +437,8 @@ def render_whisker_plot(state_report,
 
 
 def generate_state_prediction(map_state_name_to_model,
-                        prediction_filename=None,
-                        n_samples=1000):
-    map_state_name_to_prediction = dict()
+                              prediction_filename=None,
+                              n_samples=1000):
     all_predictions = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -439,85 +450,90 @@ def generate_state_prediction(map_state_name_to_model,
 
         if state_model is not None:
 
-            params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
-            param_inds_to_plot = list(range(len(params)))
-            param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
-                                                  replace=False)
-            sols_to_plot = [state_model.run_simulation(in_params=params[param_ind]) for param_ind in
-                            tqdm(param_inds_to_plot)]
+            for param_type in state_model.model_param_type:
 
-            start_ind_data = len(state_model.data_new_tested) - state_model.moving_window_size - 1
-            start_ind_sol = len(state_model.data_new_tested) + state_model.burn_in - state_model.moving_window_size
+                if param_type == ApproxType.SM:
+                    params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
+                elif param_type == ApproxType.PyMC3:
+                    params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3()
+                print(param_type)
+                param_inds_to_plot = list(range(len(params)))
+                param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
+                                                      replace=False)
+                sols_to_plot = [state_model.run_simulation(in_params=params[param_ind]) for param_ind in
+                                tqdm(param_inds_to_plot)]
 
-            sol_date_range = [
-                state_model.min_date - datetime.timedelta(days=state_model.burn_in) + datetime.timedelta(
-                    days=1) * i for i in range(len(sols_to_plot[0][0]))]
+                start_ind_data = len(state_model.data_new_tested) - state_model.moving_window_size - 1
+                start_ind_sol = len(state_model.data_new_tested) + state_model.burn_in - state_model.moving_window_size
 
-            sols_to_plot_new_tested = list()
-            sols_to_plot_new_dead = list()
-            sols_to_plot_tested = list()
-            sols_to_plot_dead = list()
-            for sol in sols_to_plot:
-                tested = sol[1]
-                tested_range = np.cumsum(tested[start_ind_sol:])
+                sol_date_range = [
+                    state_model.min_date - datetime.timedelta(days=state_model.burn_in) + datetime.timedelta(
+                        days=1) * i for i in range(len(sols_to_plot[0][0]))]
 
-                dead = sol[2]
-                dead_range = np.cumsum(dead[start_ind_sol:])
+                sols_to_plot_new_tested = list()
+                sols_to_plot_new_dead = list()
+                sols_to_plot_tested = list()
+                sols_to_plot_dead = list()
+                for sol in sols_to_plot:
+                    tested = sol[1]
+                    tested_range = np.cumsum(tested[start_ind_sol:])
 
-                sols_to_plot_new_tested.append(tested)
-                sols_to_plot_new_dead.append(dead)
+                    dead = sol[2]
+                    dead_range = np.cumsum(dead[start_ind_sol:])
 
-                data_tested_at_start = np.cumsum(state_model.data_new_tested)[start_ind_data]
-                data_dead_at_start = np.cumsum(state_model.data_new_dead)[start_ind_data]
+                    sols_to_plot_new_tested.append(tested)
+                    sols_to_plot_new_dead.append(dead)
 
-                tested = [0] * start_ind_sol + [data_tested_at_start + tested_val for tested_val in tested_range]
-                dead = [0] * start_ind_sol + [data_dead_at_start + dead_val for dead_val in dead_range]
+                    data_tested_at_start = np.cumsum(state_model.data_new_tested)[start_ind_data]
+                    data_dead_at_start = np.cumsum(state_model.data_new_dead)[start_ind_data]
 
-                sols_to_plot_tested.append(tested)
-                sols_to_plot_dead.append(dead)
+                    tested = [0] * start_ind_sol + [data_tested_at_start + tested_val for tested_val in tested_range]
+                    dead = [0] * start_ind_sol + [data_dead_at_start + dead_val for dead_val in dead_range]
 
-            output_list_of_dicts = list()
-            for date_ind in range(start_ind_sol, len(sols_to_plot_tested[0])):
-                distro_new_tested = [tested[date_ind] for tested in sols_to_plot_new_tested]
-                distro_new_dead = [dead[date_ind] for dead in sols_to_plot_new_dead]
-                distro_tested = [tested[date_ind] for tested in sols_to_plot_tested]
-                distro_dead = [dead[date_ind] for dead in sols_to_plot_dead]
-                tmp_dict = {'date': sol_date_range[date_ind],
-                             'total_positive_mean': np.average(distro_tested),
-                             'total_positive_std': np.std(distro_tested),
-                             'total_positive_p5': np.percentile(distro_tested, 5),
-                             'total_positive_p25': np.percentile(distro_tested, 25),
-                             'total_positive_p50': np.percentile(distro_tested, 50),
-                             'total_positive_p75': np.percentile(distro_tested, 75),
-                             'total_positive_p95': np.percentile(distro_tested, 95),
-                             'total_deceased_mean': np.average(distro_dead),
-                             'total_deceased_std': np.std(distro_dead),
-                             'total_deceased_p5': np.percentile(distro_dead, 5),
-                             'total_deceased_p25': np.percentile(distro_dead, 25),
-                             'total_deceased_p50': np.percentile(distro_dead, 50),
-                             'total_deceased_p75': np.percentile(distro_dead, 75),
-                             'total_deceased_p95': np.percentile(distro_dead, 95),
-                             'new_positive_mean': np.average(distro_new_tested),
-                             'new_positive_std': np.std(distro_new_tested),
-                             'new_positive_p5': np.percentile(distro_new_tested, 5),
-                             'new_positive_p25': np.percentile(distro_new_tested, 25),
-                             'new_positive_p50': np.percentile(distro_new_tested, 50),
-                             'new_positive_p75': np.percentile(distro_new_tested, 75),
-                             'new_positive_p95': np.percentile(distro_new_tested, 95),
-                             'new_deceased_mean': np.average(distro_new_dead),
-                             'new_deceased_std': np.std(distro_new_dead),
-                             'new_deceased_p5': np.percentile(distro_new_dead, 5),
-                             'new_deceased_p25': np.percentile(distro_new_dead, 25),
-                             'new_deceased_p50': np.percentile(distro_new_dead, 50),
-                             'new_deceased_p75': np.percentile(distro_new_dead, 75),
-                             'new_deceased_p95': np.percentile(distro_new_dead, 95),
-                             }
-                output_list_of_dicts.append(tmp_dict.copy())
-                
-                tmp_dict.update({'state': state})
-                all_predictions.append(tmp_dict.copy())
+                    sols_to_plot_tested.append(tested)
+                    sols_to_plot_dead.append(dead)
 
-            map_state_name_to_prediction[state] = output_list_of_dicts
+                output_list_of_dicts = list()
+                for date_ind in range(start_ind_sol, len(sols_to_plot_tested[0])):
+                    distro_new_tested = [tested[date_ind] for tested in sols_to_plot_new_tested]
+                    distro_new_dead = [dead[date_ind] for dead in sols_to_plot_new_dead]
+                    distro_tested = [tested[date_ind] for tested in sols_to_plot_tested]
+                    distro_dead = [dead[date_ind] for dead in sols_to_plot_dead]
+                    tmp_dict = {'model_type': param_type.value[1],
+                                'date': sol_date_range[date_ind],
+                                'total_positive_mean': np.average(distro_tested),
+                                'total_positive_std': np.std(distro_tested),
+                                'total_positive_p5': np.percentile(distro_tested, 5),
+                                'total_positive_p25': np.percentile(distro_tested, 25),
+                                'total_positive_p50': np.percentile(distro_tested, 50),
+                                'total_positive_p75': np.percentile(distro_tested, 75),
+                                'total_positive_p95': np.percentile(distro_tested, 95),
+                                'total_deceased_mean': np.average(distro_dead),
+                                'total_deceased_std': np.std(distro_dead),
+                                'total_deceased_p5': np.percentile(distro_dead, 5),
+                                'total_deceased_p25': np.percentile(distro_dead, 25),
+                                'total_deceased_p50': np.percentile(distro_dead, 50),
+                                'total_deceased_p75': np.percentile(distro_dead, 75),
+                                'total_deceased_p95': np.percentile(distro_dead, 95),
+                                'new_positive_mean': np.average(distro_new_tested),
+                                'new_positive_std': np.std(distro_new_tested),
+                                'new_positive_p5': np.percentile(distro_new_tested, 5),
+                                'new_positive_p25': np.percentile(distro_new_tested, 25),
+                                'new_positive_p50': np.percentile(distro_new_tested, 50),
+                                'new_positive_p75': np.percentile(distro_new_tested, 75),
+                                'new_positive_p95': np.percentile(distro_new_tested, 95),
+                                'new_deceased_mean': np.average(distro_new_dead),
+                                'new_deceased_std': np.std(distro_new_dead),
+                                'new_deceased_p5': np.percentile(distro_new_dead, 5),
+                                'new_deceased_p25': np.percentile(distro_new_dead, 25),
+                                'new_deceased_p50': np.percentile(distro_new_dead, 50),
+                                'new_deceased_p75': np.percentile(distro_new_dead, 75),
+                                'new_deceased_p95': np.percentile(distro_new_dead, 95),
+                                }
+                    output_list_of_dicts.append(tmp_dict.copy())
+
+                    tmp_dict.update({'state': state})
+                    all_predictions.append(tmp_dict.copy())
 
     all_predictions = pd.DataFrame(all_predictions)
     print('Saving state prediction to {}...'.format(prediction_filename))
@@ -526,6 +542,7 @@ def generate_state_prediction(map_state_name_to_model,
     print('Saving state report to {}...'.format(prediction_filename.replace('joblib', 'csv')))
     joblib.dump(all_predictions.to_csv(), prediction_filename.replace('joblib', 'csv'))
     print('...done!')
+
 
 def generate_state_report(map_state_name_to_model,
                           state_report_filename=None,
@@ -785,13 +802,13 @@ def run_everything(run_states,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names)
                 _ = generate_state_prediction(map_state_name_to_model,
-                                                     prediction_filename=state_prediction_filename)
+                                              prediction_filename=state_prediction_filename)
                 for param_name in state_model.plot_param_names:
                     render_whisker_plot_simplified(state_report,
                                                    plot_param_name=param_name,
                                                    output_filename_format_str=filename_format_str,
                                                    opt_log=param_name in logarithmic_params,
-                                                   opt_param_type=state_model.simplified_model_param_type)
+                                                   opt_param_type=state_model.model_param_type)
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')

@@ -1,4 +1,4 @@
-from sub_units.utils import Stopwatch
+from sub_units.utils import Stopwatch, ApproxType
 import numpy as np
 import pandas as pd
 from enum import Enum
@@ -21,18 +21,6 @@ import datetime
 import matplotlib.dates as mdates
 import arviz as az
 import seaborn as sns
-
-
-class ApproxType(Enum):
-    BS = ('BS', 'bootstrap')
-    LS = ('LS', 'likelihood_sample')
-    MCMC = ('MCMC', 'random_walk')
-    SM = ('SM', 'statsmodels')
-    PyMC3 = ('PyMC3', 'PyMC3')
-
-    def __str__(self):
-        return str(self.value)
-
 
 class WhichDistro(Enum):
     norm = 'norm'

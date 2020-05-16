@@ -17,18 +17,26 @@ class MovingWindowModel(BayesModel):
                  max_date_str,
                  moving_window_size=14,
                  optimizer_method='SLSQP',
-                 simplified_model_param_type=[ApproxType.SM], # ApproxType.PyMC3
+                 opt_simplified=False,
                  **kwargs):
         min_sol_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d') - datetime.timedelta(
             days=moving_window_size)
         model_type_name = f'moving_window_{moving_window_size}_days'
 
+        if opt_simplified:
+            model_param_type = [ApproxType.SM, ApproxType.PyMC3]
+            print('Doing simplified models...')
+        else:
+            model_param_type = [ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            print('Doing all models...')
         # these kwargs will be added as object attributes
         kwargs.update({'model_type_name': model_type_name,
                        'moving_window_size': moving_window_size,
                        'min_sol_date': min_sol_date,
-                       'simplified_model_param_type': simplified_model_param_type,
-                       'optimizer_method': optimizer_method})
+                       'optimizer_method': optimizer_method,
+                       'model_param_type': model_param_type,
+                       'moving_window_size': moving_window_size,
+                       'opt_simplified': opt_simplified})
         super(MovingWindowModel, self).__init__(state, max_date_str, **kwargs)
 
         ind1 = max(self.day_of_threshold_met_case, len(self.series_data) - moving_window_size)
@@ -327,10 +335,10 @@ class MovingWindowModel(BayesModel):
         '''
 
         # Do statsmodels. Yes. It's THAT simplified.
-        if ApproxType.SM in self.simplified_model_param_type:
+        if ApproxType.SM in self.model_param_type:
             self.render_statsmodels_fit(opt_simplified=True)
         
-        if ApproxType.PyMC3 in self.simplified_model_param_type:
+        if ApproxType.PyMC3 in self.model_param_type:
             self.render_PyMC3_fit(opt_simplified=True)
 
 

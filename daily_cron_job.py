@@ -41,9 +41,9 @@ covid.n_likelihood_samples = 10000
 covid.moving_window_size = 21  # three weeks
 covid.max_date_str = yesterdays_date_str
 covid.opt_force_calc = False
-covid.opt_force_plot = True
+covid.opt_force_plot = False
 covid.opt_simplified = True  # set to True to just do statsmodels as a simplified daily service
-covid.override_run_states = ['Utah']
+covid.override_run_states = None
 
 plot_subfolder = covid.run_everything()
 hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))

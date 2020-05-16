@@ -2,6 +2,7 @@ from sub_units.bayes_model import BayesModel
 from scipy.integrate import odeint
 import numpy as np
 import datetime
+from sub_units.utils import ApproxType
 
 
 class ConvolutionModel(BayesModel):
@@ -9,9 +10,9 @@ class ConvolutionModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self,
                  *args,
-                 optimizer_method='Nelder-Mead', #'Nelder-Mead', #'SLSQP'
+                 optimizer_method='Nelder-Mead', #'Nelder-Mead', #'SLSQP',
                  **kwargs):
-        kwargs.update({'model_type_name': 'convolution',
+        kwargs.update({'model_type_name': model_param_type,
                        'min_sol_date': None,  # TODO: find a better way to set this attribute
                        'optimizer_method': optimizer_method
                        })
