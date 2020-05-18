@@ -10,7 +10,7 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 n_bootstraps = 100
 n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
-max_date_str = '2020-05-14'
+max_date_str = '2020-05-15'
 opt_force_calc = False
 opt_force_plot = False
 opt_simplified = False  # set to True to just do statsmodels as a simplified daily service

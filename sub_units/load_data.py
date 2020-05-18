@@ -85,31 +85,6 @@ def get_state_data(state,
     dead = [x for x in map_state_to_series[state]['deaths_series'].values]
 
     ####
-    # borrow half of values from next day if we have zero
-    ####
-
-    # new_tested = [infected[0]] + [infected[i] - infected[i - 1] for i in
-    #                               range(1, len(infected))]
-    # new_dead = [dead[0]] + [dead[i] - dead[i - 1] for i in
-    #                         range(1, len(dead))]
-    # for i in range(len(new_tested) - 1):
-    #     if new_tested[i] == 0:
-    #         borrow_val = new_tested[i + 1]
-    #         print(
-    #             f'Zero entry found for cases in state {state} on day {min_date + datetime.timedelta(days=i)}, borrowing half from next days value of {borrow_val}')
-    #         new_tested[i] = borrow_val / 2
-    #         new_tested[i + 1] = borrow_val / 2
-    # for i in range(len(new_dead) - 1):
-    #     if new_dead[i] == 0:
-    #         borrow_val = new_dead[i + 1]
-    #         print(
-    #             f'Zero entry found for deaths in state {state} on day {min_date + datetime.timedelta(days=i)}, borrowing half from next days value of {borrow_val}')
-    #         new_dead[i] = borrow_val / 2
-    #         new_dead[i + 1] = borrow_val / 2
-    # infected = list(np.cumsum(new_tested))
-    # dead = list(np.cumsum(new_dead))
-
-    ####
     # Do three-day smoothing
     ####
 
@@ -122,15 +97,15 @@ def get_state_data(state,
         print('Smoothing the data...')
         new_vals = [None] * len(new_tested)
         for i in range(len(new_tested)):
-            new_vals[i] = sum(new_tested[slice(max(0, i - 1), min(len(new_tested), i + 1))]) / 3
-            if new_vals[i] < 1 / 3:
-                new_vals[i] = 1 / 10  # put minimum value at one per 3-day window
+            new_vals[i] = sum(new_tested[slice(max(0, i - 1), min(len(new_tested), i + 2))]) / 3
+            # if new_vals[i] < 1 / 3:
+            #     new_vals[i] = 1 / 100  # minimum value
         new_tested = new_vals.copy()
         new_vals = [None] * len(new_dead)
         for i in range(len(new_dead)):
-            new_vals[i] = sum(new_dead[slice(max(0, i - 1), min(len(new_dead), i + 1))]) / 3
-            if new_vals[i] < 1 / 3:
-                new_vals[i] = 1 / 10  # put minimum value at one per 3-day window
+            new_vals[i] = sum(new_dead[slice(max(0, i - 1), min(len(new_dead), i + 2))]) / 3
+            # if new_vals[i] < 1 / 3:
+            #     new_vals[i] = 1 / 100  # minimum value
         new_dead = new_vals.copy()
     else:
         print('NOT smoothing the data...')

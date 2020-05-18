@@ -24,19 +24,21 @@ class MovingWindowModel(BayesModel):
         model_type_name = f'moving_window_{moving_window_size}_days'
 
         if opt_simplified:
-            model_param_type = [ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.SM]
             print('Doing simplified models...')
         else:
-            model_param_type = [ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
             print('Doing all models...')
+
         # these kwargs will be added as object attributes
         kwargs.update({'model_type_name': model_type_name,
                        'moving_window_size': moving_window_size,
                        'min_sol_date': min_sol_date,
                        'optimizer_method': optimizer_method,
-                       'model_param_type': model_param_type,
+                       'model_approx_types': model_approx_types,
                        'moving_window_size': moving_window_size,
-                       'opt_simplified': opt_simplified})
+                       'opt_simplified': opt_simplified,
+                       'plot_two_vals': ['positive_slope', 'positive_intercept']})
         super(MovingWindowModel, self).__init__(state, max_date_str, **kwargs)
 
         ind1 = max(self.day_of_threshold_met_case, len(self.series_data) - moving_window_size)
@@ -62,12 +64,12 @@ class MovingWindowModel(BayesModel):
 
         # do intercept at the beginning of moving window
         intercept_t_val = self.max_date_in_days - self.moving_window_size
-        end_positive_count = np.exp(intercept_t_val * params['positive_slope'])
-        end_deceased_count = np.exp(intercept_t_val * params['deceased_slope'])
-        positive = np.array(np.exp(self.t_vals * params['positive_slope'])) * np.array(
-            params['positive_intercept'] / end_positive_count)
-        deceased = np.array(np.exp(self.t_vals * params['deceased_slope'])) * np.array(
-            params['deceased_intercept'] / end_deceased_count)
+        xzero_positive_count = np.exp(intercept_t_val * params['positive_slope'])
+        xzero_deceased_count = np.exp(intercept_t_val * params['deceased_slope'])
+        positive = np.maximum(np.array(np.exp(self.t_vals * params['positive_slope'])) * np.array(
+            (params['positive_intercept'] - self.log_offset) / xzero_positive_count), 0)
+        deceased = np.maximum(np.array(np.exp(self.t_vals * params['deceased_slope'])) * np.array(
+            (params['deceased_intercept'] - self.log_offset) / xzero_deceased_count), 0)
 
         # positive = np.array(np.exp(self.t_vals * params['positive_slope'])) * params['positive_intercept']
         # deceased = np.array(np.exp(self.t_vals * params['deceased_slope'])) * params['deceased_intercept']
@@ -158,20 +160,20 @@ class MovingWindowModel(BayesModel):
         # print(f'Simulation took {timer.elapsed_time() * 100} ms')
         # timer = Stopwatch()
 
-        new_tested_dists = [ \
-            (np.log(data_new_tested[i] + self.log_offset) - np.log(new_tested_from_sol[i + self.burn_in]))
-            # add self.log_offset to avoid log(0)
-            for i in cases_bootstrap_indices]
-        new_dead_dists = [ \
-            (np.log(data_new_dead[i] + self.log_offset) - np.log(new_deceased_from_sol[i + self.burn_in]))
-            # add self.log_offset to avoid log(0)
-            for i in deaths_bootstrap_indices]
+        actual_tested = [np.log(data_new_tested[i] + self.log_offset) for i in cases_bootstrap_indices]
+        predicted_tested = [np.log(new_tested_from_sol[i + self.burn_in] + self.log_offset) for i in cases_bootstrap_indices]
+        actual_dead = [np.log(data_new_dead[i] + self.log_offset) for i in deaths_bootstrap_indices]
+        predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in deaths_bootstrap_indices]
+
+        new_tested_dists = [predicted_tested[i] - actual_tested[i] for i in range(len(predicted_tested))]
+        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_tested))]
 
         tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
         deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
         other_errs = list()
 
-        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
+        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals, \
+               predicted_tested, actual_tested, predicted_dead, actual_dead
 
     def render_statsmodels_fit(self, opt_simplified=False):
         '''
@@ -204,6 +206,8 @@ class MovingWindowModel(BayesModel):
 
         positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
         deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
+        map_positive_names_to_sorted_ind = {val: ind for ind, val in enumerate(positive_names)}
+        map_deceased_names_to_sorted_ind = {val: ind for ind, val in enumerate(deceased_names)}
 
         data_new_tested = self.data_new_tested
         data_new_deceased = self.data_new_dead
@@ -214,8 +218,8 @@ class MovingWindowModel(BayesModel):
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': data_new_tested[i] + self.log_offset,
-                              'new_deceased': data_new_deceased[i] + self.log_offset,
+                              'new_positive': data_new_tested[i],
+                              'new_deceased': data_new_deceased[i],
                               } for ind, i in
                              enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
 
@@ -244,9 +248,29 @@ class MovingWindowModel(BayesModel):
         # also, note that we have already applied hte exponential transofrm on A
         means_as_list = [params_positive[name] for name in positive_names]
         sigma_as_list = [bse_positive[name] for name in positive_names]
-        print('sigma_as_list:', sigma_as_list)
-        print('means_as_list:', means_as_list)
-        cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+
+        # print('Statsmodels results for positive:')
+        # print('sigma_as_list:', sigma_as_list)
+        # print('means_as_list:', means_as_list)
+        
+        # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+        cov = results_positive.cov_params()
+        # print('Cov columns:', cov.columns)
+
+        # get ordering of rows and cols correct
+        mapping_list = [map_positive_names_to_sorted_ind[name_mapping_positive[col]] for col in cov.columns]
+        inv_mapping_list = [mapping_list.index(i) for i in range(len(mapping_list))]
+        cov = cov.values
+        cov = cov[inv_mapping_list, :]
+        cov = cov[:, inv_mapping_list]
+
+        # render corr
+        # corr = self.cov2corr(cov)
+        # print('diag(cov:)')
+        # print(np.diagonal(cov))
+        # print('corr:')
+        # print(corr)
+
         self.statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
         #####
@@ -272,28 +296,45 @@ class MovingWindowModel(BayesModel):
         print(bse_deceased)
         sigma_as_list = [bse_deceased[name] for name in deceased_names]
 
-        cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+        # print('Statsmodels results for deceased:')
+        # print('sigma_as_list:', sigma_as_list)
+        # print('means_as_list:', means_as_list)
 
-        print('sigma_as_list:', sigma_as_list)
-        print('means_as_list:', means_as_list)
+        # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
+        cov = results_deceased.cov_params()
+
+        # get ordering of rows and cols correct
+        mapping_list = [map_deceased_names_to_sorted_ind[name_mapping_deceased[col]] for col in cov.columns]
+        inv_mapping_list = [mapping_list.index(i) for i in range(len(mapping_list))]
+        cov = cov.values
+        cov = cov[inv_mapping_list, :]
+        cov = cov[:, inv_mapping_list]
+
+        # render corr
+        # corr = self.cov2corr(cov)
+        # print('cov:')
+        # print(cov)
+        # print('corr:')
+        # print(corr)
+
         self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
         if not opt_simplified:
-            self.render_and_plot_cred_int(param_type='statsmodels')
+            self.render_and_plot_cred_int(approx_type=ApproxType.SM)
 
-        self.plot_all_solutions(key='statsmodels')
+        self.plot_all_solutions(approx_type=ApproxType.SM)
 
     def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
 
         samples = self.all_PyMC3_samples_as_list
         log_probs = self.all_PyMC3_log_probs_as_list
         samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
-        
+
         sampled_ind = np.random.choice(len(samples), n_samples)
         samples = [samples[i] for i in sampled_ind]
-        
-        return samples, samples, [1] * len(samples), log_probs
+        log_probs = [log_probs[i] for i in sampled_ind]
 
+        return samples, samples, [1] * len(samples), log_probs
 
     def get_weighted_samples_via_statsmodels(self, n_samples=1000, ):
         '''
@@ -335,12 +376,13 @@ class MovingWindowModel(BayesModel):
         '''
 
         # Do statsmodels. Yes. It's THAT simplified.
-        if ApproxType.SM in self.model_param_type:
+        if ApproxType.SM in self.model_approx_types:
             self.render_statsmodels_fit(opt_simplified=True)
-        
-        if ApproxType.PyMC3 in self.model_param_type:
-            self.render_PyMC3_fit(opt_simplified=True)
+            self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
 
+        if ApproxType.PyMC3 in self.model_approx_types:
+            self.render_PyMC3_fit(opt_simplified=True)
+            self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.PyMC3)
 
     def render_PyMC3_fit(self, opt_simplified=False):
 
@@ -358,21 +400,21 @@ class MovingWindowModel(BayesModel):
 
         # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
         if (not success and self.opt_calc) or self.opt_force_calc:
-            
+
             print('Massaging data into dataframe...')
-    
+
             # PyMC3 requires a Pandas dataframe, so let's get cooking!
             data_as_list_of_dicts = [{'new_tested': self.data_new_tested[i],
                                       'new_dead': self.data_new_dead[i],
-                                      'log_new_tested': np.log(self.data_new_tested[i] + 0.1),
-                                      'log_new_dead': np.log(self.data_new_dead[i] + 0.1),
+                                      'log_new_tested': np.log(self.data_new_tested[i] + self.log_offset),
+                                      'log_new_dead': np.log(self.data_new_dead[i] + self.log_offset),
                                       'orig_ind': i + self.burn_in,
                                       'x': ind,
                                       } for ind, i in enumerate(
                 range(len(self.data_new_tested) - self.moving_window_size, len(self.data_new_tested)))]
-            
+
             data = pd.DataFrame(data_as_list_of_dicts)
-            
+
             ind_offset = 0  # had to hand-tune this to zero
             data['DOW'] = [str((x + ind_offset) % 7) for x in data['orig_ind']]
             data['day1'] = [1 if (x + ind_offset) % 7 == 1 else 0 for x in data['orig_ind']]
@@ -381,22 +423,22 @@ class MovingWindowModel(BayesModel):
             data['day4'] = [1 if (x + ind_offset) % 7 == 4 else 0 for x in data['orig_ind']]
             data['day5'] = [1 if (x + ind_offset) % 7 == 5 else 0 for x in data['orig_ind']]
             data['day6'] = [1 if (x + ind_offset) % 7 == 6 else 0 for x in data['orig_ind']]
-    
+
             print('Running PyMC3 fit...')
             with pm.Model() as model_positive:  # model specifications in PyMC3 are wrapped in a with-statement
-    
+
                 # Define priors
                 intercept = pm.Normal('positive_intercept', 10, sigma=5)
                 x_coeff = pm.Normal('positive_slope', 0, sigma=0.5)
                 sigma = pm.HalfNormal('sigma_positive', sigma=1)
-    
+
                 day1_mult = pm.Normal('day1_positive_multiplier', 0, sigma=0.5)
                 day2_mult = pm.Normal('day2_positive_multiplier', 0, sigma=0.5)
                 day3_mult = pm.Normal('day3_positive_multiplier', 0, sigma=0.5)
                 day4_mult = pm.Normal('day4_positive_multiplier', 0, sigma=0.5)
                 day5_mult = pm.Normal('day5_positive_multiplier', 0, sigma=0.5)
                 day6_mult = pm.Normal('day6_positive_multiplier', 0, sigma=0.5)
-    
+
                 # Define likelihood
                 Y_obs = pm.Normal('new_tested', mu=intercept + x_coeff * data['x'] + \
                                                    day1_mult * data['day1'] + \
@@ -407,14 +449,14 @@ class MovingWindowModel(BayesModel):
                                                    day6_mult * data['day6'],
                                   sigma=sigma,  # 1/np.exp(data_log['y']),
                                   observed=data['log_new_tested'])
-    
+
                 # Inference!
                 print("Searching for MAP...")
                 MAP = pm.find_MAP(model=model_positive)
                 print('...done! MAP:')
                 print(MAP)
                 positive_trace = pm.sample(2000, start=MAP)
-    
+
             positive_trace_as_dict = {name: positive_trace.get_values(name) for name in self.sorted_names if
                                       'positive' in name}
             positive_trace_as_list_of_dicts = list()
@@ -423,21 +465,21 @@ class MovingWindowModel(BayesModel):
                 for name in positive_trace_as_dict:
                     dict_to_add.update({name: positive_trace_as_dict[name][i]})
                 positive_trace_as_list_of_dicts.append(dict_to_add)
-    
+
             with pm.Model() as model_deceased:  # model specifications in PyMC3 are wrapped in a with-statement
-    
+
                 # Define priors
                 intercept = pm.Normal('deceased_intercept', 10, sigma=5)
                 x_coeff = pm.Normal('deceased_slope', 0, sigma=0.5)
                 sigma = pm.HalfNormal('sigma_deceased', sigma=1)
-    
+
                 day1_mult = pm.Normal('day1_deceased_multiplier', 0, sigma=0.5)
                 day2_mult = pm.Normal('day2_deceased_multiplier', 0, sigma=0.5)
                 day3_mult = pm.Normal('day3_deceased_multiplier', 0, sigma=0.5)
                 day4_mult = pm.Normal('day4_deceased_multiplier', 0, sigma=0.5)
                 day5_mult = pm.Normal('day5_deceased_multiplier', 0, sigma=0.5)
                 day6_mult = pm.Normal('day6_deceased_multiplier', 0, sigma=0.5)
-    
+
                 # Define likelihood
                 Y_obs = pm.Normal('new_dead', mu=intercept + x_coeff * data['x'] + \
                                                  day1_mult * data['day1'] + \
@@ -448,14 +490,14 @@ class MovingWindowModel(BayesModel):
                                                  day6_mult * data['day6'],
                                   sigma=sigma,  # 1/np.exp(data_log['y']),
                                   observed=data['log_new_dead'])
-    
+
                 # Inference!
                 print("Searching for MAP...")
                 MAP = pm.find_MAP(model=model_deceased)
                 print('...done! MAP:')
                 print(MAP)
                 deceased_trace = pm.sample(2000, start=MAP)
-    
+
             deceased_trace_as_dict = {name: deceased_trace.get_values(name) for name in self.sorted_names if
                                       'deceased' in name}
             deceased_trace_as_list_of_dicts = list()
@@ -464,35 +506,36 @@ class MovingWindowModel(BayesModel):
                 for name in deceased_trace_as_dict:
                     dict_to_add.update({name: deceased_trace_as_dict[name][i]})
                 deceased_trace_as_list_of_dicts.append(dict_to_add)
-    
+
             trace_as_list_of_dicts = list()
-            for positive_params, deceased_params in zip(positive_trace_as_list_of_dicts, deceased_trace_as_list_of_dicts):
+            for positive_params, deceased_params in zip(positive_trace_as_list_of_dicts,
+                                                        deceased_trace_as_list_of_dicts):
                 dict_to_add = positive_params.copy()
                 dict_to_add.update(deceased_params)
                 trace_as_list_of_dicts.append(dict_to_add)
-    
+
             for tmp_dict in trace_as_list_of_dicts:
                 for key in tmp_dict:
                     if key in self.logarithmic_params:
                         tmp_dict[key] = np.exp(tmp_dict[key])
-    
+
             all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(tmp_dict) for tmp_dict in
-                                              trace_as_list_of_dicts]
+                                         trace_as_list_of_dicts]
             all_PyMC3_log_probs_as_list = [self.get_log_likelihood(params) for params in trace_as_list_of_dicts]
-            
+
             tmp_dict = {'all_PyMC3_samples_as_list': all_PyMC3_samples_as_list,
-                         'all_PyMC3_log_probs_as_list': all_PyMC3_log_probs_as_list}
+                        'all_PyMC3_log_probs_as_list': all_PyMC3_log_probs_as_list}
 
             print(f'saving PyMC3 trace to {self.PyMC3_filename}...')
             joblib.dump(tmp_dict, self.PyMC3_filename)
             print('...done!')
-            
+
         self.all_PyMC3_samples_as_list = all_PyMC3_samples_as_list
         self.all_PyMC3_log_probs_as_list = all_PyMC3_log_probs_as_list
 
         # Plot all solutions...
-        self.plot_all_solutions(key='PyMC3')
+        self.plot_all_solutions(approx_type=ApproxType.PyMC3)
 
         if not opt_simplified:
             # Get and plot parameter distributions from bootstraps
-            self.render_and_plot_cred_int(param_type='PyMC3')
+            self.render_and_plot_cred_int(approx_type=ApproxType.PyMC3)

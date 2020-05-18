@@ -53,8 +53,9 @@ print(hyperparamater_str)
 # Step 3: Upload Figures to AWS
 #####
 
-plot_subfolder = 'state_plots/2020_05_15_date_smoothed_moving_window_21_days_statsmodels_only'
+plot_subfolder = 'state_plots/' + hyperparamater_str #state_plots/2020_05_15_date_smoothed_moving_window_21_days_statsmodels_only'
 hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
+print(hyperparamater_str)
 
 first_level_files = glob.glob(plot_subfolder+'/*.*', recursive=True)
 second_level_files = glob.glob(plot_subfolder+'/*/*.*', recursive=True)

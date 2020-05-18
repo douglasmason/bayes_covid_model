@@ -10,7 +10,7 @@ class ConvolutionModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self,
                  *args,
-                 optimizer_method='Nelder-Mead', #'Nelder-Mead', #'SLSQP',
+                 optimizer_method='Nelder-Mead',  # 'Nelder-Mead', #'SLSQP',
                  **kwargs):
         kwargs.update({'model_type_name': model_param_type,
                        'min_sol_date': None,  # TODO: find a better way to set this attribute
@@ -19,7 +19,7 @@ class ConvolutionModel(BayesModel):
         super(ConvolutionModel, self).__init__(*args, **kwargs)
         self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
         self.deaths_indices = list(range(self.day_of_threshold_met_death, len(self.series_data)))
-        
+
         # dont need to filter out zero-values since we now add the logarithm offset
         # self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
         # self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
@@ -79,7 +79,9 @@ class ConvolutionModel(BayesModel):
         convolution_kernel = np.array(convolution_kernel)
         deceased = np.convolve(np.squeeze(contagious), convolution_kernel) * params['contagious_to_deceased_mult']
 
-        return np.vstack([np.squeeze(contagious), positive[:contagious.size], deceased[:contagious.size]])
+        return np.vstack([np.maximum(np.squeeze(contagious)), 0),
+                          np.maximum(np.array(positive[:contagious.size]), 0),
+                          np.maximum(np.array(deceased[:contagious.size]), 0)])
 
     def _get_log_likelihood_precursor(self,
                                       in_params,
@@ -119,15 +121,13 @@ class ConvolutionModel(BayesModel):
         # print(f'Simulation took {timer.elapsed_time() * 100} ms')
         # timer = Stopwatch()
 
-        new_tested_dists = [ \
+        actual_tested = [np.log(data_new_tested[i] + self.log_offset) for i in cases_bootstrap_indices]
+        predicted_tested = [np.log(new_tested_from_sol[i + self.burn_in] + self.log_offset) for i in cases_bootstrap_indices]
+        actual_dead = [np.log(data_new_dead[i] + self.log_offset) for i in deaths_bootstrap_indices]
+        predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in deaths_bootstrap_indices]
 
-            (np.log(data_new_tested[i] + self.log_offset) - np.log(new_tested_from_sol[i + self.burn_in]))
-            # add self.log_offset to avoid log(0)
-            for i in cases_bootstrap_indices]
-        new_dead_dists = [ \
-            (np.log(data_new_dead[i] + self.log_offset) - np.log(new_deceased_from_sol[i + self.burn_in]))
-            # add self.log_offset to avoid log(0)
-            for i in deaths_bootstrap_indices]
+        new_tested_dists = [predicted_tested[i] - actual_tested[i] for i in range(len(predicted_tested))]
+        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_tested))]
 
         # ensure the two delays are physical
         val1 = params['contagious_to_positive_delay']
@@ -138,4 +138,5 @@ class ConvolutionModel(BayesModel):
         deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
         other_errs = [err_from_reversed_delays]
 
-        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals
+        return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals, \
+               predicted_tested, actual_tested, predicted_dead, actual_dead

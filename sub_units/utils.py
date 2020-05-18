@@ -46,7 +46,7 @@ def render_whisker_plot_simplified(state_report,
                                    output_filename_format_str='test_boxplot_for_{}_{}.png',
                                    opt_log=False,
                                    boxwidth=0.7,
-                                   opt_param_type=[('SM', 'statsmodels')]):
+                                   approx_types=[('SM', 'statsmodels')]):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -61,7 +61,7 @@ def render_whisker_plot_simplified(state_report,
     small_state_report = state_report.iloc[tmp_ind]
     small_state_report.to_csv('simplified_state_report_{}.csv'.format(plot_param_name))
 
-    for approx_type in opt_param_type:
+    for approx_type in approx_types:
         param_name_abbr, param_name = approx_type.value
 
         latex_str = small_state_report[
@@ -70,15 +70,15 @@ def render_whisker_plot_simplified(state_report,
         print(param_name)
         print(latex_str)
 
-    map_param_type_to_boxes = dict()
-    for approx_type in opt_param_type:
+    map_approx_type_to_boxes = dict()
+    for approx_type in approx_types:
         param_name_abbr, param_name = approx_type.value
         tmp_list = list()
         for i in range(len(small_state_report)):
             row = pd.DataFrame([small_state_report.iloc[i]])
             new_box = \
                 {
-                    'label': 'param_type',
+                    'label': approx_type.value[1],
                     'whislo': row[f'{param_name_abbr}_p5'].values[0],  # Bottom whisker position
                     'q1': row[f'{param_name_abbr}_p25'].values[0],  # First quartile (25th percentile)
                     'med': row[f'{param_name_abbr}_p50'].values[0],  # Median         (50th percentile)
@@ -87,31 +87,31 @@ def render_whisker_plot_simplified(state_report,
                     'fliers': []  # Outliers
                 }
             tmp_list.append(new_box)
-        map_param_type_to_boxes[param_name_abbr] = tmp_list
+        map_approx_type_to_boxes[param_name_abbr] = tmp_list
 
     plt.close()
     plt.clf()
     fig, ax = plt.subplots()
     fig.set_size_inches(8, 10.5)
 
-    n_groups = len(map_param_type_to_boxes)
+    n_groups = len(map_approx_type_to_boxes)
 
-    map_param_type_to_ax = dict()
-    for ind, param_type in enumerate(sorted(map_param_type_to_boxes)):
-        map_param_type_to_ax[param_type] = ax.bxp(map_param_type_to_boxes[param_type], showfliers=False,
-                                                  positions=range(1 + ind, len(map_param_type_to_boxes[param_type]) * (
+    map_approx_type_to_ax = dict()
+    for ind, approx_type in enumerate(sorted(map_approx_type_to_boxes)):
+        map_approx_type_to_ax[approx_type] = ax.bxp(map_approx_type_to_boxes[approx_type], showfliers=False,
+                                                  positions=range(1 + ind, len(map_approx_type_to_boxes[approx_type]) * (
                                                           n_groups + 1), (n_groups + 1)),
                                                   widths=boxwidth, patch_artist=True, vert=False)
 
-    setup_boxes = map_param_type_to_boxes[list(map_param_type_to_boxes.keys())[0]]
+    setup_boxes = map_approx_type_to_boxes[list(map_approx_type_to_boxes.keys())[0]]
 
     # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
     # fill with colors
     colors = ['blue', 'red', 'green', 'purple']
-    for param_type, color in zip(sorted(map_param_type_to_ax), colors):
-        ax = map_param_type_to_ax[param_type]
+    for approx_type, color in zip(sorted(map_approx_type_to_ax), colors):
+        ax = map_approx_type_to_ax[approx_type]
         for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
             for patch in ax[item]:
                 try:
@@ -122,13 +122,13 @@ def render_whisker_plot_simplified(state_report,
 
     # add legend
     custom_lines = [
-        Line2D([0], [0], color=color, lw=4) for param_type, color in zip(sorted(map_param_type_to_ax), colors)
+        Line2D([0], [0], color=color, lw=4) for approx_type, color in zip(sorted(map_approx_type_to_ax), colors)
     ]
-    plt.legend(custom_lines, sorted(map_param_type_to_ax))
+    plt.legend(custom_lines, sorted(map_approx_type_to_ax))
 
     # increase left margin
     output_filename = output_filename_format_str.format(plot_param_name,
-                                                        '_'.join(param_type.value[1] for param_type in opt_param_type))
+                                                        '_'.join(approx_type.value[1] for approx_type in approx_types))
     plt.subplots_adjust(left=0.2)
     if opt_log:
         plt.xscale('log')
@@ -142,8 +142,7 @@ def render_whisker_plot(state_report,
                         opt_log=False,
                         opt_statsmodels=False,
                         opt_PyMC3=False,
-                        boxwidth=0.7,
-                        param_types_to_use=None):
+                        boxwidth=0.7):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -450,22 +449,21 @@ def generate_state_prediction(map_state_name_to_model,
 
         if state_model is not None:
 
-            for param_type in state_model.model_param_type:
+            for approx_type in state_model.model_approx_types:
 
-                if param_type == ApproxType.SM:
+                if approx_type == ApproxType.SM:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
-                elif param_type == ApproxType.PyMC3:
+                elif approx_type == ApproxType.PyMC3:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3()
-                print(param_type)
+                print(approx_type)
                 param_inds_to_plot = list(range(len(params)))
                 param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
                                                       replace=False)
                 sols_to_plot = [state_model.run_simulation(in_params=params[param_ind]) for param_ind in
                                 tqdm(param_inds_to_plot)]
 
-                start_ind_data = len(state_model.data_new_tested) - state_model.moving_window_size - 1
-                start_ind_sol = len(state_model.data_new_tested) + state_model.burn_in - state_model.moving_window_size
-
+                start_ind_sol = len(state_model.data_new_tested) + state_model.burn_in
+                start_ind_data = start_ind_sol - 1 - state_model.burn_in
                 sol_date_range = [
                     state_model.min_date - datetime.timedelta(days=state_model.burn_in) + datetime.timedelta(
                         days=1) * i for i in range(len(sols_to_plot[0][0]))]
@@ -499,7 +497,7 @@ def generate_state_prediction(map_state_name_to_model,
                     distro_new_dead = [dead[date_ind] for dead in sols_to_plot_new_dead]
                     distro_tested = [tested[date_ind] for tested in sols_to_plot_tested]
                     distro_dead = [dead[date_ind] for dead in sols_to_plot_dead]
-                    tmp_dict = {'model_type': param_type.value[1],
+                    tmp_dict = {'model_type': approx_type.value[1],
                                 'date': sol_date_range[date_ind],
                                 'total_positive_mean': np.average(distro_tested),
                                 'total_positive_std': np.std(distro_tested),
@@ -562,7 +560,7 @@ def generate_state_report(map_state_name_to_model,
                 report_names = state_model.sorted_names + list(state_model.extra_params.keys())
 
             try:
-                LS_params, _, _, _ = state_model.get_weighted_samples()
+                LS_params, _, _, _ = state_model.get_weighted_samples_via_MVN()
             except:
                 LS_params = [0]
 
@@ -808,7 +806,7 @@ def run_everything(run_states,
                                                    plot_param_name=param_name,
                                                    output_filename_format_str=filename_format_str,
                                                    opt_log=param_name in logarithmic_params,
-                                                   opt_param_type=state_model.model_param_type)
+                                                   approx_types=state_model.model_approx_types)
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
