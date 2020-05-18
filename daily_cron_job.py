@@ -101,6 +101,9 @@ generate_figure_browser.generate_plot_browser()
 # Step 5: Push to Github
 ######
 
+# TODO: Update static_figures with most recent version
+# TODO: Update README.md to link to new CSV file
+
 # Do this by hand
 # TODO: Figure out how to do this automatically instead of by hand
 print('Now add, commit, and push to Github!')
