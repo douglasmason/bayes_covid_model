@@ -12,7 +12,7 @@ class ConvolutionModel(BayesModel):
                  *args,
                  optimizer_method='Nelder-Mead',  # 'Nelder-Mead', #'SLSQP',
                  **kwargs):
-        kwargs.update({ \
+        kwargs.update({'model_type_name': 'convolution',
                        'min_sol_date': None,  # TODO: find a better way to set this attribute
                        'optimizer_method': optimizer_method,
                        })

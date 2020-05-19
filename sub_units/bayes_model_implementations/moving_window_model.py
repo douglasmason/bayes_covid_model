@@ -24,7 +24,7 @@ class MovingWindowModel(BayesModel):
         model_type_name = f'moving_window_{moving_window_size}_days'
 
         if opt_simplified:
-            model_approx_types = [ApproxType.PyMC3]
+            model_approx_types = [ApproxType.SM]
             print('Doing simplified models...')
         else:
             model_approx_types = [ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]

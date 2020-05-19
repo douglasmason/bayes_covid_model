@@ -117,7 +117,7 @@ class BayesModel(ABC):
                  # this kwarg became redundant after I filled in zeros with 0.1 in load_data, leave at 0
                  opt_smoothing=True,
                  prediction_window=28,  # predict four weeks into the future
-                 model_approx_types=[ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
+                 model_approx_types=[ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
                  plot_two_vals=None,
                  **kwargs
                  ):
@@ -434,13 +434,9 @@ class BayesModel(ABC):
 
         p0 = self.convert_params_as_dict_to_list(in_params)
 
-        sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
-        normal_inds = [i for i in range(len(self.sorted_names)) if i not in sigma_inds]
-
         # hess = numdifftools.Hessian(lambda x: np.exp(self.get_log_likelihood(x)))(p0)
         hess = numdifftools.Hessian(self.get_log_likelihood)(p0)
-        hess = hess[normal_inds, :]
-        hess = hess[:, normal_inds]
+        hess = self.remove_sigma_entries_from_matrix(hess)
 
         # this uses the jacobian approx to the hessian
         # jacobian = numdifftools.Jacobian(self.get_log_likelihood)(p0)
@@ -449,13 +445,6 @@ class BayesModel(ABC):
         # print(hess)
 
         cov = np.linalg.inv(-hess)
-
-        # fill back in sigma entries
-        cov_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
-        for ind_i, i in enumerate(normal_inds):
-            for ind_j, j in enumerate(normal_inds):
-                cov_with_sigmas[i, j] = cov[ind_i, ind_j]
-        cov = cov_with_sigmas
 
         print('p0:')
         print(self.convert_params_as_list_to_dict(p0))
@@ -466,8 +455,8 @@ class BayesModel(ABC):
         eigenw, eigenv = np.linalg.eig(cov)
         print('orig_eig:')
         print(eigenw)
-        print('orig diagonal elements of cov:')
-        print(self.convert_params_as_list_to_dict(np.diagonal(cov)))
+        # print('orig diagonal elements of cov:')
+        # print(self.convert_params_as_list_to_dict(np.diagonal(cov)))
 
         # get rid of negative eigenvalue contributions to make PSD
         cov = np.zeros(cov.shape)
@@ -477,14 +466,9 @@ class BayesModel(ABC):
                 tmp_contrib = np.outer(vec, vec)
                 cov += tmp_contrib * val
 
-        # fill back in sigma entries
-        cov_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
-        for ind_i, i in enumerate(normal_inds):
-            for ind_j, j in enumerate(normal_inds):
-                cov_with_sigmas[i, j] = cov[ind_i, ind_j]
-        cov = cov_with_sigmas
+        cov = self.recover_sigma_entries_from_matrix(cov)
 
-        # eigenw, eigenv = np.linalg.eig(cov)
+        eigenw, eigenv = np.linalg.eig(cov)
         # print('new_cov:')
         # print(cov)
         print('new_eig:')
@@ -1149,14 +1133,14 @@ class BayesModel(ABC):
 
             for method in methods:
                 print('trying method', method)
-                if True:
+                try:
                     test_params_as_list = [self.test_params[key] for key in self.sorted_names]
                     all_data_params2, cov = self.fit_curve_via_likelihood(test_params_as_list,
                                                                           method=method, print_success=True)
 
                     print(f'\nParameters when trained on all data using method {method}:')
                     [print(f'{key}: {val:.4g}') for key, val in all_data_params2.items()]
-                else:
+                except:
                     print(f'method {method} failed!')
 
         # Add deterministic parameters to all-data solution
@@ -1601,11 +1585,36 @@ class BayesModel(ABC):
         self._add_samples(samples_as_list[MCMC_burn_in:], log_probs[MCMC_burn_in:], propensities[MCMC_burn_in:],
                           key=samples_key)
 
-    @staticmethod
-    def cov2corr(cov):
+    def remove_sigma_entries_from_matrix(self, in_matrix):
+
+        sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
+        normal_inds = [i for i in range(len(self.sorted_names)) if i not in sigma_inds]
+
+        in_matrix = in_matrix[normal_inds, :]
+        in_matrix = in_matrix[:, normal_inds]
+
+        return in_matrix
+
+    def recover_sigma_entries_from_matrix(self, in_matrix):
+
+        sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
+        normal_inds = [i for i in range(len(self.sorted_names)) if i not in sigma_inds]
+
+        # fill back in sigma entries
+        in_matrix_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
+        for ind_i, i in enumerate(normal_inds):
+            for ind_j, j in enumerate(normal_inds):
+                in_matrix_with_sigmas[i, j] = in_matrix[ind_i, ind_j]
+        return in_matrix_with_sigmas
+
+    def cov2corr(self, cov, opt_replace_sigma=False):
+        if opt_replace_sigma:
+            cov = self.remove_sigma_entries_from_matrix(cov)
         std_devs_mat = np.diag(np.sqrt(np.diagonal(cov)))
         cov_inv = np.linalg.inv(std_devs_mat)
         corr = cov_inv @ cov @ cov_inv
+        if opt_replace_sigma:
+            corr = self.recover_sigma_entries_from_matrix(corr)
         return corr
 
     def get_weighted_samples_via_hessian(self, n_samples=1000, ):
@@ -1687,8 +1696,11 @@ class BayesModel(ABC):
                 cov = np.cov(np.vstack(params).T,
                              aweights=weights)
 
-        # convert covariance to correlation matrix
-        corr = self.cov2corr(cov)
+        # If calculating the correlation matrix is an issue, just get rid of the sigma entries
+        try:
+            corr = self.cov2corr(cov)
+        except:
+            corr = self.cov2corr(cov, opt_replace_sigma=True)
 
         print('corr:', corr)
         model = sp.stats.multivariate_normal(mean=means_as_list, cov=cov, allow_singular=True)
@@ -1785,10 +1797,10 @@ class BayesModel(ABC):
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
-        if ApproxType.LS not in self.map_approx_type_to_MVN:
+        if approx_type not in self.map_approx_type_to_MVN:
             raise ValueError('Need to fit MVN to likelihood samples')
 
-        weight_sampled_params = self.map_approx_type_to_MVN[ApproxType.LS]['model'].rvs(n_samples)
+        weight_sampled_params = self.map_approx_type_to_MVN[approx_type]['model'].rvs(n_samples)
         log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
 
         return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
