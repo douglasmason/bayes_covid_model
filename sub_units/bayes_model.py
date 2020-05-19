@@ -21,6 +21,7 @@ import datetime
 import matplotlib.dates as mdates
 import arviz as az
 import seaborn as sns
+import numdifftools
 
 
 class WhichDistro(Enum):
@@ -115,8 +116,9 @@ class BayesModel(ABC):
                  log_offset=0.01,
                  # this kwarg became redundant after I filled in zeros with 0.1 in load_data, leave at 0
                  opt_smoothing=True,
-                 prediction_window=28, # predict four weeks into the future
-                 model_approx_types=[ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
+                 prediction_window=28,  # predict four weeks into the future
+                 model_approx_types=[ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
+                 plot_two_vals=None,
                  **kwargs
                  ):
 
@@ -124,6 +126,7 @@ class BayesModel(ABC):
             print(f'Adding extra params to attributes... {key}: {val}')
             setattr(self, key, val)
 
+        self.plot_two_vals = plot_two_vals
         self.prediction_window = prediction_window
         self.map_approx_type_to_MVN = dict()
         self.model_approx_types = model_approx_types
@@ -143,6 +146,8 @@ class BayesModel(ABC):
         else:
             smoothing_str = ''
 
+        self.all_data_fit_filename = path.join('state_all_data_fits',
+                                               f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.bootstrap_filename = path.join('state_bootstraps',
                                             f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
@@ -161,6 +166,8 @@ class BayesModel(ABC):
         self.plot_filename_base = path.join(self.plot_subfolder,
                                             state_name.lower().replace(' ', '_').replace('.', ''))
 
+        if not os.path.exists('state_all_data_fits'):
+            os.mkdir('state_all_data_fits')
         if not os.path.exists('state_bootstraps'):
             os.mkdir('state_bootstraps')
         if not os.path.exists('state_likelihood_samples'):
@@ -387,7 +394,7 @@ class BayesModel(ABC):
                                                 [self.curve_fit_bounds[name][1] for name in self.sorted_names]))
 
         params_as_list = results.x
-        cov = results.hess_inv
+        # cov = results.hess_inv
 
         # positive_dists, deceased_dists, other_errs, sol, positive_vals, deceased_vals, \
         # predicted_tested, actual_tested, predicted_dead, actual_dead = self._get_log_likelihood_precursor(
@@ -423,12 +430,77 @@ class BayesModel(ABC):
 
         return params_as_dict
 
+    def get_covariance_matrix(self, in_params):
+
+        p0 = self.convert_params_as_dict_to_list(in_params)
+
+        sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
+        normal_inds = [i for i in range(len(self.sorted_names)) if i not in sigma_inds]
+
+        # hess = numdifftools.Hessian(lambda x: np.exp(self.get_log_likelihood(x)))(p0)
+        hess = numdifftools.Hessian(self.get_log_likelihood)(p0)
+        hess = hess[normal_inds, :]
+        hess = hess[:, normal_inds]
+
+        # this uses the jacobian approx to the hessian
+        # jacobian = numdifftools.Jacobian(self.get_log_likelihood)(p0)
+        # hess = jacobian.T @ jacobian
+        # print('hess:')
+        # print(hess)
+
+        cov = np.linalg.inv(-hess)
+
+        # fill back in sigma entries
+        cov_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
+        for ind_i, i in enumerate(normal_inds):
+            for ind_j, j in enumerate(normal_inds):
+                cov_with_sigmas[i, j] = cov[ind_i, ind_j]
+        cov = cov_with_sigmas
+
+        print('p0:')
+        print(self.convert_params_as_list_to_dict(p0))
+        print('hess:')
+        print(hess)
+        print('cov:')
+        print(cov)
+        eigenw, eigenv = np.linalg.eig(cov)
+        print('orig_eig:')
+        print(eigenw)
+        print('orig diagonal elements of cov:')
+        print(self.convert_params_as_list_to_dict(np.diagonal(cov)))
+
+        # get rid of negative eigenvalue contributions to make PSD
+        cov = np.zeros(cov.shape)
+        for ind, val in enumerate(eigenw):
+            vec = eigenv[:, ind]
+            if val > 0:
+                tmp_contrib = np.outer(vec, vec)
+                cov += tmp_contrib * val
+
+        # fill back in sigma entries
+        cov_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
+        for ind_i, i in enumerate(normal_inds):
+            for ind_j, j in enumerate(normal_inds):
+                cov_with_sigmas[i, j] = cov[ind_i, ind_j]
+        cov = cov_with_sigmas
+
+        # eigenw, eigenv = np.linalg.eig(cov)
+        # print('new_cov:')
+        # print(cov)
+        print('new_eig:')
+        print(eigenw)
+        print('new diagonal elements of cov:')
+        print(self.convert_params_as_list_to_dict(np.diagonal(cov)))
+
+        return cov
+
     def fit_curve_via_likelihood(self,
                                  in_params,
                                  tested_indices=None,
                                  deaths_indices=None,
                                  method=None,
-                                 print_success=False
+                                 print_success=False,
+                                 opt_cov=False
                                  ):
         '''
         Given initial parameters, fit the curve by minimizing log likelihood using measure error Gaussian PDFs
@@ -457,7 +529,11 @@ class BayesModel(ABC):
             print(f'success? {results.success}')
         params_as_list = results.x
         params_as_dict = {key: params_as_list[i] for i, key in enumerate(self.sorted_names)}
-        cov = results.hess_inv
+
+        if opt_cov:
+            cov = self.get_covariance_matrix(p0)
+        else:
+            cov = None  # results.hess_inv # this fella only works for certain methods so avoid for now
 
         return params_as_dict, cov
 
@@ -634,7 +710,7 @@ class BayesModel(ABC):
                 if sol_plot_date_range[i] >= self.min_sol_date:
                     min_slice = i
                     break
-        
+
         ax.fill_between(sol_plot_date_range[slice(min_slice, None)],
                         p5_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                         p95_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
@@ -995,33 +1071,38 @@ class BayesModel(ABC):
         vals = np.exp(arg)
         return vals
 
-    def render_bootstraps(self):
+    def render_all_data_fit(self,
+                            passed_params=None):
+
         '''
-        Compute the bootstrap solutions
+        Compute the all-data MLE/MAP
+        :param params: dictionary of parameters to replace the usual fit, if necessary
         :return: None
         '''
 
-        bootstrap_sols = list()
-        bootstrap_params = list()
         success = False
 
         try:
-            bootstrap_dict = joblib.load(self.bootstrap_filename)
-            bootstrap_sols = bootstrap_dict['bootstrap_sols']
-            bootstrap_params = bootstrap_dict['bootstrap_params']
-            all_data_params = bootstrap_dict['all_data_params']
-            all_data_sol = bootstrap_dict['all_data_sol']
+            all_data_dict = joblib.load(self.all_data_fit_filename)
+            all_data_params = all_data_dict['all_data_params']
+            all_data_sol = all_data_dict['all_data_sol']
+            all_data_cov = all_data_dict['all_data_cov']
             success = True
-            self.loaded_bootstraps = True
+            self.loaded_all_data_fit = True
         except:
-            self.loaded_bootstraps = False
+            self.loaded_all_data_fit = False
+
+        if passed_params is not None:
+            all_data_params = passed_params
+            all_data_sol = self.run_simulation(passed_params)
+            all_data_cov = self.get_covariance_matrix(passed_params)
 
         # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
-        if (not success and self.opt_calc) or self.opt_force_calc:
+        if (not success and self.opt_calc and passed_params is None) or self.opt_force_calc:
 
-            print('\n----\nRendering bootstrap model fits... starting with the all-data one...\n----')
+            print('\n----\nRendering all-data model fits... \n----')
 
-            # This is kind of a kludge, I find more reliabel fits with fit_curve_exactly_with_jitter
+            # This is kind of a kludge, I find more reliable fits with fit_curve_exactly_with_jitter
             #   But it doesn't fit the observation error, which I need for likelihood samples
             #   So I use it to fit everything BUT observation error, then insert the test_params entries for the sigmas,
             #   and re-fit using the jankier (via_likelihood) method that fits the observation error
@@ -1031,8 +1112,15 @@ class BayesModel(ABC):
             all_data_params['sigma_positive'] = self.test_params['sigma_positive']
             all_data_params['sigma_deceased'] = self.test_params['sigma_deceased']
             print('refitting all-data params to get sigma values')
-            all_data_params_for_sigma, cov = self.fit_curve_via_likelihood(all_data_params,
-                                                                           print_success=True)  # fit_curve_via_likelihood
+            all_data_params_for_sigma, all_data_cov = self.fit_curve_via_likelihood(all_data_params,
+                                                                                    print_success=True,
+                                                                                    opt_cov=True)
+
+            print('Orig params:')
+            self.pretty_print_params(all_data_params)
+            print('Re-fit params for sigmas:')
+            self.pretty_print_params(all_data_params_for_sigma)
+
             for key in all_data_params:
                 if 'sigma' in key:
                     print(f'Stealing value for {key}: {all_data_params_for_sigma[key]}')
@@ -1040,7 +1128,7 @@ class BayesModel(ABC):
             all_data_sol = self.run_simulation(all_data_params)
 
             print('\nParameters when trained on all data (this is our starting point for optimization):')
-            [print(f'{key}: {val:.4g}') for key, val in all_data_params.items()]
+            self.pretty_print_params(all_data_params)
 
             methods = [
                 'Nelder-Mead',  # ok results, but claims it failed
@@ -1071,6 +1159,47 @@ class BayesModel(ABC):
                 else:
                     print(f'method {method} failed!')
 
+        # Add deterministic parameters to all-data solution
+        for extra_param, extra_param_func in self.extra_params.items():
+            all_data_params[extra_param] = extra_param_func(
+                [all_data_params[name] for name in self.sorted_names])
+
+        print(f'saving bootstraps to {self.all_data_fit_filename}...')
+        joblib.dump({'all_data_sol': all_data_sol, 'all_data_params': all_data_params, 'all_data_cov': all_data_cov},
+                    self.all_data_fit_filename)
+        print('...done!')
+
+        self.all_data_params = all_data_params
+        self.all_data_sol = all_data_sol
+        self.all_data_cov = all_data_cov
+        # print('all_data_cov:')
+        # print(all_data_cov)
+
+        self.hessian_model = sp.stats.multivariate_normal(mean=self.convert_params_as_dict_to_list(all_data_params),
+                                                          cov=all_data_cov, allow_singular=True)
+
+    def render_bootstraps(self):
+        '''
+        Compute the bootstrap solutions
+        :return: None
+        '''
+
+        bootstrap_sols = list()
+        bootstrap_params = list()
+        success = False
+
+        try:
+            bootstrap_dict = joblib.load(self.bootstrap_filename)
+            bootstrap_sols = bootstrap_dict['bootstrap_sols']
+            bootstrap_params = bootstrap_dict['bootstrap_params']
+            success = True
+            self.loaded_bootstraps = True
+        except:
+            self.loaded_bootstraps = False
+
+        # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
+        if (not success and self.opt_calc) or self.opt_force_calc:
+
             print('\n----\nRendering bootstrap model fits... now going through bootstraps...\n----')
             for bootstrap_ind in tqdm(range(self.n_bootstraps)):
                 # get bootstrap indices by concatenating cases and deaths
@@ -1092,7 +1221,7 @@ class BayesModel(ABC):
                 #                range(len(self.data_new_dead))]
 
                 # here is where we select the all-data parameters as our starting point
-                starting_point_as_list = [all_data_params[key] for key in self.sorted_names]
+                starting_point_as_list = [self.all_data_params[key] for key in self.sorted_names]
 
                 # params_as_dict, cov = self.fit_curve_via_likelihood(starting_point_as_list,
                 #                                                # data_tested=tested_jitter,
@@ -1113,27 +1242,20 @@ class BayesModel(ABC):
                 bootstrap_params.append(params_as_dict)
 
             print(f'saving bootstraps to {self.bootstrap_filename}...')
-            joblib.dump({'bootstrap_sols': bootstrap_sols, 'bootstrap_params': bootstrap_params,
-                         'all_data_params': all_data_params, 'all_data_sol': all_data_sol},
+            joblib.dump({'bootstrap_sols': bootstrap_sols, 'bootstrap_params': bootstrap_params},
                         self.bootstrap_filename)
             print('...done!')
 
         print('\nParameters when trained on all data (this is our starting point for optimization):')
-        [print(f'{key}: {val:.4g}') for key, val in all_data_params.items()]
+        [print(f'{key}: {val:.4g}') for key, val in self.all_data_params.items()]
 
         # Add deterministic parameters to bootstraps
         for params in bootstrap_params:
             for extra_param, extra_param_func in self.extra_params.items():
                 params[extra_param] = extra_param_func([params[name] for name in self.sorted_names])
 
-        # Add deterministic parameters to all-data solution
-        for extra_param, extra_param_func in self.extra_params.items():
-            all_data_params[extra_param] = extra_param_func([all_data_params[name] for name in self.sorted_names])
-
         self.bootstrap_sols = bootstrap_sols
         self.bootstrap_params = bootstrap_params
-        self.all_data_params = all_data_params
-        self.all_data_sol = all_data_sol
 
         bootstrap_weights = [1] * len(self.bootstrap_params)
         for bootstrap_ind in range(len(self.bootstrap_params)):
@@ -1215,32 +1337,6 @@ class BayesModel(ABC):
         self.random_likelihood_vals = all_log_probs_as_list
         self.random_likelihood_propensities = all_propensities_as_list
         self._add_samples(all_samples_as_list, all_log_probs_as_list, all_propensities_as_list)
-
-        # we add the results from our bootstrap fits to fill in unknown regions in parameter space
-        # if not path.exists(self.likelihood_samples_from_bootstraps_filename):
-        #     # add in bootstrap fits as additional samples (huh, nice connection to synthetic data techniques...)
-        #     print('Adding bootstrap fitted params to likelihood samples...')
-        #     bootstrap_samples_as_list = list()
-        #     bootstrap_vals_as_list = list()
-        #     for sample in tqdm(self.bootstrap_params):
-        #         val = logp(sample)
-        #         sample_as_list = [float(sample[name]) for name in self.map_name_to_sorted_ind]
-        #         bootstrap_samples_as_list.append(sample_as_list)
-        #         bootstrap_vals_as_list.append(val)
-        #     print(f'Saving to {self.likelihood_samples_from_bootstraps_filename}...')
-        #     joblib.dump({'bootstrap_samples_as_list': bootstrap_samples_as_list,
-        #                  'bootstrap_vals_as_list': bootstrap_vals_as_list},
-        #                 self.likelihood_samples_from_bootstraps_filename)
-        # else:
-        #     print(
-        #         f'\n----\nLoading likelihood samples from {self.likelihood_samples_from_bootstraps_filename}...\n----')
-        #     tmp_dict = joblib.load(self.likelihood_samples_from_bootstraps_filename)
-        #     print('...done!')
-        #     bootstrap_samples_as_list = tmp_dict['bootstrap_samples_as_list']
-        #     bootstrap_vals_as_list = tmp_dict['bootstrap_vals_as_list']
-        # 
-        # self.bootstrap_vals = bootstrap_vals_as_list
-        # self._add_samples(bootstrap_samples_as_list, bootstrap_vals_as_list)
 
     def _add_samples(self, samples, vals, propensities, key=False):
         print('adding samples...')
@@ -1341,6 +1437,10 @@ class BayesModel(ABC):
         _, offending_params = get_bunched_up_on_bounds(p0)
         if len(offending_params) > 0:
             print('Starting point outside of bounds, MCMC won\'t work!')
+            print('offending parameters:')
+            print(offending_params)
+            print('parameters')
+            self.pretty_print_params(p0)
             return
 
         def acquisition_function(input_params, sample_shape_param):
@@ -1508,6 +1608,19 @@ class BayesModel(ABC):
         corr = cov_inv @ cov @ cov_inv
         return corr
 
+    def get_weighted_samples_via_hessian(self, n_samples=1000, ):
+        '''
+        Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
+        :param n_samples: how many samples to re-sample from the list of likelihood samples
+        :return: tuple of weight_sampled_params, params, weights, log_probs
+        '''
+
+        weight_sampled_params = self.hessian_model.rvs(n_samples)
+
+        log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
+
+        return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
+
     def get_weighted_samples(self, approx_type=ApproxType.BS, mvn_fit=False):
         if not mvn_fit:
             if approx_type == ApproxType.BS:
@@ -1526,11 +1639,15 @@ class BayesModel(ABC):
                 weighted_params, params, weights, log_probs = self.get_weighted_samples_via_statsmodels()
             elif approx_type == ApproxType.PyMC3:
                 weighted_params, params, weights, log_probs = self.get_weighted_samples_via_PyMC3()
+            elif approx_type == ApproxType.Hess:
+                weighted_params, params, weights, log_probs = self.get_weighted_samples_via_hessian()
             else:
                 raise ValueError
         else:
             weighted_params, params, weights, log_probs = self.get_weighted_samples_via_MVN(approx_type=approx_type)
 
+        weighted_params = [self.convert_params_as_dict_to_list(x) for x in weighted_params]
+        params = [self.convert_params_as_dict_to_list(x) for x in params]
         return weighted_params, params, weights, log_probs
 
     def fit_MVN_to_likelihood(self,
@@ -1538,7 +1655,7 @@ class BayesModel(ABC):
                               approx_type=ApproxType.LS):
         filename_str = f'MVN_{approx_type.value[1]}'
 
-        _, params, weights, log_probs = self.get_weighted_samples(approx_type=approx_type, mvn_fit=False)
+        weighted_params, params, weights, log_probs = self.get_weighted_samples(approx_type=approx_type, mvn_fit=False)
 
         # If there are no weights, then just abort
         if sum(weights) == 0:
@@ -1615,8 +1732,10 @@ class BayesModel(ABC):
             plt.close()
 
         if self.plot_two_vals is not None:
-            val0 = [params[i][self.map_name_to_sorted_ind[self.plot_two_vals[0]]] for i in range(len(params))]
-            val1 = [params[i][self.map_name_to_sorted_ind[self.plot_two_vals[1]]] for i in range(len(params))]
+            val0 = [weighted_params[i][self.map_name_to_sorted_ind[self.plot_two_vals[0]]] for i in
+                    range(len(weighted_params))]
+            val1 = [weighted_params[i][self.map_name_to_sorted_ind[self.plot_two_vals[1]]] for i in
+                    range(len(weighted_params))]
             full_output_filename = path.join(self.plot_filename_base,
                                              f'{filename_str}_{self.plot_two_vals[1]}_vs_{self.plot_two_vals[0]}.png')
             if not path.exists(full_output_filename) or self.opt_force_plot:
@@ -1682,8 +1801,6 @@ class BayesModel(ABC):
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
-        timer = Stopwatch()
-
         valid_ind = [i for i, x in enumerate(self.all_log_probs_as_list) if np.isfinite(np.exp(x)) and \
                      np.isfinite(self.all_propensities_as_list[i]) and \
                      self.all_propensities_as_list[i] > 0]
@@ -1720,6 +1837,7 @@ class BayesModel(ABC):
         param_inds = [valid_ind[i] for i in sampled_valid_inds]
         weight_sampled_params = [params[i] for i in param_inds]
 
+        # TODO: add a plot to show distribution of weights and log-probs for likelihood samples
         # max_weight_ind = np.argmax(weights)
         # max_log_prob_ind = np.argmax(log_probs)
 
@@ -1751,6 +1869,7 @@ class BayesModel(ABC):
         :return: None, just adds attributes to the object
         '''
 
+        param_type = approx_type.value[1]
         calc_param_names = self.sorted_names + list(self.extra_params.keys())
 
         params, _, _, _ = self.get_weighted_samples(approx_type=approx_type, mvn_fit=mvn_fit)
@@ -1811,9 +1930,23 @@ class BayesModel(ABC):
         :return: None
         '''
 
-        # Sample plot just to check
-        self.solve_and_plot_solution(title='Test Plot with Default Parameters',
-                                     plot_filename_filename='test_plot.png')
+        # # Sample plot just to check
+        # self.solve_and_plot_solution(title='Test Plot with Default Parameters',
+        #                              plot_filename_filename='test_plot.png')
+
+        self.render_all_data_fit()
+
+        # Plot all-data solution 
+        self.solve_and_plot_solution(in_params=self.all_data_params,
+                                     title='All-Data Solution',
+                                     plot_filename_filename='all_data_solution.png')
+
+        if ApproxType.Hess in self.model_approx_types:
+            # Plot all hessian solutions
+            self.plot_all_solutions(approx_type=ApproxType.Hess)
+
+            # Get and plot parameter distributions from hessian
+            self.render_and_plot_cred_int(approx_type=ApproxType.Hess)
 
         if ApproxType.SM in self.model_approx_types:
             try:
@@ -1821,6 +1954,12 @@ class BayesModel(ABC):
                 self.render_statsmodels_fit()
             except:
                 print('Error calculating and rendering statsmodels fit')
+
+        # self.all_data_params = self.statsmodels_params
+        # for param_name in self.sorted_names:
+        #     if 'sigma' in param_name:
+        #         self.all_data_params[param_name] = 0.1
+        # self.render_all_data_fit(passed_params=self.all_data_params)
 
         if ApproxType.PyMC3 in self.model_approx_types:
             try:
@@ -1834,11 +1973,6 @@ class BayesModel(ABC):
                 # Training Data Bootstraps
                 self.render_bootstraps()
 
-                # Plot all-data solution 
-                self.solve_and_plot_solution(in_params=self.all_data_params,
-                                             title='All-Data Solution',
-                                             plot_filename_filename='all_data_solution.png')
-
                 # Plot example solutions from bootstrap
                 bootstrap_selection = np.random.choice(self.bootstrap_params)
                 self.solve_and_plot_solution(in_params=bootstrap_selection,
@@ -1847,7 +1981,6 @@ class BayesModel(ABC):
 
                 # Plot all bootstraps
                 self.plot_all_solutions(approx_type=ApproxType.BS)
-                # self.plot_all_solutions(key='bootstrap_with_priors')
 
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.BS)
@@ -1873,16 +2006,16 @@ class BayesModel(ABC):
                 # print('Sampling around MLE with medium sigma')
                 # self.MCMC(self.all_data_params, opt_walk=False,
                 #           sample_shape_param=10, which_distro='norm')
-                # print('Sampling around MLE with narrow sigma')
-                # self.MCMC(self.all_data_params, opt_walk=False,
-                #           sample_shape_param=100, which_distro='norm')
-                # print('Sampling around MLE with ultra-narrow sigma')
-                # self.MCMC(self.all_data_params, opt_walk=False,
-                #           sample_shape_param=1000, which_distro=WhichDistro.norm)
-
-                print('Sampling around MLE with medium exponential parameter')
+                print('Sampling around MLE with narrow sigma')
                 self.MCMC(self.all_data_params, opt_walk=False,
-                          sample_shape_param=100, which_distro=WhichDistro.laplace)
+                          sample_shape_param=100, which_distro=WhichDistro.norm)
+                print('Sampling around MLE with ultra-narrow sigma')
+                self.MCMC(self.all_data_params, opt_walk=False,
+                          sample_shape_param=1000, which_distro=WhichDistro.norm)
+
+                # print('Sampling around MLE with medium exponential parameter')
+                # self.MCMC(self.all_data_params, opt_walk=False,
+                #           sample_shape_param=10, which_distro=WhichDistro.laplace)
                 # print('Sampling around MLE with narrow exponential parameter')
                 # self.MCMC(self.all_data_params, opt_walk=False,
                 #           sample_shape_param=100, which_distro=WhichDistro.laplace)

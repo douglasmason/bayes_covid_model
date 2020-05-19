@@ -12,9 +12,9 @@ class ConvolutionModel(BayesModel):
                  *args,
                  optimizer_method='Nelder-Mead',  # 'Nelder-Mead', #'SLSQP',
                  **kwargs):
-        kwargs.update({'model_type_name': model_param_type,
+        kwargs.update({ \
                        'min_sol_date': None,  # TODO: find a better way to set this attribute
-                       'optimizer_method': optimizer_method
+                       'optimizer_method': optimizer_method,
                        })
         super(ConvolutionModel, self).__init__(*args, **kwargs)
         self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
@@ -66,20 +66,26 @@ class ConvolutionModel(BayesModel):
         convolution_kernel = self.norm(np.linspace(0, len(self.t_vals), len(self.t_vals) + 1),
                                        mu=params['contagious_to_positive_delay'],
                                        std=params['contagious_to_positive_width'])
-        convolution_kernel /= sum(convolution_kernel)
+        if sum(convolution_kernel) == 0:
+            convolution_kernel = np.zeros_like(convolution_kernel)
+        else:
+            convolution_kernel /= sum(convolution_kernel)
         convolution_kernel = np.array(convolution_kernel)
         positive = np.convolve(np.squeeze(contagious),
                                convolution_kernel) * 0.1  # params['contagious_to_positive_mult']
 
-        # then use convolution to simulate transition to positive
+        # then use convolution to simulate transition to deceased
         convolution_kernel = self.norm(np.linspace(0, len(self.t_vals), len(self.t_vals) + 1),
                                        mu=params['contagious_to_deceased_delay'],
                                        std=params['contagious_to_deceased_width'])
-        convolution_kernel /= sum(convolution_kernel)
+        if sum(convolution_kernel) == 0:
+            convolution_kernel = np.zeros_like(convolution_kernel)
+        else:
+            convolution_kernel /= sum(convolution_kernel)
         convolution_kernel = np.array(convolution_kernel)
         deceased = np.convolve(np.squeeze(contagious), convolution_kernel) * params['contagious_to_deceased_mult']
 
-        return np.vstack([np.maximum(np.squeeze(contagious)), 0),
+        return np.vstack([np.maximum(np.squeeze(contagious), 0),
                           np.maximum(np.array(positive[:contagious.size]), 0),
                           np.maximum(np.array(deceased[:contagious.size]), 0)])
 
@@ -127,7 +133,7 @@ class ConvolutionModel(BayesModel):
         predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in deaths_bootstrap_indices]
 
         new_tested_dists = [predicted_tested[i] - actual_tested[i] for i in range(len(predicted_tested))]
-        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_tested))]
+        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_dead))]
 
         # ensure the two delays are physical
         val1 = params['contagious_to_positive_delay']

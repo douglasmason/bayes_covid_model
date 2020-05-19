@@ -19,11 +19,13 @@ from yattag import Doc
 
 
 class ApproxType(Enum):
+    __order__ = 'BS LS MCMC SM PyMC3 Hess'
     BS = ('BS', 'bootstrap')
-    LS = ('LS', 'likelihood_sample')
+    LS = ('LS', 'likelihood_samples')
     MCMC = ('MCMC', 'random_walk')
     SM = ('SM', 'statsmodels')
     PyMC3 = ('PyMC3', 'PyMC3')
+    Hess = ('Hess', 'hessian')
 
     def __str__(self):
         return str(self.value)
@@ -56,38 +58,46 @@ def render_whisker_plot_simplified(state_report,
     :return: None, it saves plots to files
     '''
     tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == plot_param_name]
-    tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['SM_p50'])
+    print('columns:')
+    print(state_report.columns)
+    tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x][f'{approx_types[0].value[0]}_p50'])
 
     small_state_report = state_report.iloc[tmp_ind]
     small_state_report.to_csv('simplified_state_report_{}.csv'.format(plot_param_name))
 
     for approx_type in approx_types:
-        param_name_abbr, param_name = approx_type.value
-
-        latex_str = small_state_report[
-            [f'{param_name_abbr}_p5', f'{param_name_abbr}_p50', f'{param_name_abbr}_p95']].to_latex(index=False,
-                                                                                                    float_format="{:0.4f}".format)
-        print(param_name)
-        print(latex_str)
+        try:
+            param_name_abbr, param_name = approx_type.value
+    
+            latex_str = small_state_report[
+                [f'{param_name_abbr}_p5', f'{param_name_abbr}_p50', f'{param_name_abbr}_p95']].to_latex(index=False,
+                                                                                                        float_format="{:0.4f}".format)
+            print(param_name)
+            print(latex_str)
+        except:
+            pass
 
     map_approx_type_to_boxes = dict()
     for approx_type in approx_types:
-        param_name_abbr, param_name = approx_type.value
-        tmp_list = list()
-        for i in range(len(small_state_report)):
-            row = pd.DataFrame([small_state_report.iloc[i]])
-            new_box = \
-                {
-                    'label': approx_type.value[1],
-                    'whislo': row[f'{param_name_abbr}_p5'].values[0],  # Bottom whisker position
-                    'q1': row[f'{param_name_abbr}_p25'].values[0],  # First quartile (25th percentile)
-                    'med': row[f'{param_name_abbr}_p50'].values[0],  # Median         (50th percentile)
-                    'q3': row[f'{param_name_abbr}_p75'].values[0],  # Third quartile (75th percentile)
-                    'whishi': row[f'{param_name_abbr}_p95'].values[0],  # Top whisker position
-                    'fliers': []  # Outliers
-                }
-            tmp_list.append(new_box)
-        map_approx_type_to_boxes[param_name_abbr] = tmp_list
+        try:
+            param_name_abbr, param_name = approx_type.value
+            tmp_list = list()
+            for i in range(len(small_state_report)):
+                row = pd.DataFrame([small_state_report.iloc[i]])
+                new_box = \
+                    {
+                        'label': approx_type.value[1],
+                        'whislo': row[f'{param_name_abbr}_p5'].values[0],  # Bottom whisker position
+                        'q1': row[f'{param_name_abbr}_p25'].values[0],  # First quartile (25th percentile)
+                        'med': row[f'{param_name_abbr}_p50'].values[0],  # Median         (50th percentile)
+                        'q3': row[f'{param_name_abbr}_p75'].values[0],  # Third quartile (75th percentile)
+                        'whishi': row[f'{param_name_abbr}_p95'].values[0],  # Top whisker position
+                        'fliers': []  # Outliers
+                    }
+                tmp_list.append(new_box)
+            map_approx_type_to_boxes[param_name_abbr] = tmp_list
+        except:
+            pass
 
     plt.close()
     plt.clf()
@@ -96,12 +106,20 @@ def render_whisker_plot_simplified(state_report,
 
     n_groups = len(map_approx_type_to_boxes)
 
+    # when just one group, there's extra space between each state we need to account for
+    if n_groups == 1:
+        boxwidth = 1.2
+
     map_approx_type_to_ax = dict()
     for ind, approx_type in enumerate(sorted(map_approx_type_to_boxes)):
-        map_approx_type_to_ax[approx_type] = ax.bxp(map_approx_type_to_boxes[approx_type], showfliers=False,
-                                                  positions=range(1 + ind, len(map_approx_type_to_boxes[approx_type]) * (
-                                                          n_groups + 1), (n_groups + 1)),
-                                                  widths=boxwidth, patch_artist=True, vert=False)
+        try:
+            map_approx_type_to_ax[approx_type] = ax.bxp(map_approx_type_to_boxes[approx_type], showfliers=False,
+                                                        positions=range(1 + ind,
+                                                                        len(map_approx_type_to_boxes[approx_type]) * (
+                                                                                n_groups + 1), (n_groups + 1)),
+                                                        widths=boxwidth, patch_artist=True, vert=False)
+        except:
+            pass
 
     setup_boxes = map_approx_type_to_boxes[list(map_approx_type_to_boxes.keys())[0]]
 
@@ -109,16 +127,19 @@ def render_whisker_plot_simplified(state_report,
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
     # fill with colors
-    colors = ['blue', 'red', 'green', 'purple']
+    colors = ['blue', 'red', 'green', 'purple', 'orange', 'cyan']
     for approx_type, color in zip(sorted(map_approx_type_to_ax), colors):
-        ax = map_approx_type_to_ax[approx_type]
-        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-            for patch in ax[item]:
-                try:
-                    patch.set_facecolor(color)
-                except:
-                    pass
-                patch.set_color(color)
+        try:
+            ax = map_approx_type_to_ax[approx_type]
+            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
+                for patch in ax[item]:
+                    try:
+                        patch.set_facecolor(color)
+                    except:
+                        pass
+                    patch.set_color(color)
+        except:
+            pass
 
     # add legend
     custom_lines = [
@@ -134,305 +155,6 @@ def render_whisker_plot_simplified(state_report,
         plt.xscale('log')
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
-
-
-def render_whisker_plot(state_report,
-                        param_name='alpha_2',
-                        output_filename_format_str='test_boxplot_for_{}_{}.png',
-                        opt_log=False,
-                        opt_statsmodels=False,
-                        opt_PyMC3=False,
-                        boxwidth=0.7):
-    '''
-    Plot all-state box/whiskers for given apram_name
-    :param state_report: full state report as pandas dataframe
-    :param param_name: param name as string
-    :param output_filename_format_str: format string for the output filename, with two open slots
-    :param opt_log: boolean for log-transform x-axis
-    :return: None, it saves plots to files
-    '''
-    tmp_ind = [i for i, x in state_report.iterrows() if x['param'] == param_name]
-    tmp_ind = sorted(tmp_ind, key=lambda x: state_report.iloc[x]['BS_p50'])
-
-    small_state_report = state_report.iloc[tmp_ind]
-    small_state_report.to_csv('state_report_{}.csv'.format(param_name))
-
-    latex_str = small_state_report[['BS_p5', 'BS_p50', 'BS_p95']].to_latex(index=False, float_format="{:0.4f}".format)
-    print(param_name)
-    print(latex_str)
-
-    BS_boxes = list()
-    for i in range(len(small_state_report)):
-        row = pd.DataFrame([small_state_report.iloc[i]])
-        new_box = \
-            {
-                'label': 'Bootstrap',
-                'whislo': row['BS_p5'].values[0],  # Bottom whisker position
-                'q1': row['BS_p25'].values[0],  # First quartile (25th percentile)
-                'med': row['BS_p50'].values[0],  # Median         (50th percentile)
-                'q3': row['BS_p75'].values[0],  # Third quartile (75th percentile)
-                'whishi': row['BS_p95'].values[0],  # Top whisker position
-                'fliers': []  # Outliers
-            }
-        BS_boxes.append(new_box)
-    LS_boxes = list()
-    for i in range(len(small_state_report)):
-        row = pd.DataFrame([small_state_report.iloc[i]])
-        new_box = \
-            {
-                'label': 'Direct Likelihood Sampling',
-                'whislo': row['LS_p5'].values[0],  # Bottom whisker position
-                'q1': row['LS_p25'].values[0],  # First quartile (25th percentile)
-                'med': row['LS_p50'].values[0],  # Median         (50th percentile)
-                'q3': row['LS_p75'].values[0],  # Third quartile (75th percentile)
-                'whishi': row['LS_p95'].values[0],  # Top whisker position
-                'fliers': []  # Outliers
-            }
-        LS_boxes.append(new_box)
-    MCMC_boxes = list()
-    for i in range(len(small_state_report)):
-        row = pd.DataFrame([small_state_report.iloc[i]])
-        new_box = \
-            {
-                'label': 'MCMC',
-                'whislo': row['MCMC_p5'].values[0],  # Bottom whisker position
-                'q1': row['MCMC_p25'].values[0],  # First quartile (25th percentile)
-                'med': row['MCMC_p50'].values[0],  # Median         (50th percentile)
-                'q3': row['MCMC_p75'].values[0],  # Third quartile (75th percentile)
-                'whishi': row['MCMC_p95'].values[0],  # Top whisker position
-                'fliers': []  # Outliers
-            }
-        MCMC_boxes.append(new_box)
-
-    plt.close()
-    plt.clf()
-    fig, ax = plt.subplots()
-    fig.set_size_inches(8, 10.5)
-
-    n_groups = 2
-    ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=boxwidth, patch_artist=True, vert=False)
-    # ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-    #              widths=1.2 / n_groups, patch_artist=True, vert=False)
-    ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(2, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=boxwidth, patch_artist=True, vert=False)
-
-    # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-    plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-
-    # fill with colors
-    colors = ['red', 'blue', 'green']
-    for ax, color in zip((ax1, ax3), colors):
-        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-            for patch in ax[item]:
-                try:
-                    patch.set_facecolor(color)
-                except:
-                    pass
-                patch.set_color(color)
-                # patch.set_markeredgecolor(color)
-
-    # add legend
-    custom_lines = [
-        Line2D([0], [0], color="red", lw=4),
-        Line2D([0], [0], color="blue", lw=4),
-        # Line2D([0], [0], color="green", lw=4),
-    ]
-    plt.legend(custom_lines, ('Bootstraps', 'MCMC'))
-
-    # increase left margin
-    output_filename = output_filename_format_str.format(param_name, 'without_direct_samples')
-    plt.subplots_adjust(left=0.2)
-
-    if opt_log:
-        plt.xscale('log')
-    plt.savefig(output_filename, dpi=300)
-    # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
-
-    ######
-    # Plots with MVN
-    ######
-
-    plt.close()
-    plt.clf()
-    fig, ax = plt.subplots()
-    fig.set_size_inches(8, 10.5)
-
-    n_groups = 3
-    ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=boxwidth, patch_artist=True, vert=False)
-    ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=boxwidth, patch_artist=True, vert=False)
-    ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                 widths=boxwidth, patch_artist=True, vert=False)
-
-    # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-    plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-
-    # fill with colors
-    colors = ['red', 'green', 'blue']
-    for ax, color in zip((ax1, ax2, ax3), colors):
-        for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-            for patch in ax[item]:
-                try:
-                    patch.set_facecolor(color)
-                except:
-                    pass
-                patch.set_color(color)
-                # patch.set_markeredgecolor(color)
-
-    # add legend
-    custom_lines = [
-        Line2D([0], [0], color="red", lw=4),
-        Line2D([0], [0], color="green", lw=4),
-        Line2D([0], [0], color="blue", lw=4),
-    ]
-    plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC'))
-
-    # increase left margin
-    output_filename = output_filename_format_str.format(param_name, 'with_direct_samples')
-    plt.subplots_adjust(left=0.2)
-    if opt_log:
-        plt.xscale('log')
-    plt.savefig(output_filename, dpi=300)
-    # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
-
-    ######
-    # Plots with Statsmodels
-    ######
-
-    if opt_statsmodels:
-
-        SM_boxes = list()
-        for i in range(len(small_state_report)):
-            row = pd.DataFrame([small_state_report.iloc[i]])
-            new_box = \
-                {
-                    'label': 'Statsmodels',
-                    'whislo': row['SM_p5'].values[0],  # Bottom whisker position
-                    'q1': row['SM_p25'].values[0],  # First quartile (25th percentile)
-                    'med': row['SM_p50'].values[0],  # Median         (50th percentile)
-                    'q3': row['SM_p75'].values[0],  # Third quartile (75th percentile)
-                    'whishi': row['SM_p95'].values[0],  # Top whisker position
-                    'fliers': []  # Outliers
-                }
-            SM_boxes.append(new_box)
-
-        plt.close()
-        plt.clf()
-        fig, ax = plt.subplots()
-        fig.set_size_inches(8, 10.5)
-
-        n_groups = 4
-        ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax3 = ax.bxp(MCMC_boxes, showfliers=False, positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-
-        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-        plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-
-        # fill with colors
-        colors = ['red', 'green', 'blue', 'purple']
-        for ax, color in zip((ax1, ax2, ax3, ax4), colors):
-            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-                for patch in ax[item]:
-                    try:
-                        patch.set_facecolor(color)
-                    except:
-                        pass
-                    patch.set_color(color)
-                    # patch.set_markeredgecolor(color)
-
-        # add legend
-        custom_lines = [
-            Line2D([0], [0], color="red", lw=4),
-            Line2D([0], [0], color="green", lw=4),
-            Line2D([0], [0], color="blue", lw=4),
-            Line2D([0], [0], color="purple", lw=4),
-        ]
-        plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors'))
-
-        # increase left margin
-        output_filename = output_filename_format_str.format(param_name, 'with_direct_samples_and_statsmodels')
-        plt.subplots_adjust(left=0.2)
-        if opt_log:
-            plt.xscale('log')
-        plt.savefig(output_filename, dpi=300)
-        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
-
-    if opt_PyMC3:
-
-        PyMC3_boxes = list()
-        for i in range(len(small_state_report)):
-            row = pd.DataFrame([small_state_report.iloc[i]])
-            new_box = \
-                {
-                    'label': 'PyMC3',
-                    'whislo': row['PyMC3_p5'].values[0],  # Bottom whisker position
-                    'q1': row['PyMC3_p25'].values[0],  # First quartile (25th percentile)
-                    'med': row['PyMC3_p50'].values[0],  # Median         (50th percentile)
-                    'q3': row['PyMC3_p75'].values[0],  # Third quartile (75th percentile)
-                    'whishi': row['PyMC3_p95'].values[0],  # Top whisker position
-                    'fliers': []  # Outliers
-                }
-            PyMC3_boxes.append(new_box)
-
-        plt.close()
-        plt.clf()
-        fig, ax = plt.subplots()
-        fig.set_size_inches(8, 10.5)
-
-        n_groups = 5
-        ax1 = ax.bxp(BS_boxes, showfliers=False, positions=range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax2 = ax.bxp(LS_boxes, showfliers=False, positions=range(2, len(LS_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax3 = ax.bxp(MCMC_boxes, showfliers=False,
-                     positions=range(3, len(MCMC_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax4 = ax.bxp(SM_boxes, showfliers=False, positions=range(4, len(SM_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-        ax5 = ax.bxp(PyMC3_boxes, showfliers=False,
-                     positions=range(4, len(PyMC3_boxes) * (n_groups + 1), (n_groups + 1)),
-                     widths=boxwidth, patch_artist=True, vert=False)
-
-        # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
-        plt.yticks(range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
-
-        # fill with colors
-        colors = ['red', 'green', 'blue', 'purple', 'pink']
-        for ax, color in zip((ax1, ax2, ax3, ax4, ax5), colors):
-            for item in ['boxes', 'whiskers', 'fliers', 'medians', 'caps']:
-                for patch in ax[item]:
-                    try:
-                        patch.set_facecolor(color)
-                    except:
-                        pass
-                    patch.set_color(color)
-                    # patch.set_markeredgecolor(color)
-
-        # add legend
-        custom_lines = [
-            Line2D([0], [0], color="red", lw=4),
-            Line2D([0], [0], color="green", lw=4),
-            Line2D([0], [0], color="blue", lw=4),
-            Line2D([0], [0], color="purple", lw=4),
-            Line2D([0], [0], color="pink", lw=4),
-        ]
-        plt.legend(custom_lines, ('Bootstraps', 'MVN', 'MCMC', 'Std. Errors', 'NUTS'))
-
-        # increase left margin
-        output_filename = output_filename_format_str.format(param_name, 'with_direct_samples_and_statsmodels_and_PyMC3')
-        plt.subplots_adjust(left=0.2)
-        if opt_log:
-            plt.xscale('log')
-        plt.savefig(output_filename, dpi=300)
-        # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
 
 def generate_state_prediction(map_state_name_to_model,
@@ -570,6 +292,11 @@ def generate_state_report(map_state_name_to_model,
                 SM_params = [0]
 
             try:
+                Hess_params, _, _, _ = state_model.get_weighted_samples_via_hessian()
+            except:
+                Hess_params = [0]
+                
+            try:
                 PyMC3_params, _, _, _ = state_model.get_weighted_samples_via_PyMC3()
             except:
                 PyMC3_params = [0]
@@ -586,6 +313,12 @@ def generate_state_report(map_state_name_to_model,
                                    range(len(LS_params))]
                     except:
                         pass
+                    try:
+                        Hess_vals = [Hess_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                                   range(len(Hess_params))]
+                    except:
+                        pass
+                    
                     try:
                         SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
                                    range(len(SM_params))]
@@ -621,6 +354,11 @@ def generate_state_report(map_state_name_to_model,
                     try:
                         SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
                                    in range(len(SM_params))]
+                    except:
+                        pass
+                    try:
+                        Hess_vals = [state_model.extra_params[param_name](Hess_params[i]) for i
+                                   in range(len(Hess_params))]
                     except:
                         pass
                     try:
@@ -702,6 +440,23 @@ def generate_state_report(map_state_name_to_model,
 
                 try:
                     dict_to_add.update({
+                        'hessian_mean_with_priors': np.average(Hess_vals),
+                        'hessian_std_err_with_priors': np.std(Hess_vals),
+                        'hessian_p50_with_priors': np.percentile(Hess_vals, 50),
+                        'hessian_p5_with_priors':
+                            np.percentile(Hess_vals, 5),
+                        'hessian_p95_with_priors':
+                            np.percentile(Hess_vals, 95),
+                        'hessian_p25_with_priors':
+                            np.percentile(Hess_vals, 25),
+                        'hessian_p75_with_priors':
+                            np.percentile(Hess_vals, 75)
+                    })
+                except:
+                    pass
+
+                try:
+                    dict_to_add.update({
                         'PyMC3_mean_with_priors': np.average(PyMC3_vals),
                         'PyMC3_std_err_with_priors': np.std(PyMC3_vals),
                         'PyMC3_p50_with_priors': np.percentile(PyMC3_vals, 50),
@@ -731,12 +486,9 @@ def generate_state_report(map_state_name_to_model,
 
     new_cols = list()
     for col in state_report.columns:
-        new_col = col.replace('bootstrap', 'BS') \
-            .replace('_with_priors', '') \
-            .replace('likelihood_samples', 'LS') \
-            .replace('random_walk', 'MCMC') \
-            .replace('statsmodels', 'SM') \
-            .replace('__', '_')
+        for approx_type in ApproxType:
+            col = col.replace(approx_type.value[1], approx_type.value[0])
+        new_col = col.replace('__', '_').replace('_with_priors', '')
         new_cols.append(new_col)
     state_report.columns = new_cols
 
@@ -752,7 +504,6 @@ def run_everything(run_states,
                    extra_params=None,
                    logarithmic_params=list(),
                    plot_param_names=None,
-                   opt_statsmodels=False,
                    opt_simplified=False,
                    **kwargs):
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
@@ -810,16 +561,16 @@ def run_everything(run_states,
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-            if state_ind % 10 == 9 or state_ind == len(run_states) - 1:
-                print('Reporting every 10th state and at the end')
+            if state_ind % 1 == 0 or state_ind == len(run_states) - 1:
+                print('Reporting every state and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename)
                 for param_name in state_model.plot_param_names:
-                    render_whisker_plot(state_report,
-                                        param_name=param_name,
+                    render_whisker_plot_simplified(state_report,
+                                        plot_param_name=param_name,
                                         output_filename_format_str=filename_format_str,
                                         opt_log=param_name in logarithmic_params,
-                                        opt_statsmodels=opt_statsmodels)
+                                        approx_types=state_model.model_approx_types)
 
     return plot_subfolder
 

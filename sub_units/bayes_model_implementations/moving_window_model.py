@@ -24,10 +24,10 @@ class MovingWindowModel(BayesModel):
         model_type_name = f'moving_window_{moving_window_size}_days'
 
         if opt_simplified:
-            model_approx_types = [ApproxType.SM]
+            model_approx_types = [ApproxType.PyMC3]
             print('Doing simplified models...')
         else:
-            model_approx_types = [ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
             print('Doing all models...')
 
         # these kwargs will be added as object attributes
@@ -166,7 +166,7 @@ class MovingWindowModel(BayesModel):
         predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in deaths_bootstrap_indices]
 
         new_tested_dists = [predicted_tested[i] - actual_tested[i] for i in range(len(predicted_tested))]
-        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_tested))]
+        new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_dead))]
 
         tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
         deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
@@ -236,7 +236,7 @@ class MovingWindowModel(BayesModel):
                                  data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
         print(results_positive.summary())
-        params_positive = results_positive.params
+        params_positive = dict(results_positive.params)
         for name1, name2 in name_mapping_positive.items():
             params_positive[name2] = params_positive.pop(name1)
         # params_positive['positive_intercept'] = np.exp(params_positive['positive_intercept'])
@@ -317,6 +317,13 @@ class MovingWindowModel(BayesModel):
         # print('corr:')
         # print(corr)
 
+        tmp_params = params_positive.copy()
+        tmp_params.update(params_deceased)
+        for param_name in self.logarithmic_params:
+            if 'sigma' in param_name:
+                continue
+            tmp_params[param_name] = np.exp(tmp_params.pop(param_name))
+        self.statsmodels_params = tmp_params
         self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
         if not opt_simplified:
