@@ -27,7 +27,7 @@ class MovingWindowModel(BayesModel):
             model_approx_types = [ApproxType.SM]
             print('Doing simplified models...')
         else:
-            model_approx_types = [ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
             print('Doing all models...')
 
         # these kwargs will be added as object attributes

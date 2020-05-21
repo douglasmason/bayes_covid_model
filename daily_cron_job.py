@@ -23,26 +23,26 @@ import generate_plot_browser_moving_window_statsmodels_only as generate_figure_b
 # Step 1: Update counts data
 #####
 
-# url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-# r = requests.get(url, allow_redirects=True)
-# with open('source_data/counts.csv', 'w') as f:
-#     f.write(r.content.decode("utf-8") )
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+r = requests.get(url, allow_redirects=True)
+with open('source_data/counts.csv', 'w') as f:
+    f.write(r.content.decode("utf-8") )
 
 #####
 # Step 2: Run Update
 #####
 
 # get today's date
-yesterdays_date_str = (datetime.date.today()-datetime.timedelta(days=2)).strftime('%Y-%m-%d')
+yesterdays_date_str = (datetime.date.today()-datetime.timedelta(days=1)).strftime('%Y-%m-%d')
 print(f'Yesterday: {yesterdays_date_str}')
 
-covid.n_bootstraps = 10
-covid.n_likelihood_samples = 10000
+covid.n_bootstraps = None
+covid.n_likelihood_samples = None
 covid.moving_window_size = 21  # three weeks
 covid.max_date_str = yesterdays_date_str
 covid.opt_force_calc = False
 covid.opt_force_plot = False
-covid.opt_simplified = False  # set to True to just do statsmodels as a simplified daily service
+covid.opt_simplified = True  # set to True to just do statsmodels as a simplified daily service
 covid.override_run_states = None
 
 plot_subfolder = covid.run_everything()

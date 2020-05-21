@@ -436,13 +436,18 @@ class BayesModel(ABC):
 
         # hess = numdifftools.Hessian(lambda x: np.exp(self.get_log_likelihood(x)))(p0)
         hess = numdifftools.Hessian(self.get_log_likelihood)(p0)
-        hess = self.remove_sigma_entries_from_matrix(hess)
-
-        # this uses the jacobian approx to the hessian
+        
+        # this uses the jacobian approx to the hessian, but I end up with a singular matrix
         # jacobian = numdifftools.Jacobian(self.get_log_likelihood)(p0)
         # hess = jacobian.T @ jacobian
+        # eigenw, eigenv = np.linalg.eig(hess)
+        # print('hess eigenw:')
+        # print(eigenw)
+        
         # print('hess:')
         # print(hess)
+
+        hess = self.remove_sigma_entries_from_matrix(hess)
 
         cov = np.linalg.inv(-hess)
 
