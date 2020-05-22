@@ -4,15 +4,13 @@
 
 **Tabulated projections can be found within the [US CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_prediction.csv) and [International CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv)**
 
-~~*We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*~~
-
 *Thank You to Digital Ocean and Black Sails Consulting for access to compute resources for this project.*
 
 *We've  implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to beautifully and easily find their nation, province, or county, and the metrics that matter to them, please contact the contributors.*
 
-*To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`*
+*To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`.*
 
-*To run the code that generates the daily updates, clone repo and execute `python daily_cron_job.py`.
+*To run the code that generates the daily updates, clone repo and execute `python daily_cron_job.py`.*
 
 We model universal curves of reported COVID-19 daily reported infections and related deaths using a linear regression with standard errors and a weekly profile in the log space (making it an exponential regression in linear space). Using currently available data from [N. Y. Times](https://github.com/nytimes/covid-19-data) and [Johns Hopkins University](https://github.com/CSSEGISandData/COVID-19), we fit our model parameters to the most recent three weeks and provide projections for the next three months.
 
