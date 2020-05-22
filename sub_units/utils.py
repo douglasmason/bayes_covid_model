@@ -18,6 +18,15 @@ from enum import Enum
 from yattag import Doc
 
 
+class Region(Enum):
+    US_states = 'US_states'
+    countries = 'countries'
+    US_counties = 'US_counties'
+
+    def __str__(self):
+        return str(self.value)
+
+
 class ApproxType(Enum):
     __order__ = 'BS LS MCMC SM PyMC3 Hess'
     BS = ('BS', 'bootstrap')
@@ -68,7 +77,7 @@ def render_whisker_plot_simplified(state_report,
     for approx_type in approx_types:
         try:
             param_name_abbr, param_name = approx_type.value
-    
+
             latex_str = small_state_report[
                 [f'{param_name_abbr}_p5', f'{param_name_abbr}_p50', f'{param_name_abbr}_p95']].to_latex(index=False,
                                                                                                         float_format="{:0.4f}".format)
@@ -104,6 +113,9 @@ def render_whisker_plot_simplified(state_report,
     fig, ax = plt.subplots()
     fig.set_size_inches(8, 10.5)
 
+    # add vertical line at zero
+    plt.axvline(linestyle='--', x=0, color='black')
+
     n_groups = len(map_approx_type_to_boxes)
 
     # when just one group, there's extra space between each state we need to account for
@@ -124,6 +136,7 @@ def render_whisker_plot_simplified(state_report,
     setup_boxes = map_approx_type_to_boxes[list(map_approx_type_to_boxes.keys())[0]]
 
     # plt.yticks([x + 0.5 for x in range(1, len(BS_boxes) * (n_groups + 1), (n_groups + 1))], small_state_report['state'])
+
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
     # fill with colors
@@ -142,10 +155,11 @@ def render_whisker_plot_simplified(state_report,
             pass
 
     # add legend
-    custom_lines = [
-        Line2D([0], [0], color=color, lw=4) for approx_type, color in zip(sorted(map_approx_type_to_ax), colors)
-    ]
-    plt.legend(custom_lines, sorted(map_approx_type_to_ax))
+    if n_groups > 1:
+        custom_lines = [
+            Line2D([0], [0], color=color, lw=4) for approx_type, color in zip(sorted(map_approx_type_to_ax), colors)
+        ]
+        plt.legend(custom_lines, sorted(map_approx_type_to_ax))
 
     # increase left margin
     output_filename = output_filename_format_str.format(plot_param_name,
@@ -158,8 +172,10 @@ def render_whisker_plot_simplified(state_report,
 
 
 def generate_state_prediction(map_state_name_to_model,
+                              override_max_date_str,
                               prediction_filename=None,
                               n_samples=1000):
+    max_date = datetime.datetime.strptime(override_max_date_str, '%Y-%m-%d')
     all_predictions = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -256,11 +272,22 @@ def generate_state_prediction(map_state_name_to_model,
                     all_predictions.append(tmp_dict.copy())
 
     all_predictions = pd.DataFrame(all_predictions)
+
+    if all([x.startswith('US ') for x in all_predictions['state']]):
+        all_predictions['state'] = [x[3:] for x in all_predictions['state']]
+
+    # filter to just the first two weeks and every 1st of the month
+    projection_dates = [max_date + datetime.timedelta(days=x) for x in range(1, 14)]
+    for date in set(all_predictions['date']):
+        if date.strftime('%Y-%m-%d').endswith('-01'):
+            projection_dates.append(date)
+    use_date_iloc = [i for i, x in enumerate(all_predictions['date']) if x in projection_dates]
+
     print('Saving state prediction to {}...'.format(prediction_filename))
     joblib.dump(all_predictions, prediction_filename)
     print('...done!')
     print('Saving state report to {}...'.format(prediction_filename.replace('joblib', 'csv')))
-    joblib.dump(all_predictions.to_csv(), prediction_filename.replace('joblib', 'csv'))
+    joblib.dump(all_predictions.iloc[use_date_iloc].to_csv(), prediction_filename.replace('joblib', 'csv'))
     print('...done!')
 
 
@@ -295,7 +322,7 @@ def generate_state_report(map_state_name_to_model,
                 Hess_params, _, _, _ = state_model.get_weighted_samples_via_hessian()
             except:
                 Hess_params = [0]
-                
+
             try:
                 PyMC3_params, _, _, _ = state_model.get_weighted_samples_via_PyMC3()
             except:
@@ -315,10 +342,10 @@ def generate_state_report(map_state_name_to_model,
                         pass
                     try:
                         Hess_vals = [Hess_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                                   range(len(Hess_params))]
+                                     range(len(Hess_params))]
                     except:
                         pass
-                    
+
                     try:
                         SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
                                    range(len(SM_params))]
@@ -358,7 +385,7 @@ def generate_state_report(map_state_name_to_model,
                         pass
                     try:
                         Hess_vals = [state_model.extra_params[param_name](Hess_params[i]) for i
-                                   in range(len(Hess_params))]
+                                     in range(len(Hess_params))]
                     except:
                         pass
                     try:
@@ -492,13 +519,16 @@ def generate_state_report(map_state_name_to_model,
         new_cols.append(new_col)
     state_report.columns = new_cols
 
+    if all([x.startswith('US ') for x in state_report['state']]):
+        state_report['state'] = [x[3:] for x in state_report['state']]
+
     return state_report
 
 
 def run_everything(run_states,
                    model_class,
-                   max_date_str,
                    load_data,
+                   override_max_date_str=None,
                    sorted_init_condit_names=None,
                    sorted_param_names=None,
                    extra_params=None,
@@ -512,21 +542,23 @@ def run_everything(run_states,
     map_state_name_to_model = dict()
 
     for state_ind, state in enumerate(run_states):
+        if state not in load_data.map_state_to_current_case_cnt:
+            continue
         print(
-            f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, pop. {load_data.map_state_to_population[state]:,})...\n----\n----\n')
+            f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, current cases {load_data.map_state_to_current_case_cnt[state]:,})...\n----\n----\n')
 
         if True:
             print('Building model with the following args...')
             for key in sorted(kwargs.keys()):
                 print(f'{key}: {kwargs[key]}')
             state_model = model_class(state,
-                                      max_date_str,
                                       sorted_init_condit_names=sorted_init_condit_names,
                                       sorted_param_names=sorted_param_names,
                                       extra_params=extra_params,
                                       logarithmic_params=logarithmic_params,
                                       plot_param_names=plot_param_names,
                                       opt_simplified=opt_simplified,
+                                      override_max_date_str=override_max_date_str,
                                       **kwargs
                                       )
             if opt_simplified:
@@ -545,12 +577,13 @@ def run_everything(run_states,
             state_report_filename = path.join(plot_subfolder, f'simplified_state_report.joblib')
             state_prediction_filename = path.join(plot_subfolder, f'simplified_state_prediction.joblib')
             filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
-            if state_ind % 10 == 0 or state_ind == len(run_states) - 1:
-                print('Reporting every 10th state and at the end')
+            if state_ind in [0, 1, 4, 9, 100] or state_ind == len(run_states) - 1:
+                print('Reporting now and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names)
                 _ = generate_state_prediction(map_state_name_to_model,
+                                              override_max_date_str,
                                               prediction_filename=state_prediction_filename)
                 for param_name in state_model.plot_param_names:
                     render_whisker_plot_simplified(state_report,
@@ -561,28 +594,28 @@ def run_everything(run_states,
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-            if state_ind % 1 == 0 or state_ind == len(run_states) - 1:
-                print('Reporting every state and at the end')
+            if state_ind in [0, 1, 4, 9, 100] or state_ind == len(run_states) - 1:
+                print('Reporting now and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename)
                 for param_name in state_model.plot_param_names:
                     render_whisker_plot_simplified(state_report,
-                                        plot_param_name=param_name,
-                                        output_filename_format_str=filename_format_str,
-                                        opt_log=param_name in logarithmic_params,
-                                        approx_types=state_model.model_approx_types)
+                                                   plot_param_name=param_name,
+                                                   output_filename_format_str=filename_format_str,
+                                                   opt_log=param_name in logarithmic_params,
+                                                   approx_types=state_model.model_approx_types)
 
     return plot_subfolder
 
 
-def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url, full_report_filename, list_of_figures,
-                          list_of_figures_full_report):
+def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_report_filename, list_of_figures,
+                          list_of_figures_full_report, regions_to_present):
     if not path.exists(plot_browser_dir):
         os.mkdir(plot_browser_dir)
 
-    alphabetical_states = sorted(load_data.map_state_to_population.keys())
-    alphabetical_states.remove('total')
-    alphabetical_states = ['total'] + alphabetical_states
+    alphabetical_states = sorted(regions_to_present)  # load_data.map_state_to_current_case_cnt.keys())
+    # alphabetical_states.remove('total')
+    # alphabetical_states = ['total'] + alphabetical_states
 
     map_state_to_html = dict()
     for state in alphabetical_states:
@@ -625,7 +658,7 @@ def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url,
     #####
 
     with open(path.join(plot_browser_dir, full_report_filename), 'w') as f:
-        doc, tag, text = Doc(defaults={'title': f'Plots for Full U.S. Report'}).tagtext()
+        doc, tag, text = Doc(defaults={'title': f'Plots for Full Report'}).tagtext()
         doc.asis('<!DOCTYPE html>')
         with tag('html'):
             with tag('head'):
@@ -665,11 +698,17 @@ def generate_plot_browser(plot_browser_dir, load_data, base_url_dir, github_url,
                             text('<-- Back to Repository')
                     with tag('li'):
                         with tag("a", href=full_report_filename):
-                            text('Full U.S. Report')
+                            text(f'Full Report')
                     for state in alphabetical_states:
                         state_lc = state.lower().replace(' ', '_')
                         tmp_url = state_lc + '/index.html'
+                        if state.lower().startswith('us_'):
+                            print_state = state[3:]
+                        else:
+                            print_state = state
+                        print_state = print_state.title().replace('_',' ')
+                        print_state = print_state.replace(' Of',' of')
                         with tag('li'):
                             with tag("a", href=tmp_url):
-                                text(state)
+                                text(print_state)
         f.write(doc.getvalue())

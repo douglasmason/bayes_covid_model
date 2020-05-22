@@ -25,20 +25,35 @@ for date in sorted(set(full_count_data['date'])):
 total_counts_data = pd.DataFrame(list_of_dict_totals)
 full_count_data = full_count_data.append(total_counts_data, ignore_index=True)
 
+# get current case counts
+max_date = max(full_count_data['date'])
+date_inds = [i for i, x in enumerate(full_count_data['date']) if x==max_date]
+today_data = full_count_data.iloc[date_inds]
+map_state_to_current_case_cnt = {state: cases for state, cases in zip(today_data['state'], today_data['date'])}
+
 # data munging gets daily-differences differences by state
 for state in sorted(set(full_count_data['state'])):
     state_iloc = [i for i, x in enumerate(full_count_data['state']) if x == state]
     state_iloc = sorted(state_iloc, key=lambda x: full_count_data.iloc[x]['date'])
-
+    
     cases_series = pd.Series({full_count_data.iloc[i]['date']: full_count_data.iloc[i]['cases'] for i in state_iloc})
-    deaths_series = pd.Series({full_count_data.iloc[i]['date']: full_count_data.iloc[i]['deaths'] for i in state_iloc})
-
+    deaths_series = pd.Series(
+        {full_count_data.iloc[i]['date']: full_count_data.iloc[i]['deaths'] for i in state_iloc})
+    
     cases_series.index = pd.DatetimeIndex(cases_series.index)
     deaths_series.index = pd.DatetimeIndex(deaths_series.index)
-
+    
+    # fill in missing dates
+    idx = pd.date_range(min(cases_series.index), max(cases_series.index))
+    cases_series = cases_series.reindex(idx, fill_value=np.nan)
+    cases_series.fillna(method='ffill', inplace=True)
+    idx = pd.date_range(min(deaths_series.index), max(deaths_series.index))
+    deaths_series = deaths_series.reindex(idx, fill_value=np.NaN)
+    deaths_series.fillna(method='ffill', inplace=True)
+    
     cases_diff = cases_series.diff()
     deaths_diff = deaths_series.diff()
-
+    
     map_state_to_series[state] = {'cases_series': cases_series,
                                   'deaths_series': deaths_series,
                                   'cases_diff': cases_diff,
@@ -73,11 +88,13 @@ def get_state_data(state,
     # NP: Cali shelter-in-place (SIP) March 19 Data starts at Jan. 21.
 
     population = map_state_to_population[state]
+
     count_data = map_state_to_series[state]['cases_series'].values
     n_count_data = np.prod(count_data.shape)
     print(f'# data points: {n_count_data}')
 
     min_date = min(list(map_state_to_series[state]['cases_series'].index))
+    max_date = max(list(map_state_to_series[state]['cases_series'].index))
 
     # format count_data into I and S values for SIR Model
     infected = [x for x in count_data]
@@ -132,4 +149,5 @@ def get_state_data(state,
     return {'series_data': series_data,
             'population': population,
             'sip_date': sip_date,
-            'min_date': min_date}
+            'min_date': min_date,
+            'max_date': max_date}

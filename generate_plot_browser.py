@@ -10,8 +10,8 @@ github_url = 'https://github.com/douglasmason/covid_model'
 plot_browser_dir = 'plot_browser'
 full_report_filename = 'full_us_report.html'
 
-population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
-                                       key=lambda x: -load_data.map_state_to_population[x])
+population_ranked_state_names = sorted(load_data.map_state_to_current_case_cnt.keys(),
+                                       key=lambda x: -load_data.map_state_to_current_case_cnt[x])
 alphabetical_states = sorted(load_data.map_state_to_population.keys())
 alphabetical_states.remove('total')
 alphabetical_states = ['total'] + alphabetical_states

@@ -1,7 +1,9 @@
 from sub_units.bayes_model_implementations.moving_window_model import \
     MovingWindowModel  # want to make an instance of this class for each state / set of params
 from sub_units.utils import run_everything as run_everything_imported  # for plotting the report across all states
-import sub_units.load_data as load_data  # only want to load this once, so import as singleton pattern
+from sub_units.utils import Region
+import sub_units.load_data_country as load_data  # only want to load this once, so import as singleton pattern
+import datetime
 
 #####
 # Set up model
@@ -10,11 +12,11 @@ import sub_units.load_data as load_data  # only want to load this once, so impor
 n_bootstraps = 100
 n_likelihood_samples = 100000
 moving_window_size = 21  # three weeks
-max_date_str = '2020-05-15'
 opt_force_calc = False
 opt_force_plot = False
 opt_simplified = False  # set to True to just do statsmodels as a simplified daily service
 override_run_states = None
+override_max_date_str = None
 
 
 # ['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
@@ -23,10 +25,33 @@ override_run_states = None
 # Execute
 ###
 
-
 def run_everything():
-    state_models_filename = f'state_models_smoothed_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-    state_report_filename = f'state_report_smoothed_moving_window_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+    countries_plot_subfolder = _run_everything_sub(region=Region.countries)
+    us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
+    return {Region.US_states: us_states_plot_subfolder, Region.countries: countries_plot_subfolder}
+    
+
+def _run_everything_sub(region=Region.US_states):
+    if region == Region.US_states:
+        override_run_states = load_data.current_cases_ranked_us_states
+    elif region == Region.US_counties:
+        raise ValueError
+    elif region == Region.countries:
+        override_run_states = load_data.current_cases_ranked_non_us_states[:50] # top fifty countries
+    
+    override_run_states = [x for x in override_run_states if not x.startswith(' ')]
+    print('Gonna run these states:')
+    [print(x) for x in sorted(override_run_states)]
+
+    model_type_name = f'moving_window_{moving_window_size}_days_{region}_region'
+        
+    if override_max_date_str is None:
+        hyperparameter_max_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
+    else:
+        hyperparameter_max_date_str = override_max_date_str
+
+    state_models_filename = f'state_models_smoothed_moving_window_{region}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{hyperparameter_max_date_str.replace("-", "_")}_max_date.joblib'
+    state_report_filename = f'state_report_smoothed_moving_window_{region}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{hyperparameter_max_date_str.replace("-", "_")}_max_date.joblib'
 
     # fixing parameters I don't want to train for saves a lot of computer power
     extra_params = dict()
@@ -131,18 +156,10 @@ def run_everything():
     # uniform priors with bounds:
     priors = curve_fit_bounds
 
-    # cycle over most populous states first
-    population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
-                                           key=lambda x: -load_data.map_state_to_population[x])
-    run_states = population_ranked_state_names
-
-    if override_run_states is not None:
-        run_states = override_run_states
-
-    plot_subfolder = run_everything_imported(run_states,
+    plot_subfolder = run_everything_imported(override_run_states,
                                              MovingWindowModel,
-                                             max_date_str,
                                              load_data,
+                                             model_type_name=model_type_name,
                                              state_models_filename=state_models_filename,
                                              state_report_filename=state_report_filename,
                                              moving_window_size=moving_window_size,
@@ -161,9 +178,10 @@ def run_everything():
                                              extra_params=extra_params,
                                              plot_param_names=plot_param_names,
                                              opt_statsmodels=True,
-                                             opt_simplified=opt_simplified
+                                             opt_simplified=opt_simplified,
+                                             override_max_date_str=override_max_date_str,
                                              )
-    
+
     return plot_subfolder
 
 

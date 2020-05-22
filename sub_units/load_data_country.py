@@ -5,6 +5,7 @@ import datetime
 import requests
 from tqdm import tqdm
 from collections import Counter
+import joblib
 
 #####
 # Step 1: Update counts data
@@ -23,63 +24,147 @@ from collections import Counter
 # with open(f'source_data/csse_covid_19_daily_reports/{yesterdays_date_str_for_JHU_data}.csv', 'w') as f:
 #     f.write(r.content.decode("utf-8"))
 
-######
-# Step 2: Process Data
-######
 
-map_state_to_series = dict()
+if not os.path.exists('loaded_data'):
+    os.mkdir('loaded_data')
 
-data_dir = os.path.join('source_data', 'csse_covid_19_daily_reports')
-onlyfiles = [f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
+today_str = datetime.datetime.today().strftime('%Y-%m-%d')
+loaded_data_filename = os.path.join('loaded_data', today_str) + '.joblib'
+try:
+    print(f'Loading {loaded_data_filename}...')
+    tmp_dict = joblib.load(loaded_data_filename)
+    map_state_to_series = tmp_dict['map_state_to_series']
+    current_cases_ranked_us_states = tmp_dict['current_cases_ranked_us_states']
+    current_cases_ranked_non_us_states = tmp_dict['current_cases_ranked_non_us_states']
+    map_state_to_current_case_cnt = tmp_dict['map_state_to_current_case_cnt']
+    print('...done!')
+except:
 
-list_of_small_dataframes = list()
-for file in tqdm(sorted(onlyfiles)):
-    if not file.endswith('.csv'):
-        continue
-    full_filename = os.path.join(data_dir, file)
-    tmp_count_data = pd.read_csv(os.path.join(data_dir, file))
-    tmp_count_data.rename(columns={'Country_Region': 'Country/Region', 'Province_State': 'Province/State'},
-                          inplace=True)
-    print(f'processing file {full_filename} with {len(tmp_count_data)} rows...')
-    tmp_count_data['date'] = datetime.datetime.strptime(file[:-4], '%m-%d-%Y')
-    list_of_small_dataframes.append(tmp_count_data)
+    #####
+    # Step 1: Get US Data
+    #####
 
-# Filter out data associated with provinces
-full_count_data = pd.concat(list_of_small_dataframes)
-null_provice_inds = [i for i, x in enumerate(full_count_data['Province/State']) if type(x)!=str]
-full_count_data = full_count_data.iloc[null_provice_inds]
-full_count_data = full_count_data.groupby(['date', 'Country/Region'])[['Confirmed', 'Deaths']].sum().reset_index()
-full_count_data.rename(columns={'Country/Region': 'state', 'Confirmed': 'positive', 'Deaths': 'deceased'},
-                       inplace=True)
+    data_dir = 'source_data'
+    us_full_count_data = pd.read_csv(os.path.join(data_dir, 'counts.csv'))
+    # from https://github.com/nytimes/covid-19-data
+    # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
+    us_full_count_data['date'] = us_full_count_data['date'].astype('datetime64[ns]')
+    us_full_count_data['state'] = [f'US {us_full_count_data.iloc[i]["state"]}' for i in range(len(us_full_count_data))]
+    us_full_count_data.rename(columns={'cases': 'positive', 'deaths': 'deceased'},
+                              inplace=True)
 
-# germany_inds = [i for i, x in enumerate(full_count_data['country']) if x == 'France']
-# date_sorted_inds = sorted(germany_inds, key=lambda x: full_count_data.iloc[x]['date'])
-# full_count_data.iloc[date_sorted_inds[-10:]]
+    # get totals across U.S.
+    list_of_dict_totals = list()
+    for date in sorted(set(us_full_count_data['date'])):
+        date_iloc = [i for i, x in enumerate(us_full_count_data['date']) if x == date]
+        sum_cases = sum(us_full_count_data.iloc[date_iloc]['positive'])
+        sum_deaths = sum(us_full_count_data.iloc[date_iloc]['deceased'])
+        list_of_dict_totals.append({'date': date, 'positive': sum_cases, 'deceased': sum_deaths, 'state': 'US total'})
 
-# data munging gets daily-differences differences by state
-for state in sorted(set(full_count_data['state'])):
-    state_iloc = [i for i, x in enumerate(full_count_data['state']) if x == state]
-    state_iloc = sorted(state_iloc, key=lambda x: full_count_data.iloc[x]['date'])
+    us_total_counts_data = pd.DataFrame(list_of_dict_totals)
+    us_full_count_data = us_full_count_data.append(us_total_counts_data, ignore_index=True)
 
-    cases_series = pd.Series({full_count_data.iloc[i]['date']: full_count_data.iloc[i]['cases'] for i in state_iloc})
-    deaths_series = pd.Series({full_count_data.iloc[i]['date']: full_count_data.iloc[i]['deaths'] for i in state_iloc})
+    us_states = sorted(set(us_full_count_data['state']))
 
-    cases_series.index = pd.DatetimeIndex(cases_series.index)
-    deaths_series.index = pd.DatetimeIndex(deaths_series.index)
+    ######
+    # Step 2: Process Data
+    ######
 
-    cases_diff = cases_series.diff()
-    deaths_diff = deaths_series.diff()
+    map_state_to_series = dict()
 
-    map_state_to_series[state] = {'cases_series': cases_series,
-                                  'deaths_series': deaths_series,
-                                  'cases_diff': cases_diff,
-                                  'deaths_diff': deaths_diff}
+    data_dir = os.path.join('source_data', 'csse_covid_19_daily_reports')
+    onlyfiles = [f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
+
+    list_of_small_dataframes = list()
+    for file in tqdm(sorted(onlyfiles)):
+        if not file.endswith('.csv'):
+            continue
+        full_filename = os.path.join(data_dir, file)
+        tmp_count_data = pd.read_csv(os.path.join(data_dir, file))
+        tmp_count_data.rename(columns={'Country_Region': 'Country/Region', 'Province_State': 'Province/State'},
+                              inplace=True)
+        print(f'processing file {full_filename} with {len(tmp_count_data)} rows...')
+        tmp_count_data['date'] = datetime.datetime.strptime(file[:-4], '%m-%d-%Y')
+        list_of_small_dataframes.append(tmp_count_data)
+
+    # Filter out data associated with provinces
+    full_count_data = pd.concat(list_of_small_dataframes)
+    #null_provice_inds = [i for i, x in enumerate(full_count_data['Province/State']) if type(x) != str]
+    #full_count_data = full_count_data.iloc[null_provice_inds]
+    full_count_data = full_count_data.groupby(['date', 'Country/Region'])[['Confirmed', 'Deaths']].sum().reset_index()
+    full_count_data.rename(columns={'Country/Region': 'state', 'Confirmed': 'positive', 'Deaths': 'deceased'},
+                           inplace=True)
+
+    # get totals across U.S. (again)
+    # us_total_counts_data['state'] = 'United States'
+    # full_count_data = full_count_data.append(us_total_counts_data, ignore_index=True)
+
+    non_us_states = sorted(set(full_count_data['state']))
+
+    #####
+    # Step 3: Merge
+    #####
+
+    full_count_data = pd.concat([full_count_data, us_full_count_data])
+
+    #####
+    # Step 4: Further processing, rendering dictionaries
+    #####
+
+    max_date = max(full_count_data['date']) - datetime.timedelta(days=1)
+    date_inds = [i for i, x in enumerate(full_count_data['date']) if x == max_date]
+    today_data = full_count_data.iloc[date_inds]
+    map_state_to_current_case_cnt = {state: cases for state, cases in zip(today_data['state'], today_data['positive'])}
+
+    current_cases_ranked_us_states = sorted(us_states, key=lambda x: -map_state_to_current_case_cnt[x])
+    current_cases_ranked_non_us_states = sorted(non_us_states, key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+
+    # germany_inds = [i for i, x in enumerate(full_count_data['country']) if x == 'France']
+    # date_sorted_inds = sorted(germany_inds, key=lambda x: full_count_data.iloc[x]['date'])
+    # full_count_data.iloc[date_sorted_inds[-10:]]
+
+    # data munging gets daily-differences differences by state
+    for state in sorted(set(full_count_data['state'])):
+        state_iloc = [i for i, x in enumerate(full_count_data['state']) if x == state]
+        state_iloc = sorted(state_iloc, key=lambda x: full_count_data.iloc[x]['date'])
+
+        cases_series = pd.Series(
+            {full_count_data.iloc[i]['date']: full_count_data.iloc[i]['positive'] for i in state_iloc})
+        deaths_series = pd.Series(
+            {full_count_data.iloc[i]['date']: full_count_data.iloc[i]['deceased'] for i in state_iloc})
+
+        cases_series.index = pd.DatetimeIndex(cases_series.index)
+        deaths_series.index = pd.DatetimeIndex(deaths_series.index)
+
+        # fill in missing dates
+        idx = pd.date_range(min(cases_series.index), max(cases_series.index))
+        cases_series = cases_series.reindex(idx, fill_value=np.nan)
+        cases_series.fillna(method='ffill', inplace=True)
+        idx = pd.date_range(min(deaths_series.index), max(deaths_series.index))
+        deaths_series = deaths_series.reindex(idx, fill_value=np.NaN)
+        deaths_series.fillna(method='ffill', inplace=True)
+
+        cases_diff = cases_series.diff()
+        deaths_diff = deaths_series.diff()
+
+        map_state_to_series[state] = {'cases_series': cases_series,
+                                      'deaths_series': deaths_series,
+                                      'cases_diff': cases_diff,
+                                      'deaths_diff': deaths_diff}
+
+    tmp_dict = {
+        'map_state_to_series': map_state_to_series,
+        'current_cases_ranked_us_states': current_cases_ranked_us_states,
+        'current_cases_ranked_non_us_states': current_cases_ranked_non_us_states,
+        'map_state_to_current_case_cnt': map_state_to_current_case_cnt,
+    }
+    joblib.dump(tmp_dict, loaded_data_filename)
+
 
 def get_state_data(state,
                    opt_smoothing=False):
+    # TODO: get actual population
 
-    #TODO: get actual population
-    
     # population = map_state_to_population[state]
     population = 1e10
     count_data = map_state_to_series[state]['cases_series'].values
@@ -87,6 +172,7 @@ def get_state_data(state,
     print(f'# data points: {n_count_data}')
 
     min_date = min(list(map_state_to_series[state]['cases_series'].index))
+    max_date = max(list(map_state_to_series[state]['cases_series'].index))
 
     # format count_data into I and S values for SIR Model
     infected = [x for x in count_data]
@@ -141,4 +227,5 @@ def get_state_data(state,
     return {'series_data': series_data,
             'population': population,
             'sip_date': sip_date,
-            'min_date': min_date}
+            'min_date': min_date,
+            'max_date': max_date}

@@ -2,26 +2,31 @@ from sub_units.bayes_model_implementations.convolution_model import \
     ConvolutionModel  # want to make an instance of this class for each state / set of params
 from sub_units.utils import run_everything as run_everything_imported  # for plotting the report across all states
 import sub_units.load_data as load_data  # only want to load this once, so import as singleton pattern
-
+import datetime
 #####
 # Set up model
 #####
 
 n_bootstraps = 100
 n_likelihood_samples = 100000
-max_date_str = '2020-05-14'
 opt_force_plot = False
 opt_force_calc = False
 override_run_states = None
 # ['Kansas', 'New York', 'Alaska', 'South Dakota', 'Wyoming', 'Arkansas', 'Arizona', 'Virginia']  #['New York', 'total'] #['North Carolina', 'Michigan', 'Georgia']
 # ['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
+override_max_date_str = None
 
 ####
 # Make whisker plots
 ####
 def run_everything():
-    state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
-    state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{max_date_str.replace("-", "_")}_max_date.joblib'
+    if override_max_date_str is None:
+        hyperparameter_max_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
+    else:
+        hyperparameter_max_date_str = override_max_date_str
+
+    state_models_filename = f'state_models_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{hyperparameter_max_date_str.replace("-", "_")}_max_date.joblib'
+    state_report_filename = f'state_report_smoothed_convolution_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples_{hyperparameter_max_date_str.replace("-", "_")}_max_date.joblib'
 
     # fixing parameters I don't want to train for saves a lot of computer power
     static_params = {'contagious_to_positive_width': 7,
@@ -86,8 +91,8 @@ def run_everything():
     priors = curve_fit_bounds
 
     # cycle over most populous states first
-    population_ranked_state_names = sorted(load_data.map_state_to_population.keys(),
-                                           key=lambda x: -load_data.map_state_to_population[x])
+    population_ranked_state_names = sorted(load_data.map_state_to_current_case_cnt.keys(),
+                                           key=lambda x: -load_data.map_state_to_current_case_cnt[x])
     run_states = population_ranked_state_names
     if override_run_states is not None:
         run_states = override_run_states

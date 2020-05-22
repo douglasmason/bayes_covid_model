@@ -2,6 +2,7 @@ from sub_units.utils import Stopwatch, ApproxType
 import numpy as np
 import pandas as pd
 from enum import Enum
+import random
 
 pd.plotting.register_matplotlib_converters()  # addresses complaints about Timestamp instead of float for plotting x-values
 import matplotlib
@@ -27,6 +28,7 @@ import numdifftools
 class WhichDistro(Enum):
     norm = 'norm'
     laplace = 'laplace'
+    sphere = 'hypersphere'
 
     def __str__(self):
         return str(self.value)
@@ -93,7 +95,6 @@ class BayesModel(ABC):
 
     def __init__(self,
                  state_name,
-                 max_date_str,
                  n_bootstraps=1000,
                  n_likelihood_samples=1000,
                  load_data_obj=None,
@@ -116,9 +117,10 @@ class BayesModel(ABC):
                  log_offset=0.01,
                  # this kwarg became redundant after I filled in zeros with 0.1 in load_data, leave at 0
                  opt_smoothing=True,
-                 prediction_window=28,  # predict four weeks into the future
+                 prediction_window=28 * 3,  # predict three months into the future
                  model_approx_types=[ApproxType.BS, ApproxType.LS, ApproxType.MCMC],
                  plot_two_vals=None,
+                 override_max_date_str=None,
                  **kwargs
                  ):
 
@@ -126,6 +128,17 @@ class BayesModel(ABC):
             print(f'Adding extra params to attributes... {key}: {val}')
             setattr(self, key, val)
 
+        if load_data_obj is None:
+            from sub_units import load_data as load_data_obj
+
+        tmp_dict = load_data_obj.get_state_data(state_name)
+        max_date_str = datetime.datetime.strftime(tmp_dict['max_date'], '%Y-%m-%d')
+        self.max_date_str = max_date_str
+
+        if hasattr(self, 'moving_window_size'):
+            self.min_sol_date = tmp_dict['max_date'] - datetime.timedelta(days=self.moving_window_size)
+
+        self.override_max_date_str = override_max_date_str
         self.plot_two_vals = plot_two_vals
         self.prediction_window = prediction_window
         self.map_approx_type_to_MVN = dict()
@@ -134,7 +147,6 @@ class BayesModel(ABC):
         self.log_offset = log_offset
         self.model_type_name = model_type_name
         self.state_name = state_name
-        self.max_date_str = max_date_str
         self.n_bootstraps = n_bootstraps
         self.n_likelihood_samples = n_likelihood_samples
         self.burn_in = burn_in
@@ -146,21 +158,26 @@ class BayesModel(ABC):
         else:
             smoothing_str = ''
 
+        if override_max_date_str is None:
+            hyperparameter_max_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
+        else:
+            hyperparameter_max_date_str = override_max_date_str
+
         self.all_data_fit_filename = path.join('state_all_data_fits',
-                                               f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                               f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.bootstrap_filename = path.join('state_bootstraps',
-                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
-                                                                f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                                                f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
-                                                                     f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                                                     f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.PyMC3_filename = path.join('state_PyMC3_traces',
-                                        f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{max_date_str.replace('-', '_')}.joblib")
+                                        f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
 
         if opt_simplified:
-            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{"_".join(val.value[1] for val in model_approx_types)}'
+            self.plot_subfolder = f'{hyperparameter_max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{"_".join(val.value[1] for val in model_approx_types)}'
         else:
-            self.plot_subfolder = f'{max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
+            self.plot_subfolder = f'{hyperparameter_max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_{n_likelihood_samples}_likelihood_samples'
 
         self.plot_subfolder = path.join('state_plots', self.plot_subfolder)
         self.plot_filename_base = path.join(self.plot_subfolder,
@@ -180,9 +197,6 @@ class BayesModel(ABC):
             os.mkdir(self.plot_subfolder)
         if not os.path.exists(self.plot_filename_base):
             os.mkdir(self.plot_filename_base)
-
-        if load_data_obj is None:
-            from sub_units import load_data as load_data_obj
 
         state_data = load_data_obj.get_state_data(state_name, opt_smoothing=self.opt_smoothing)
 
@@ -436,14 +450,14 @@ class BayesModel(ABC):
 
         # hess = numdifftools.Hessian(lambda x: np.exp(self.get_log_likelihood(x)))(p0)
         hess = numdifftools.Hessian(self.get_log_likelihood)(p0)
-        
+
         # this uses the jacobian approx to the hessian, but I end up with a singular matrix
         # jacobian = numdifftools.Jacobian(self.get_log_likelihood)(p0)
         # hess = jacobian.T @ jacobian
         # eigenw, eigenv = np.linalg.eig(hess)
         # print('hess eigenw:')
         # print(eigenw)
-        
+
         # print('hess:')
         # print(hess)
 
@@ -633,18 +647,25 @@ class BayesModel(ABC):
                                               replace=False)
         sols_to_plot = [self.run_simulation(in_params=params[param_ind]) for param_ind in tqdm(param_inds_to_plot)]
 
+        data_plot_kwargs = {'markersize': 6, 'markeredgewidth': 0.5, 'markeredgecolor': 'black'}
         self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
-                                                               plot_filename_filename=f'{key}_solutions_discrete.png')
+                                                               plot_filename_filename=f'{key}_solutions_discrete.png',
+                                                               data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,
-                                                      plot_filename_filename=f'{key}_solutions_filled_quantiles.png')
+                                                      plot_filename_filename=f'{key}_solutions_filled_quantiles.png',
+                                                      data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(sols_to_plot,
-                                                                          plot_filename_filename=f'{key}_solutions_cumulative_discrete.png')
+                                                                          plot_filename_filename=f'{key}_solutions_cumulative_discrete.png',
+                                                                          data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_filled_quantiles_cumulative(sols_to_plot,
-                                                                 plot_filename_filename=f'{key}_solutions_cumulative_filled_quantiles.png')
+                                                                 plot_filename_filename=f'{key}_solutions_cumulative_filled_quantiles.png',
+                                                                 data_plot_kwargs=data_plot_kwargs)
 
     def _plot_all_solutions_sub_filled_quantiles(self,
                                                  sols_to_plot,
-                                                 plot_filename_filename=None):
+                                                 plot_filename_filename=None,
+                                                 data_markersize=36,
+                                                 data_plot_kwargs=dict()):
         '''
         Helper function to plot_all_solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
@@ -740,8 +761,8 @@ class BayesModel(ABC):
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                 color="darkgreen")
 
-        ax.plot(data_plot_date_range, self.data_new_tested, '.', color='darkgreen', label='cases')
-        ax.plot(data_plot_date_range, self.data_new_dead, '.', color='darkred', label='deaths')
+        ax.plot(data_plot_date_range, self.data_new_tested, '.', color='darkgreen', label='Infections', **data_plot_kwargs)
+        ax.plot(data_plot_date_range, self.data_new_dead, '.', color='darkred', label='Deaths', **data_plot_kwargs)
         fig.autofmt_xdate()
 
         # this removes the year from the x-axis ticks
@@ -749,7 +770,7 @@ class BayesModel(ABC):
 
         # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
         plt.yscale('log')
-        plt.ylabel('new people each day')
+        plt.ylabel('Daily Reported Counts')
         plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
         plt.ylim((0.1, max(self.data_new_tested) * 100))
         plt.legend()
@@ -760,7 +781,8 @@ class BayesModel(ABC):
     def _plot_all_solutions_sub_filled_quantiles_cumulative(self,
                                                             sols_to_plot,
                                                             plot_filename_filename=None,
-                                                            opt_predict=True):
+                                                            opt_predict=True,
+                                                            data_plot_kwargs=dict()):
         '''
         Helper function to plot_all_solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
@@ -875,8 +897,10 @@ class BayesModel(ABC):
         ax.plot(sol_plot_date_range[slice(min_slice, None)], p50_curve[min_plot_pt:max_plot_pt][slice(min_slice, None)],
                 color="darkgreen")
 
-        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='cases')
-        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='deaths')
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='Infections',
+                **data_plot_kwargs)
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='Deaths',
+                **data_plot_kwargs)
         fig.autofmt_xdate()
 
         # this removes the year from the x-axis ticks
@@ -884,9 +908,9 @@ class BayesModel(ABC):
 
         # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
         plt.yscale('log')
-        plt.ylabel('cumulative people each day')
+        plt.ylabel('Cumulative Reported Counts')
         plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
-        plt.ylim((1, max(self.data_new_tested) * 100))
+        plt.ylim((1, sum(self.data_new_tested) * 100))
         plt.legend()
         # plt.title(f'{state} Data (points) and Model Predictions (lines)')
         plt.savefig(full_output_filename, dpi=self.plot_dpi)
@@ -895,7 +919,8 @@ class BayesModel(ABC):
     def _plot_all_solutions_sub_distinct_lines_with_alpha(self,
                                                           sols_to_plot,
                                                           n_sols_to_plot=1000,
-                                                          plot_filename_filename=None):
+                                                          plot_filename_filename=None,
+                                                          data_plot_kwargs=dict()):
         '''
         Helper function to plot_all_solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
@@ -946,16 +971,16 @@ class BayesModel(ABC):
                     new_dead[min_plot_pt:max_plot_pt][slice(min_slice, None)], 'r',
                     alpha=5 / n_sols)
 
-        ax.plot(data_plot_date_range, self.data_new_tested, '.', color='darkgreen', label='cases')
-        ax.plot(data_plot_date_range, self.data_new_dead, '.', color='darkred', label='deaths')
+        ax.plot(data_plot_date_range, self.data_new_tested, '.', color='darkgreen', label='Infections', **data_plot_kwargs)
+        ax.plot(data_plot_date_range, self.data_new_dead, '.', color='darkred', label='Deaths', **data_plot_kwargs)
         fig.autofmt_xdate()
 
         # this removes the year from the x-axis ticks
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-
+        
         # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
         plt.yscale('log')
-        plt.ylabel('new people each day')
+        plt.ylabel('Daily Reported Counts')
         plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
         plt.ylim((0.1, max(self.data_new_tested) * 100))
         plt.legend()
@@ -967,7 +992,8 @@ class BayesModel(ABC):
                                                                      sols_to_plot,
                                                                      n_sols_to_plot=1000,
                                                                      plot_filename_filename=None,
-                                                                     opt_predict=True):
+                                                                     opt_predict=True,
+                                                                     data_plot_kwargs=dict()):
         '''
         Helper function to plot_all_solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
@@ -1037,18 +1063,18 @@ class BayesModel(ABC):
                     dead[min_plot_pt:max_plot_pt][slice(min_slice, None)], 'r',
                     alpha=5 / n_sols)
 
-        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='cases')
-        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='deaths')
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_tested), '.', color='darkgreen', label='Infections', **data_plot_kwargs)
+        ax.plot(data_plot_date_range, np.cumsum(self.data_new_dead), '.', color='darkred', label='Deaths', **data_plot_kwargs)
         fig.autofmt_xdate()
 
         # this removes the year from the x-axis ticks
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-
+        
         # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
         plt.yscale('log')
-        plt.ylabel('cumulative people each day')
+        plt.ylabel('Cumulative Reported Counts')
         plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
-        plt.ylim((1, max(self.data_new_tested) * 100))
+        plt.ylim((1, sum(self.data_new_tested) * 100))
         plt.legend()
         # plt.title(f'{state} Data (points) and Model Predictions (lines)')
         plt.savefig(full_output_filename, dpi=self.plot_dpi)
@@ -1380,6 +1406,8 @@ class BayesModel(ABC):
             propensity_model = sp.stats.multivariate_normal(cov=cov)
         elif which_distro == WhichDistro.laplace:
             propensity_model = sp.stats.laplace(scale=sigma_as_list)
+        elif which_sitro == WhichDistro.sphere:
+            propensity_model = sp.stats.multivariate_normal(cov=cov)
 
         return propensity_model
 
@@ -1443,15 +1471,33 @@ class BayesModel(ABC):
             while n_attempts < 100 and not accepted:  # this limits endless searches with wide sigmas
                 n_attempts += 1
 
-                # acq_timer=Stopwatch()
-                jitter = propensity_model.rvs()
-                # sample_time = acq_timer.elapsed_time()
-                # print(f'Sample time: {sample_time * 1000:.4g} ms')
-                # acq_timer.reset()
-                jitter_propensity = np.prod(propensity_model.pdf(jitter))  # works correctly for laplace and MVN distros
-                # pdf_time = acq_timer.elapsed_time()
-                # print(f'PDF time: {pdf_time * 1000:.4g} ms')
-                # print(f'n_attempts: {n_attempts}')
+                if which_distro in [WhichDistro.norm, WhichDistro.laplace]:
+                    # acq_timer=Stopwatch()
+                    jitter = propensity_model.rvs()
+                    # sample_time = acq_timer.elapsed_time()
+                    # print(f'Sample time: {sample_time * 1000:.4g} ms')
+                    # acq_timer.reset()
+                    jitter_propensity = np.prod(propensity_model.pdf(jitter))
+                    # pdf_time = acq_timer.elapsed_time()
+                    # print(f'PDF time: {pdf_time * 1000:.4g} ms')
+                    # print(f'n_attempts: {n_attempts}')
+                elif which_distro == WhichDistro.sphere:
+                    accepted = False
+                    n_tries = 0
+                    while not accepted:
+                        jitter = propensity_model.rvs()  # this will be multivariate norm
+                        jitter_propensity = np.prod(propensity_model.pdf(jitter))
+                        center_propensity = np.prod(propensity_model.pdf(np.zeros_like(jitter)))
+
+                        # the idea here is to discard points that have low propensities, which approximates
+                        #   to the hypersphere as cheaply as I could figure out
+                        if jitter_propensity > 0.1 * center_propensity:
+                            accepted = True
+                        else:
+                            n_tries += 1
+                        if n_tries > 1000:
+                            raise ValueError('Discarding too many points...')
+
                 for param_name in self.logarithmic_params:
                     if param_name not in self.map_name_to_sorted_ind:
                         continue

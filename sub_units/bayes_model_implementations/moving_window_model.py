@@ -14,15 +14,15 @@ class MovingWindowModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self,
                  state,
-                 max_date_str,
                  moving_window_size=14,
                  optimizer_method='SLSQP',
                  opt_simplified=False,
+                 model_type_name=None,
                  **kwargs):
-        min_sol_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d') - datetime.timedelta(
-            days=moving_window_size)
-        model_type_name = f'moving_window_{moving_window_size}_days'
-
+        
+        if model_type_name is None:
+            model_type_name = f'moving_window_{moving_window_size}_days'
+        
         if opt_simplified:
             model_approx_types = [ApproxType.SM]
             print('Doing simplified models...')
@@ -33,13 +33,11 @@ class MovingWindowModel(BayesModel):
         # these kwargs will be added as object attributes
         kwargs.update({'model_type_name': model_type_name,
                        'moving_window_size': moving_window_size,
-                       'min_sol_date': min_sol_date,
                        'optimizer_method': optimizer_method,
                        'model_approx_types': model_approx_types,
-                       'moving_window_size': moving_window_size,
                        'opt_simplified': opt_simplified,
                        'plot_two_vals': ['positive_slope', 'positive_intercept']})
-        super(MovingWindowModel, self).__init__(state, max_date_str, **kwargs)
+        super(MovingWindowModel, self).__init__(state, **kwargs)
 
         ind1 = max(self.day_of_threshold_met_case, len(self.series_data) - moving_window_size)
         self.cases_indices = list(range(ind1, len(self.series_data)))
@@ -231,7 +229,7 @@ class MovingWindowModel(BayesModel):
         #####
         # Do fit on positive curve
         #####
-
+        
         model_positive = smf.ols(formula='np.log(new_positive + log_offset) ~ x + DOW',
                                  data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
