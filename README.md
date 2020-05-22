@@ -2,7 +2,7 @@
 
 **Full write-up at [PDF version](https://covid-figures.s3-us-west-2.amazonaws.com/covid.pdf)**
 
-**Latest per-state results and two-week projections provided in the [Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only/index.html) and tabulated within the [CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_17_date_smoothed_moving_window_21_days_statsmodels/simplified_state_prediction.csv)**
+**Latest per-state results and three-month projections provided in the [US Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_US_states/index.html) and [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html) and tabulated within the [US CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_prediction.csv) and [International CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv) **
 
 ~~*We are looking for more compute resources so we can provide results for each state on a daily basis at high fidelity, requiring 10x more samples. If you would like to help please contact the contributors.*~~
 
