@@ -23,7 +23,10 @@ We model universal curves of reported COVID-19 daily reported infections and rel
 **Figure 1b:** Moving-Window Linear Regression model curves and COVID-19 Daily Reported Cases and Related Deaths in the U.S. 
 
 ![boxplot](/static_figures/simplified_boxplot_for_positive_slope_statsmodels.png?)
-**Figure 2:** Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. We see strongest growth in Minnesota, Main, and South Dakota, and lowest growth in Montana, Arkansas, and Virginia.
+**Figure 2a:** Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
+
+![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels.png?)
+**Figure 2b:** Model parameter estimates for the current growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
 
 [1] R.M. Anderson and R.M. May. Infectious Diseases of Humans: Dynamics and Control. Dynamics and Control. OUP Oxford, 1992.
 
