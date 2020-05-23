@@ -22,6 +22,7 @@ class Region(Enum):
     US_states = 'US_states'
     countries = 'countries'
     US_counties = 'US_counties'
+    provinces = 'provinces'
 
     def __str__(self):
         return str(self.value)
@@ -189,7 +190,7 @@ def generate_state_prediction(map_state_name_to_model,
 
             for approx_type in state_model.model_approx_types:
 
-                if approx_type == ApproxType.SM:
+                if approx_type == ApproxType.SM or approx_type == ApproxType.SM_acc:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
                 elif approx_type == ApproxType.PyMC3:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3()
@@ -273,7 +274,7 @@ def generate_state_prediction(map_state_name_to_model,
 
     all_predictions = pd.DataFrame(all_predictions)
 
-    if all([x.startswith('US ') for x in all_predictions['state']]):
+    if all([x.startswith('US: ') for x in all_predictions['state']]):
         all_predictions['state'] = [x[3:] for x in all_predictions['state']]
 
     # filter to just the first two weeks and every 1st of the month
@@ -317,6 +318,11 @@ def generate_state_report(map_state_name_to_model,
                 SM_params, _, _, _ = state_model.get_weighted_samples_via_statsmodels()
             except:
                 SM_params = [0]
+
+            try:
+                SM_acc_params = state_model.map_param_to_acc
+            except:
+                SM_acc_params = [0]
 
             try:
                 Hess_params, _, _, _ = state_model.get_weighted_samples_via_hessian()
@@ -407,6 +413,18 @@ def generate_state_report(map_state_name_to_model,
                                'param': param_name
                                }
 
+                if True:
+                    dict_to_add.update({
+                        'statsmodels_mean_one_week_ago_with_priors': SM_acc_params[param_name]['slope1'],
+                        'statsmodels_mean_std_err_one_week_ago_with_priors': SM_acc_params[param_name]['bse1'],
+                        # 'statsmodels_mean': SM_acc_params[param_name]['slope2'],
+                        # 'statsmodels_mean_std_err': SM_acc_params[param_name]['bse2'],
+                        'statsmodels_acc_z_score_with_priors': SM_acc_params[param_name]['z_score'],
+                        'statsmodels_acc_p_value_with_priors': SM_acc_params[param_name]['p_value'],
+                    })
+                else:
+                    pass
+                
                 try:
                     dict_to_add.update({
                         'bootstrap_mean_with_priors': np.average(BS_vals),
@@ -519,7 +537,7 @@ def generate_state_report(map_state_name_to_model,
         new_cols.append(new_col)
     state_report.columns = new_cols
 
-    if all([x.startswith('US ') for x in state_report['state']]):
+    if all([x.startswith('US: ') for x in state_report['state']]):
         state_report['state'] = [x[3:] for x in state_report['state']]
 
     return state_report
@@ -702,8 +720,8 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                     for state in alphabetical_states:
                         state_lc = state.lower().replace(' ', '_')
                         tmp_url = state_lc + '/index.html'
-                        if state.lower().startswith('us_'):
-                            print_state = state[3:]
+                        if state.lower().startswith('us:_'):
+                            print_state = state[4:]
                         else:
                             print_state = state
                         print_state = print_state.title().replace('_',' ')

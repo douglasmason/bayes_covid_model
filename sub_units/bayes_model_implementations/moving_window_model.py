@@ -19,10 +19,10 @@ class MovingWindowModel(BayesModel):
                  opt_simplified=False,
                  model_type_name=None,
                  **kwargs):
-        
+
         if model_type_name is None:
             model_type_name = f'moving_window_{moving_window_size}_days'
-        
+
         if opt_simplified:
             model_approx_types = [ApproxType.SM]
             print('Doing simplified models...')
@@ -159,9 +159,11 @@ class MovingWindowModel(BayesModel):
         # timer = Stopwatch()
 
         actual_tested = [np.log(data_new_tested[i] + self.log_offset) for i in cases_bootstrap_indices]
-        predicted_tested = [np.log(new_tested_from_sol[i + self.burn_in] + self.log_offset) for i in cases_bootstrap_indices]
+        predicted_tested = [np.log(new_tested_from_sol[i + self.burn_in] + self.log_offset) for i in
+                            cases_bootstrap_indices]
         actual_dead = [np.log(data_new_dead[i] + self.log_offset) for i in deaths_bootstrap_indices]
-        predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in deaths_bootstrap_indices]
+        predicted_dead = [np.log(new_deceased_from_sol[i + self.burn_in] + self.log_offset) for i in
+                          deaths_bootstrap_indices]
 
         new_tested_dists = [predicted_tested[i] - actual_tested[i] for i in range(len(predicted_tested))]
         new_dead_dists = [predicted_dead[i] - actual_dead[i] for i in range(len(predicted_dead))]
@@ -173,7 +175,54 @@ class MovingWindowModel(BayesModel):
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals, \
                predicted_tested, actual_tested, predicted_dead, actual_dead
 
-    def render_statsmodels_fit(self, opt_simplified=False):
+    # @staticmethod
+    # def print_var_inspection(exec_statement):
+    #     print(exec_statement + ':', eval(exec_statement))
+
+    def render_statsmodels_fit(self, opt_simplified=False, offset=7):
+        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset)
+        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=0)
+
+        tmp_dict = self.map_offset_to_statsmodels_dict[0]
+        statsmodels_model_deceased = tmp_dict['statsmodels_model_deceased']
+        statsmodels_model_positive = tmp_dict['statsmodels_model_positive']
+        statsmodels_params = tmp_dict['statsmodels_params']
+        statsmodels_bse = tmp_dict['statsmodels_bse']
+        
+        tmp_dict = self.map_offset_to_statsmodels_dict[7]
+        statsmodels_model_deceased_one_week_ago = tmp_dict['statsmodels_model_deceased']
+        statsmodels_model_positive_one_week_ago = tmp_dict['statsmodels_model_positive']
+        statsmodels_params_one_week_ago = tmp_dict['statsmodels_params']
+        statsmodels_bse_one_week_ago = tmp_dict['statsmodels_bse']
+        # print('statsmodels_params:', statsmodels_params)
+        # print('statsmodels_params_one_week_ago:', statsmodels_params_one_week_ago)
+
+        map_param_to_acc = dict()
+        for param in statsmodels_params:
+            bse_one = statsmodels_bse_one_week_ago[param]
+            bse_two = statsmodels_bse[param]
+            slope_one = statsmodels_params[param]
+            slope_two = statsmodels_params_one_week_ago[param]
+            z_score = (slope_two - slope_one)/np.sqrt(bse_one**2 + bse_two**2)
+            p_value = sp.stats.norm.sf(abs(z_score))
+            print(f'{param}:')
+            print(f'  bse_one: {bse_one:.4g} slope_one: {slope_one:.4g}')
+            print(f'  bse_two: {bse_two:.4g} slope_two: {slope_two:.4g}')
+            print(f'  z_score: {z_score:.4g} p_value: {p_value:.4g}')
+            
+            tmp_dict = {
+                'bse1': bse_one,
+                'bse2': bse_two,
+                'slope1': slope_one,
+                'slope2': slope_two,
+                'z_score': z_score,
+                'p_value': p_value
+            }
+            map_param_to_acc[param] = tmp_dict
+        
+        self.map_param_to_acc = map_param_to_acc
+        
+    def _render_statsmodels_fit_sub(self, opt_simplified=False, offset=0):
         '''
         Performs fit using statsmodels, since this is a standard linear regression. This model gives us standard errors.
         :return: 
@@ -213,13 +262,15 @@ class MovingWindowModel(BayesModel):
         cases_bootstrap_indices = self.cases_indices[-moving_window_size:]
         deaths_bootstrap_indices = self.deaths_indices[-moving_window_size:]
 
+        print('len(data_new_tested):', len(data_new_tested))
+        print('len(data_new_deceased):', len(data_new_deceased))
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': data_new_tested[i],
-                              'new_deceased': data_new_deceased[i],
+                              'new_positive': max(data_new_tested[i], 0.1),
+                              'new_deceased': max(data_new_deceased[i], 0.1),
                               } for ind, i in
-                             enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested)))])
+                             enumerate(range(len(data_new_tested) - moving_window_size, len(data_new_tested) - offset))])
 
         # need to use orig_ind to align intercept with run_simulation
         ind_offset = 0  # had to hand-tune this to zero
@@ -229,7 +280,7 @@ class MovingWindowModel(BayesModel):
         #####
         # Do fit on positive curve
         #####
-        
+
         model_positive = smf.ols(formula='np.log(new_positive + log_offset) ~ x + DOW',
                                  data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
@@ -250,7 +301,7 @@ class MovingWindowModel(BayesModel):
         # print('Statsmodels results for positive:')
         # print('sigma_as_list:', sigma_as_list)
         # print('means_as_list:', means_as_list)
-        
+
         # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
         cov = results_positive.cov_params()
         # print('Cov columns:', cov.columns)
@@ -269,7 +320,7 @@ class MovingWindowModel(BayesModel):
         # print('corr:')
         # print(corr)
 
-        self.statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+        statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
         #####
         # Do fit on deceased curve
@@ -321,13 +372,41 @@ class MovingWindowModel(BayesModel):
             if 'sigma' in param_name:
                 continue
             tmp_params[param_name] = np.exp(tmp_params.pop(param_name))
-        self.statsmodels_params = tmp_params
-        self.statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+        statsmodels_params = tmp_params
+
+        tmp_bse = bse_positive.copy()
+        tmp_bse.update(bse_deceased)
+        for param_name in self.logarithmic_params:
+            if 'sigma' in param_name:
+                continue
+            tmp_bse[param_name] = np.exp(tmp_bse.pop(param_name))
+        statsmodels_bse = tmp_bse
+
+        statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+        self.statsmodels_model_deceased = statsmodels_model_deceased
+        self.statsmodels_model_positive = statsmodels_model_positive
+        self.statsmodels_params = statsmodels_params
+        self.statsmodels_bse = statsmodels_bse
+        
+        
+        if not hasattr(self, 'map_offset_to_statsmodels_dict'):
+            self.map_offset_to_statsmodels_dict = dict()
+        self.map_offset_to_statsmodels_dict[offset] = {
+            'statsmodels_model_deceased': statsmodels_model_deceased,
+            'statsmodels_model_positive': statsmodels_model_positive,
+            'statsmodels_params': statsmodels_params,
+            'statsmodels_bse': statsmodels_bse,
+        }
 
         if not opt_simplified:
             self.render_and_plot_cred_int(approx_type=ApproxType.SM)
 
-        self.plot_all_solutions(approx_type=ApproxType.SM)
+        if offset == 0:
+            offset_str = ''
+        else:
+            offset_str = f'_offset_{offset}_days'
+
+        self.plot_all_solutions(approx_type=ApproxType.SM, offset_str=offset_str)
 
     def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
 
@@ -341,7 +420,7 @@ class MovingWindowModel(BayesModel):
 
         return samples, samples, [1] * len(samples), log_probs
 
-    def get_weighted_samples_via_statsmodels(self, n_samples=1000, ):
+    def get_weighted_samples_via_statsmodels(self, n_samples=1000):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
@@ -380,7 +459,6 @@ class MovingWindowModel(BayesModel):
         :return: None
         '''
 
-        # Do statsmodels. Yes. It's THAT simplified.
         if ApproxType.SM in self.model_approx_types:
             self.render_statsmodels_fit(opt_simplified=True)
             self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
@@ -411,8 +489,8 @@ class MovingWindowModel(BayesModel):
             # PyMC3 requires a Pandas dataframe, so let's get cooking!
             data_as_list_of_dicts = [{'new_tested': self.data_new_tested[i],
                                       'new_dead': self.data_new_dead[i],
-                                      'log_new_tested': np.log(self.data_new_tested[i] + self.log_offset),
-                                      'log_new_dead': np.log(self.data_new_dead[i] + self.log_offset),
+                                      'log_new_tested': np.log(max(self.data_new_tested[i], 0.1)),
+                                      'log_new_dead': np.log(max(self.data_new_dead[i], 0.1)),
                                       'orig_ind': i + self.burn_in,
                                       'x': ind,
                                       } for ind, i in enumerate(

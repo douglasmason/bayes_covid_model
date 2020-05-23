@@ -2,7 +2,6 @@ from sub_units.utils import Stopwatch, ApproxType
 import numpy as np
 import pandas as pd
 from enum import Enum
-import random
 
 pd.plotting.register_matplotlib_converters()  # addresses complaints about Timestamp instead of float for plotting x-values
 import matplotlib
@@ -162,17 +161,19 @@ class BayesModel(ABC):
             hyperparameter_max_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
         else:
             hyperparameter_max_date_str = override_max_date_str
+            
+        state_lc = state_name.lower().replace(' ','_').replace(':', '_')
 
         self.all_data_fit_filename = path.join('state_all_data_fits',
-                                               f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+                                               f"{state_lc}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.bootstrap_filename = path.join('state_bootstraps',
-                                            f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+                                            f"{state_lc}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
-                                                                f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+                                                                f"{state_lc}_{smoothing_str}{model_type_name}_{{}}_{n_likelihood_samples}_samples_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_from_bootstraps_filename = path.join('state_likelihood_samples',
-                                                                     f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+                                                                     f"{state_lc}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_likelihoods_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.PyMC3_filename = path.join('state_PyMC3_traces',
-                                        f"{state_name.lower().replace(' ', '_')}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+                                        f"{state_lc}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
 
         if opt_simplified:
             self.plot_subfolder = f'{hyperparameter_max_date_str.replace("-", "_")}_date_{smoothing_str}{model_type_name}_{"_".join(val.value[1] for val in model_approx_types)}'
@@ -618,17 +619,18 @@ class BayesModel(ABC):
             # for i in range(len(sol)):
             #     print(f'index: {i}, odeint_value: {sol[i]}, real_value: {[None, series_data[i]]}')
 
-    def plot_all_solutions(self, n_samples=1000, approx_type=ApproxType.BS, mvn_fit=False, n_sols_to_plot=1000):
+    def plot_all_solutions(self, n_samples=1000, approx_type=ApproxType.BS, mvn_fit=False, n_sols_to_plot=1000, offset_str=''):
         '''
         Plot all the bootstrap simulation solutions
         :param n_sols_to_plot: how many simulations should we sample for the plot?
         :return: None
         '''
+                
         key = approx_type.value[1]
-        full_output_filename = path.join(self.plot_filename_base, f'{key}_solutions_discrete.png')
-        full_output_filename2 = path.join(self.plot_filename_base, f'{key}_solutions_filled_quantiles.png')
-        full_output_filename3 = path.join(self.plot_filename_base, f'{key}_solutions_cumulative_discrete.png')
-        full_output_filename4 = path.join(self.plot_filename_base, f'{key}_solutions_cumulative_filled_quantiles.png')
+        full_output_filename = path.join(self.plot_filename_base, f'{key}{offset_str}_solutions_discrete.png')
+        full_output_filename2 = path.join(self.plot_filename_base, f'{key}{offset_str}_solutions_filled_quantiles.png')
+        full_output_filename3 = path.join(self.plot_filename_base, f'{key}{offset_str}_solutions_cumulative_discrete.png')
+        full_output_filename4 = path.join(self.plot_filename_base, f'{key}{offset_str}_solutions_cumulative_filled_quantiles.png')
         if path.exists(full_output_filename) and path.exists(full_output_filename2) and path.exists(
                 full_output_filename3) and path.exists(full_output_filename4) and not self.opt_force_plot:
             return
@@ -649,16 +651,16 @@ class BayesModel(ABC):
 
         data_plot_kwargs = {'markersize': 6, 'markeredgewidth': 0.5, 'markeredgecolor': 'black'}
         self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
-                                                               plot_filename_filename=f'{key}_solutions_discrete.png',
+                                                               plot_filename_filename=full_output_filename,
                                                                data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,
-                                                      plot_filename_filename=f'{key}_solutions_filled_quantiles.png',
+                                                      plot_filename_filename=full_output_filename2,
                                                       data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(sols_to_plot,
-                                                                          plot_filename_filename=f'{key}_solutions_cumulative_discrete.png',
+                                                                          plot_filename_filename=full_output_filename3,
                                                                           data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_filled_quantiles_cumulative(sols_to_plot,
-                                                                 plot_filename_filename=f'{key}_solutions_cumulative_filled_quantiles.png',
+                                                                 plot_filename_filename=full_output_filename4,
                                                                  data_plot_kwargs=data_plot_kwargs)
 
     def _plot_all_solutions_sub_filled_quantiles(self,
