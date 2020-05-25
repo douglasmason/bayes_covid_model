@@ -8,6 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import joblib
+from scipy.stats import norm as sp_norm
 
 plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
@@ -29,13 +30,15 @@ class Region(Enum):
 
 
 class ApproxType(Enum):
-    __order__ = 'BS LS MCMC SM PyMC3 Hess'
+    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS'
     BS = ('BS', 'bootstrap')
     LS = ('LS', 'likelihood_samples')
     MCMC = ('MCMC', 'random_walk')
     SM = ('SM', 'statsmodels')
     PyMC3 = ('PyMC3', 'PyMC3')
     Hess = ('Hess', 'hessian')
+    SM_acc = ('SM_acc', 'statsmodels_acc')
+    SM_TS = ('SM_TS', 'statsmodels_time_series')
 
     def __str__(self):
         return str(self.value)
@@ -190,7 +193,7 @@ def generate_state_prediction(map_state_name_to_model,
 
             for approx_type in state_model.model_approx_types:
 
-                if approx_type == ApproxType.SM or approx_type == ApproxType.SM_acc:
+                if approx_type == ApproxType.SM or approx_type == ApproxType.SM_acc or approx_type == ApproxType.SM_TS:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
                 elif approx_type == ApproxType.PyMC3:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3()
@@ -212,10 +215,10 @@ def generate_state_prediction(map_state_name_to_model,
                 sols_to_plot_tested = list()
                 sols_to_plot_dead = list()
                 for sol in sols_to_plot:
-                    tested = sol[1]
+                    tested =  [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
                     tested_range = np.cumsum(tested[start_ind_sol:])
 
-                    dead = sol[2]
+                    dead =  [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
                     dead_range = np.cumsum(dead[start_ind_sol:])
 
                     sols_to_plot_new_tested.append(tested)
@@ -384,6 +387,7 @@ def generate_state_report(map_state_name_to_model,
                                    in range(len(LS_params))]
                     except:
                         pass
+
                     try:
                         SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
                                    in range(len(SM_params))]
@@ -413,71 +417,93 @@ def generate_state_report(map_state_name_to_model,
                                'param': param_name
                                }
 
-                if True:
+                try:
+                    offset = SM_acc_params[param_name]['offset']
+                    SM_acc_mean = SM_acc_params[param_name]['slope2'] - SM_acc_params[param_name]['slope1']
+                    SM_acc_std_err = np.sqrt(
+                            SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
+                    SM_acc_vals = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err).rvs(1000)
+
                     dict_to_add.update({
-                        'statsmodels_mean_one_week_ago_with_priors': SM_acc_params[param_name]['slope1'],
-                        'statsmodels_mean_std_err_one_week_ago_with_priors': SM_acc_params[param_name]['bse1'],
+                        'statsmodels_acc_mean': np.average(SM_acc_vals),
+                        'statsmodels_acc_std_err': np.std(SM_acc_vals),
+                        'statsmodels_acc_fwhm': np.std(SM_acc_vals) * 2.355,
+                        'statsmodels_acc_p50': np.percentile(SM_acc_vals, 50),
+                        'statsmodels_acc_p5':
+                            np.percentile(SM_acc_vals, 5),
+                        'statsmodels_acc_p95':
+                            np.percentile(SM_acc_vals, 95),
+                        'statsmodels_acc_p25':
+                            np.percentile(SM_acc_vals, 25),
+                        'statsmodels_acc_p75':
+                            np.percentile(SM_acc_vals, 75)
+                    })
+
+                    dict_to_add.update({
+                        f'statsmodels_mean_offset_{offset}_days': SM_acc_params[param_name]['slope1'],
+                        f'statsmodels_mean_std_err_offset_{offset}_days': SM_acc_params[param_name]['bse1'],
                         # 'statsmodels_mean': SM_acc_params[param_name]['slope2'],
                         # 'statsmodels_mean_std_err': SM_acc_params[param_name]['bse2'],
-                        'statsmodels_acc_z_score_with_priors': SM_acc_params[param_name]['z_score'],
-                        'statsmodels_acc_p_value_with_priors': SM_acc_params[param_name]['p_value'],
+                        'statsmodels_acc_z_score': SM_acc_params[param_name]['z_score'],
+                        'statsmodels_acc_p_value': SM_acc_params[param_name]['p_value']
                     })
-                else:
+                except:
                     pass
-                
+
                 try:
                     dict_to_add.update({
-                        'bootstrap_mean_with_priors': np.average(BS_vals),
-                        'bootstrap_p50_with_priors': np.percentile(BS_vals, 50),
-                        'bootstrap_p25_with_priors':
+                        'bootstrap_mean': np.average(BS_vals),
+                        'bootstrap_p50': np.percentile(BS_vals, 50),
+                        'bootstrap_p25':
                             np.percentile(BS_vals, 25),
-                        'bootstrap_p75_with_priors':
+                        'bootstrap_p75':
                             np.percentile(BS_vals, 75),
-                        'bootstrap_p5_with_priors': np.percentile(BS_vals, 5),
-                        'bootstrap_p95_with_priors': np.percentile(BS_vals, 95)
+                        'bootstrap_p5': np.percentile(BS_vals, 5),
+                        'bootstrap_p95': np.percentile(BS_vals, 95)
                     })
                 except:
                     pass
                 try:
                     dict_to_add.update({
-                        'random_walk_mean_with_priors': np.average(MCMC_vals),
-                        'random_walk_p50_with_priors': np.percentile(MCMC_vals, 50),
-                        'random_walk_p5_with_priors': np.percentile(MCMC_vals, 5),
-                        'random_walk_p95_with_priors': np.percentile(MCMC_vals, 95),
-                        'random_walk_p25_with_priors':
+                        'random_walk_mean': np.average(MCMC_vals),
+                        'random_walk_p50': np.percentile(MCMC_vals, 50),
+                        'random_walk_p5': np.percentile(MCMC_vals, 5),
+                        'random_walk_p95': np.percentile(MCMC_vals, 95),
+                        'random_walk_p25':
                             np.percentile(MCMC_vals, 25),
-                        'random_walk_p75_with_priors':
+                        'random_walk_p75':
                             np.percentile(MCMC_vals, 75)
                     })
                 except:
                     pass
                 try:
                     dict_to_add.update({
-                        'likelihood_samples_mean_with_priors': np.average(LS_vals),
-                        'likelihood_samples_p50_with_priors': np.percentile(LS_vals, 50),
-                        'likelihood_samples_p5_with_priors':
+                        'likelihood_samples_mean': np.average(LS_vals),
+                        'likelihood_samples_p50': np.percentile(LS_vals, 50),
+                        'likelihood_samples_p5':
                             np.percentile(LS_vals, 5),
-                        'likelihood_samples_p95_with_priors':
+                        'likelihood_samples_p95':
                             np.percentile(LS_vals, 95),
-                        'likelihood_samples_p25_with_priors':
+                        'likelihood_samples_p25':
                             np.percentile(LS_vals, 25),
-                        'likelihood_samples_p75_with_priors':
+                        'likelihood_samples_p75':
                             np.percentile(LS_vals, 75)
                     })
                 except:
                     pass
                 try:
                     dict_to_add.update({
-                        'statsmodels_mean_with_priors': np.average(SM_vals),
-                        'statsmodels_std_err_with_priors': np.std(SM_vals),
-                        'statsmodels_p50_with_priors': np.percentile(SM_vals, 50),
-                        'statsmodels_p5_with_priors':
+                        'statsmodels_mean': np.average(SM_vals),
+                        'statsmodels_std_err': np.std(SM_vals),
+                        'statsmodels_fwhm': np.std(SM_vals) * 2.355,
+                        'statsmodels_p50': np.percentile(SM_vals, 50),
+                        'statsmodels_p5':
                             np.percentile(SM_vals, 5),
-                        'statsmodels_p95_with_priors':
+                        'statsmodels_p95':
                             np.percentile(SM_vals, 95),
-                        'statsmodels_p25_with_priors':
+                        'statsmodels_p25':
                             np.percentile(SM_vals, 25),
-                        'statsmodels_p75_with_priors':
+                        'statsmodels_p75':
                             np.percentile(SM_vals, 75)
                     })
                 except:
@@ -485,16 +511,16 @@ def generate_state_report(map_state_name_to_model,
 
                 try:
                     dict_to_add.update({
-                        'hessian_mean_with_priors': np.average(Hess_vals),
-                        'hessian_std_err_with_priors': np.std(Hess_vals),
-                        'hessian_p50_with_priors': np.percentile(Hess_vals, 50),
-                        'hessian_p5_with_priors':
+                        'hessian_mean': np.average(Hess_vals),
+                        'hessian_std_err': np.std(Hess_vals),
+                        'hessian_p50': np.percentile(Hess_vals, 50),
+                        'hessian_p5':
                             np.percentile(Hess_vals, 5),
-                        'hessian_p95_with_priors':
+                        'hessian_p95':
                             np.percentile(Hess_vals, 95),
-                        'hessian_p25_with_priors':
+                        'hessian_p25':
                             np.percentile(Hess_vals, 25),
-                        'hessian_p75_with_priors':
+                        'hessian_p75':
                             np.percentile(Hess_vals, 75)
                     })
                 except:
@@ -502,16 +528,16 @@ def generate_state_report(map_state_name_to_model,
 
                 try:
                     dict_to_add.update({
-                        'PyMC3_mean_with_priors': np.average(PyMC3_vals),
-                        'PyMC3_std_err_with_priors': np.std(PyMC3_vals),
-                        'PyMC3_p50_with_priors': np.percentile(PyMC3_vals, 50),
-                        'PyMC3_p5_with_priors':
+                        'PyMC3_mean': np.average(PyMC3_vals),
+                        'PyMC3_std_err': np.std(PyMC3_vals),
+                        'PyMC3_p50': np.percentile(PyMC3_vals, 50),
+                        'PyMC3_p5':
                             np.percentile(PyMC3_vals, 5),
-                        'PyMC3_p95_with_priors':
+                        'PyMC3_p95':
                             np.percentile(PyMC3_vals, 95),
-                        'PyMC3_p25_with_priors':
+                        'PyMC3_p25':
                             np.percentile(PyMC3_vals, 25),
-                        'PyMC3_p75_with_priors':
+                        'PyMC3_p75':
                             np.percentile(PyMC3_vals, 75)
                     })
                 except:
@@ -533,7 +559,7 @@ def generate_state_report(map_state_name_to_model,
     for col in state_report.columns:
         for approx_type in ApproxType:
             col = col.replace(approx_type.value[1], approx_type.value[0])
-        new_col = col.replace('__', '_').replace('_with_priors', '')
+        new_col = col.replace('__', '_')
         new_cols.append(new_col)
     state_report.columns = new_cols
 
@@ -609,6 +635,14 @@ def run_everything(run_states,
                                                    output_filename_format_str=filename_format_str,
                                                    opt_log=param_name in logarithmic_params,
                                                    approx_types=state_model.model_approx_types)
+                    if ApproxType.SM in state_model.model_approx_types:
+                        render_whisker_plot_simplified(state_report,
+                                                       plot_param_name=param_name,
+                                                       output_filename_format_str=filename_format_str,
+                                                       opt_log=param_name in logarithmic_params,
+                                                       approx_types=[ApproxType.SM_acc])
+                    else:
+                        pass
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
@@ -724,8 +758,8 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                             print_state = state[4:]
                         else:
                             print_state = state
-                        print_state = print_state.title().replace('_',' ')
-                        print_state = print_state.replace(' Of',' of')
+                        print_state = print_state.title().replace('_', ' ')
+                        print_state = print_state.replace(' Of', ' of')
                         with tag('li'):
                             with tag("a", href=tmp_url):
                                 text(print_state)

@@ -13,17 +13,20 @@ full_report_filename = 'full_report.html'
 
 list_of_figures = [
     # 'statsmodels_param_distro_without_priors.png',
-    'statsmodels_solutions_discrete.png',
+    # 'statsmodels_solutions_discrete.png',
+    'statsmodels_growth_rate_time_series.png',
     'statsmodels_solutions_filled_quantiles.png',
-    'statsmodels_solutions_cumulative_discrete.png',
+    # 'statsmodels_solutions_cumulative_discrete.png',
     'statsmodels_solutions_cumulative_filled_quantiles.png',
 ]
 
 list_of_figures_full_report = [
     'simplified_boxplot_for_positive_slope_statsmodels.png',
     'simplified_boxplot_for_deceased_slope_statsmodels.png',
-    'simplified_boxplot_for_positive_intercept_statsmodels.png',
-    'simplified_boxplot_for_deceased_intercept_statsmodels.png'
+    'simplified_boxplot_for_positive_slope_statsmodels_acc.png',
+    'simplified_boxplot_for_deceased_slope_statsmodels_acc.png',
+    # 'simplified_boxplot_for_positive_intercept_statsmodels.png',
+    # 'simplified_boxplot_for_deceased_intercept_statsmodels.png'
 ]
 regions_to_present = ['total', 'California', 'New York']
 

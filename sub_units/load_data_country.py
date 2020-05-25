@@ -239,7 +239,7 @@ if not success:
     print('...done!')
 
 def get_state_data(state,
-                   opt_smoothing=False):
+                   opt_smoothing=True):
     # TODO: get actual population
 
     # population = map_state_to_population[state]
