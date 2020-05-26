@@ -20,7 +20,7 @@ We model universal curves of reported COVID-19 daily  infections and related dea
 ![boxplot](/static_figures/statsmodels_solutions_cumulative_filled_quantiles.png?)
 **Figure 1b:** Three-week moving-window model prediction curves for three months and COVID-19 Comulative Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively
 
-    ![boxplot](/static_figures/statsmodels_growth_rate_time_series.png?)
+![boxplot](/static_figures/statsmodels_growth_rate_time_series.png?)
 **Figure 1c:** Three-week moving-window model growth rate curves for three months and COVID-19 Comulative Reported Cases and Related Deaths in the U.S.
 
 ![boxplot](/static_figures/simplified_boxplot_for_positive_slope_statsmodels.png?)
