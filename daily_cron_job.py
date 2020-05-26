@@ -75,7 +75,6 @@ for days_back in tqdm(range(0, 7)):
 #####
 
 import covid_moving_window as covid
-import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
 #####
 # Step 2: Run Update
@@ -120,8 +119,13 @@ for region, plot_subfolder in region_plot_subfolders.items():
 # Step 5: Generate Figure Browser
 ######
 
-# region_plot_subfolders = {Region.US_states: 'state_plots/2020_05_21_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
-#  Region.countries: 'state_plots/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels'}
+import os
+from sub_units.utils import Region
+import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
+
+region_plot_subfolders = {Region.US_states: 'state_plots/2020_05_25_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+ Region.countries: 'state_plots/2020_05_25_date_smoothed_moving_window_21_days_countries_region_statsmodels'}
+
 
 # import importlib
 # importlib.reload(generate_figure_browser)

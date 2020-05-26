@@ -713,7 +713,7 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
         map_state_to_html[state] = result
 
     for state in map_state_to_html:
-        state_lc = state.lower().replace(' ', '_')
+        state_lc = state.lower().replace(' ', '_').replace(':','')
         if not path.exists(path.join(plot_browser_dir, state_lc)):
             os.mkdir(path.join(plot_browser_dir, state_lc))
         with open(path.join(plot_browser_dir, path.join(state_lc, 'index.html')), 'w') as f:
@@ -766,14 +766,13 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                         with tag("a", href=full_report_filename):
                             text(f'Full Report')
                     for state in alphabetical_states:
-                        state_lc = state.lower().replace(' ', '_')
+                        state_lc = state.lower().replace(' ', '_').replace(':', '')
                         tmp_url = state_lc + '/index.html'
                         if state.lower().startswith('us:_'):
                             print_state = state[4:]
                         else:
                             print_state = state
-                        print_state = print_state.title().replace('_', ' ')
-                        print_state = print_state.replace(' Of', ' of')
+                        print_state = print_state.title().replace('_', ' ').replace(' Of', ' of')
                         with tag('li'):
                             with tag("a", href=tmp_url):
                                 text(print_state)
