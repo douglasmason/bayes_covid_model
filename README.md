@@ -23,10 +23,10 @@ We model universal curves of reported COVID-19 daily  infections and related dea
 **Figure 2a:** Three-week moving-window model prediction curves for three months and COVID-19 Daily Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively.
 
 ![boxplot](/static_figures/statsmodels_solutions_cumulative_filled_quantiles.png?)
-**Figure 2b:** Three-week moving-window model prediction curves for three months and COVID-19 Comulative Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively
+**Figure 2b:** Three-week moving-window model prediction curves for three months and COVID-19 Cumulative Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively
 
 ![boxplot](/static_figures/statsmodels_growth_rate_time_series.png?)
-**Figure 2c:** Three-week moving-window model growth rate curves for three months and COVID-19 Comulative Reported Cases and Related Deaths in the U.S.
+**Figure 2c:** Three-week moving-window model growth rate curves for three months and COVID-19 Cumulative Reported Cases and Related Deaths in the U.S.
 
 ![boxplot](/static_figures/simplified_boxplot_for_positive_slope_statsmodels.png?)
 **Figure 3a:** Model parameter estimates for the current growth rate of COVID- 19 for each of 50 U.S. states, Washington D.C., and U.S. totals with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
