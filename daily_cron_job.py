@@ -48,7 +48,12 @@ def upload_file(file_name, bucket, object_name=None):
 
 url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
 r = requests.get(url, allow_redirects=True)
-with open('source_data/counts.csv', 'w') as f:
+with open('source_data/states.csv', 'w') as f:
+    f.write(r.content.decode("utf-8") )
+
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+r = requests.get(url, allow_redirects=True)
+with open('source_data/counties.csv', 'w') as f:
     f.write(r.content.decode("utf-8") )
 
 # # from https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports
@@ -87,7 +92,7 @@ covid.override_max_date_str = yesterdays_date_str
 covid.opt_force_calc = False
 covid.opt_force_plot = False
 covid.opt_simplified = True  # set to True to just do statsmodels as a simplified daily service
-# covid.override_run_states = covid.load_data.current_cases_ranked_non_us_states[:50] # if you want to do countries instead
+covid.override_run_states = None # ['Spain', 'Iceland']#covid.load_data.current_cases_ranked_non_us_states[:50] # if you want to do countries instead
 
 region_plot_subfolders = covid.run_everything()
 

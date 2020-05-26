@@ -26,25 +26,67 @@ override_max_date_str = None
 ###
 
 def run_everything():
-    countries_plot_subfolder = _run_everything_sub(region=Region.countries)
-    us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
-    return {Region.US_states: us_states_plot_subfolder, Region.countries: countries_plot_subfolder}
+
+    if override_run_states is not None:
+        countries_plot_subfolder = _run_everything_sub(region=Region.countries, override_run_states=override_run_states)
+        return {Region.countries: countries_plot_subfolder}
+    else:
+        countries_plot_subfolder = _run_everything_sub(region=Region.countries)
+        us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
+        #us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
+        #provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
+        return {
+            Region.US_states: us_states_plot_subfolder, 
+            Region.countries: countries_plot_subfolder,
+            #Region.US_counties: us_counties_plot_subfolder, 
+            #Region.provinces: provinces_plot_subfolder
+        }
+
+
+def _run_everything_sub(region=Region.US_states, override_run_states=None):
+    if type(load_data.current_cases_ranked_us_counties) == tuple:
+        load_data.current_cases_ranked_us_counties = load_data.current_cases_ranked_us_counties[0]
+    if type(load_data.current_cases_ranked_non_us_provinces) == tuple:
+        load_data.current_cases_ranked_non_us_provinces = load_data.current_cases_ranked_non_us_provinces[0]
+
+    load_data.current_cases_ranked_non_us_provinces = [x for x in load_data.current_cases_ranked_non_us_provinces \
+                                                       if not x.startswith('US:')]
+    
+    # Remove provinces without enough data
+    new_provinces = list()
+    for province in load_data.current_cases_ranked_non_us_provinces:
+        tmp_dict = load_data.get_state_data(province)
+        if tmp_dict['series_data'].shape[1] < 3 or tmp_dict['series_data'].shape[0] < 30 or province.startswith('China:'):
+            print(f'Removing province {province}')
+            if tmp_dict['series_data'].shape[1] >= 3:
+                print(f'  with tmp_dict["series_data"].shape = {tmp_dict["series_data"].shape}')
+        else:
+            print(f'Keeping province {province}')
+            print(f'  with tmp_dict["series_data"].shape = {tmp_dict["series_data"].shape}')
+            new_provinces.append(province)
+    load_data.current_cases_ranked_non_us_provinces = new_provinces
     
 
-def _run_everything_sub(region=Region.US_states):
-    if region == Region.US_states:
-        override_run_states = load_data.current_cases_ranked_us_states
-    elif region == Region.US_counties:
-        raise ValueError
-    elif region == Region.countries:
-        override_run_states = load_data.current_cases_ranked_non_us_states[:50] # top fifty countries
+    print('load_data.current_cases_ranked_non_us_provinces')
+    [print(x) for x in sorted(load_data.current_cases_ranked_non_us_provinces)]
+
+    if override_run_states is None:
+        if region == Region.US_states:
+            override_run_states = load_data.current_cases_ranked_us_states
+        elif region == Region.US_counties:
+            override_run_states = load_data.current_cases_ranked_us_counties[:50]
+        elif region == Region.countries:
+            override_run_states = load_data.current_cases_ranked_non_us_states[:50]
+        elif region == Region.provinces:
+            override_run_states = load_data.current_cases_ranked_non_us_provinces[:50]
     
-    override_run_states = [x for x in override_run_states if not x.startswith(' ')]
+        override_run_states = [x for x in override_run_states if not x.startswith(' ')]
+
     print('Gonna run these states:')
     [print(x) for x in sorted(override_run_states)]
 
     model_type_name = f'moving_window_{moving_window_size}_days_{region}_region'
-        
+
     if override_max_date_str is None:
         hyperparameter_max_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
     else:

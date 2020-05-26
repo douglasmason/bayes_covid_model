@@ -6,7 +6,7 @@ import datetime
 data_dir = 'source_data'
 
 # NB: full_count_data is cumulative
-full_count_data = pd.read_csv(os.path.join(data_dir, 'counts.csv'))
+full_count_data = pd.read_csv(os.path.join(data_dir, 'states.csv'))
 # from https://github.com/nytimes/covid-19-data
 # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
 full_count_data['date'] = full_count_data['date'].astype('datetime64[ns]')

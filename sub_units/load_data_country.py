@@ -30,28 +30,37 @@ if not os.path.exists('loaded_data'):
 
 today_str = datetime.datetime.today().strftime('%Y-%m-%d')
 loaded_data_filename = os.path.join('loaded_data', today_str) + '.joblib'
+success = False
 try:
     print(f'Loading {loaded_data_filename}...')
     tmp_dict = joblib.load(loaded_data_filename)
     map_state_to_series = tmp_dict['map_state_to_series']
     current_cases_ranked_us_states = tmp_dict['current_cases_ranked_us_states']
     current_cases_ranked_non_us_states = tmp_dict['current_cases_ranked_non_us_states']
+    current_cases_ranked_non_us_provinces = tmp_dict['current_cases_ranked_non_us_provinces'],
+    current_cases_ranked_us_counties = tmp_dict['current_cases_ranked_us_counties'],
     map_state_to_current_case_cnt = tmp_dict['map_state_to_current_case_cnt']
     print('...done!')
+    success = True
 except:
+    print('...loading failed!')
+    
+if not success:
 
     #####
-    # Step 1: Get US Data
+    # Step 1: Get US Data States
     #####
 
+    print('Processing U.S. States...')
     data_dir = 'source_data'
-    us_full_count_data = pd.read_csv(os.path.join(data_dir, 'counts.csv'))
+    us_full_count_data = pd.read_csv(os.path.join(data_dir, 'states.csv'))
     # from https://github.com/nytimes/covid-19-data
     # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
     us_full_count_data['date'] = us_full_count_data['date'].astype('datetime64[ns]')
-    us_full_count_data['state'] = [f'US {us_full_count_data.iloc[i]["state"]}' for i in range(len(us_full_count_data))]
+    us_full_count_data['state'] = [f'US: {us_full_count_data.iloc[i]["state"]}' for i in range(len(us_full_count_data))]
     us_full_count_data.rename(columns={'cases': 'positive', 'deaths': 'deceased'},
                               inplace=True)
+    us_full_count_data = us_full_count_data[['date', 'state', 'positive', 'deceased']]
 
     # get totals across U.S.
     list_of_dict_totals = list()
@@ -59,19 +68,38 @@ except:
         date_iloc = [i for i, x in enumerate(us_full_count_data['date']) if x == date]
         sum_cases = sum(us_full_count_data.iloc[date_iloc]['positive'])
         sum_deaths = sum(us_full_count_data.iloc[date_iloc]['deceased'])
-        list_of_dict_totals.append({'date': date, 'positive': sum_cases, 'deceased': sum_deaths, 'state': 'US total'})
+        list_of_dict_totals.append({'date': date, 'positive': sum_cases, 'deceased': sum_deaths, 'state': 'US: total'})
 
     us_total_counts_data = pd.DataFrame(list_of_dict_totals)
     us_full_count_data = us_full_count_data.append(us_total_counts_data, ignore_index=True)
 
     us_states = sorted(set(us_full_count_data['state']))
 
+    #####
+    # Step 1b: Get US Data Counties
+    #####
+    
+    print('Processing U.S. Counties...')
+    data_dir = 'source_data'
+    us_county_full_data = pd.read_csv(os.path.join(data_dir, 'counties.csv'))
+    # from https://github.com/nytimes/covid-19-data
+    # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
+    us_county_full_data['date'] = us_county_full_data['date'].astype('datetime64[ns]')
+    us_county_full_data['state'] = [
+        f'US: {state}: {county}' for state, county in zip(us_county_full_data['state'], us_county_full_data['county'])]
+    us_county_full_data.rename(columns={'cases': 'positive', 'deaths': 'deceased'},
+                               inplace=True)
+    us_county_full_data = us_county_full_data[['date', 'state', 'positive', 'deceased']]
+
+    us_counties = sorted(set(us_county_full_data['state']))
+
+    us_full_count_data = pd.concat([us_full_count_data, us_county_full_data])
+
     ######
-    # Step 2: Process Data
+    # Step 2a: Get International Data Nations
     ######
 
-    map_state_to_series = dict()
-
+    print('Processing non-U.S. Nations...')
     data_dir = os.path.join('source_data', 'csse_covid_19_daily_reports')
     onlyfiles = [f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
 
@@ -89,8 +117,8 @@ except:
 
     # Filter out data associated with provinces
     full_count_data = pd.concat(list_of_small_dataframes)
-    #null_provice_inds = [i for i, x in enumerate(full_count_data['Province/State']) if type(x) != str]
-    #full_count_data = full_count_data.iloc[null_provice_inds]
+    # null_provice_inds = [i for i, x in enumerate(full_count_data['Province/State']) if type(x) != str]
+    # full_count_data = full_count_data.iloc[null_provice_inds]
     full_count_data = full_count_data.groupby(['date', 'Country/Region'])[['Confirmed', 'Deaths']].sum().reset_index()
     full_count_data.rename(columns={'Country/Region': 'state', 'Confirmed': 'positive', 'Deaths': 'deceased'},
                            inplace=True)
@@ -99,39 +127,85 @@ except:
     # us_total_counts_data['state'] = 'United States'
     # full_count_data = full_count_data.append(us_total_counts_data, ignore_index=True)
 
-    non_us_states = sorted(set(full_count_data['state']))
-
-    #####
-    # Step 3: Merge
-    #####
+    non_us_countries = sorted(set(full_count_data['state']))
 
     full_count_data = pd.concat([full_count_data, us_full_count_data])
+
+    ######
+    # Step 2b: Get International Data Provinces
+    ######
+
+    print('Processing non-U.S. Provinces...')
+    data_dir = os.path.join('source_data', 'csse_covid_19_daily_reports')
+    onlyfiles = [f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
+
+    list_of_small_dataframes = list()
+    for file in tqdm(sorted(onlyfiles)):
+        if not file.endswith('.csv'):
+            continue
+        full_filename = os.path.join(data_dir, file)
+        tmp_count_data = pd.read_csv(os.path.join(data_dir, file))
+        tmp_count_data.rename(columns={'Country_Region': 'Country/Region', 'Province_State': 'Province/State'},
+                              inplace=True)
+        print(f'processing file {full_filename} with {len(tmp_count_data)} rows...')
+        tmp_count_data['date'] = datetime.datetime.strptime(file[:-4], '%m-%d-%Y')
+        list_of_small_dataframes.append(tmp_count_data)
+
+    # Filter out data associated with provinces
+    province_full_data = pd.concat(list_of_small_dataframes)
+    # null_provice_inds = [i for i, x in enumerate(full_count_data['Province/State']) if type(x) != str]
+    # full_count_data = full_count_data.iloc[null_provice_inds]
+    province_full_data = province_full_data.groupby(['date', 'Country/Region', 'Province/State'])[
+        ['Confirmed', 'Deaths']].sum().reset_index()
+    province_full_data['state'] = [f'{country}: {province}' for country, province in
+                                   zip(province_full_data['Country/Region'], province_full_data['Province/State'])]
+    province_full_data.rename(columns={'Confirmed': 'positive', 'Deaths': 'deceased'},
+                              inplace=True)
+
+    # get totals across U.S. (again)
+    # us_total_counts_data['state'] = 'United States'
+    # full_count_data = full_count_data.append(us_total_counts_data, ignore_index=True)
+
+    non_us_provinces = sorted(set(province_full_data['state']))
+
+    full_count_data = pd.concat([full_count_data, province_full_data])
 
     #####
     # Step 4: Further processing, rendering dictionaries
     #####
 
-    max_date = max(full_count_data['date']) - datetime.timedelta(days=1)
+    map_state_to_series = dict()
+    max_date = max(full_count_data['date']) - datetime.timedelta(days=2)
     date_inds = [i for i, x in enumerate(full_count_data['date']) if x == max_date]
     today_data = full_count_data.iloc[date_inds]
     map_state_to_current_case_cnt = {state: cases for state, cases in zip(today_data['state'], today_data['positive'])}
 
-    current_cases_ranked_us_states = sorted(us_states, key=lambda x: -map_state_to_current_case_cnt[x])
-    current_cases_ranked_non_us_states = sorted(non_us_states, key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+    current_cases_ranked_us_states = sorted(us_states, key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+    current_cases_ranked_us_counties = sorted(us_counties, key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+    current_cases_ranked_non_us_states = sorted(non_us_countries,
+                                                key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+    current_cases_ranked_non_us_provinces = sorted(non_us_provinces,
+                                                key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
 
     # germany_inds = [i for i, x in enumerate(full_count_data['country']) if x == 'France']
     # date_sorted_inds = sorted(germany_inds, key=lambda x: full_count_data.iloc[x]['date'])
     # full_count_data.iloc[date_sorted_inds[-10:]]
-
+    
+    # build reverse index for states, since this computaiton is expensive
+    map_state_to_iloc = dict()
+    for iloc, state in enumerate(full_count_data['state']):
+        map_state_to_iloc.setdefault(state, list()).append(iloc)
+    
+    print('Processing states, counties, and provinces...')
     # data munging gets daily-differences differences by state
-    for state in sorted(set(full_count_data['state'])):
-        state_iloc = [i for i, x in enumerate(full_count_data['state']) if x == state]
+    for state in tqdm(sorted(set(full_count_data['state']))):
+        state_iloc = map_state_to_iloc[state]
         state_iloc = sorted(state_iloc, key=lambda x: full_count_data.iloc[x]['date'])
 
         cases_series = pd.Series(
-            {full_count_data.iloc[i]['date']: full_count_data.iloc[i]['positive'] for i in state_iloc})
+            {date: x for date, x in zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['positive'])})
         deaths_series = pd.Series(
-            {full_count_data.iloc[i]['date']: full_count_data.iloc[i]['deceased'] for i in state_iloc})
+            {date: x for date, x in zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['deceased'])})
 
         cases_series.index = pd.DatetimeIndex(cases_series.index)
         deaths_series.index = pd.DatetimeIndex(deaths_series.index)
@@ -156,13 +230,16 @@ except:
         'map_state_to_series': map_state_to_series,
         'current_cases_ranked_us_states': current_cases_ranked_us_states,
         'current_cases_ranked_non_us_states': current_cases_ranked_non_us_states,
+        'current_cases_ranked_non_us_provinces': current_cases_ranked_non_us_provinces,
+        'current_cases_ranked_us_counties': current_cases_ranked_us_counties,
         'map_state_to_current_case_cnt': map_state_to_current_case_cnt,
     }
+    print(f'Saving to {loaded_data_filename}...')
     joblib.dump(tmp_dict, loaded_data_filename)
-
+    print('...done!')
 
 def get_state_data(state,
-                   opt_smoothing=False):
+                   opt_smoothing=True):
     # TODO: get actual population
 
     # population = map_state_to_population[state]
@@ -208,10 +285,12 @@ def get_state_data(state,
     infected = list(np.cumsum(new_tested))
     dead = list(np.cumsum(new_dead))
 
-    print('new_tested')
-    print(new_tested)
-    print('new_dead')
-    print(new_dead)
+    # print('map_state_to_series[state]')
+    # print(map_state_to_series[state])
+    # print('new_tested')
+    # print(new_tested)
+    # print('new_dead')
+    # print(new_dead)
 
     ####
     # Put it all together
