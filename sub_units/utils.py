@@ -30,7 +30,7 @@ class Region(Enum):
 
 
 class ApproxType(Enum):
-    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS'
+    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS CF NDT_Hess NDT_Jac SP_min'
     BS = ('BS', 'bootstrap')
     LS = ('LS', 'likelihood_samples')
     MCMC = ('MCMC', 'random_walk')
@@ -39,6 +39,10 @@ class ApproxType(Enum):
     Hess = ('Hess', 'hessian')
     SM_acc = ('SM_acc', 'statsmodels_acc')
     SM_TS = ('SM_TS', 'statsmodels_time_series')
+    CF = ('CF', 'curve_fit_covariance')
+    NDT_Hess = ('NDT_Hess', 'numdifftools_hessian')
+    NDT_Jac = ('NDT_Jac', 'numdifftools_jacobian')
+    SP_min = ('SP_min', 'scipy_minimize')
 
     def __str__(self):
         return str(self.value)
@@ -144,7 +148,7 @@ def render_whisker_plot_simplified(state_report,
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
     # fill with colors
-    colors = ['blue', 'red', 'green', 'purple', 'orange', 'cyan']
+    colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'navy', 'teal', 'orchid', 'tan']
     for approx_type, color in zip(sorted(map_approx_type_to_ax), colors):
         try:
             ax = map_approx_type_to_ax[approx_type]
@@ -327,10 +331,12 @@ def generate_state_report(map_state_name_to_model,
             except:
                 SM_acc_params = [0]
 
-            try:
-                Hess_params, _, _, _ = state_model.get_weighted_samples_via_hessian()
-            except:
-                Hess_params = [0]
+            approx_type_params = dict()
+            for approx_type in state_model.map_approx_type_to_model:
+                if True:
+                    approx_type_params[approx_type], _, _, _ = state_model.get_weighted_samples_via_model(approx_type=approx_type)
+                else:
+                    approx_type_params[approx_type] = [0]
 
             try:
                 PyMC3_params, _, _, _ = state_model.get_weighted_samples_via_PyMC3()
@@ -349,11 +355,14 @@ def generate_state_report(map_state_name_to_model,
                                    range(len(LS_params))]
                     except:
                         pass
-                    try:
-                        Hess_vals = [Hess_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                                     range(len(Hess_params))]
-                    except:
-                        pass
+
+                    approx_type_vals = dict()
+                    for approx_type in state_model.map_approx_type_to_model:
+                        try:
+                            approx_type_vals[approx_type] = [approx_type_params[approx_type][i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                                         range(len(approx_type_params[approx_type]))]
+                        except:
+                            pass
 
                     try:
                         SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
@@ -393,11 +402,15 @@ def generate_state_report(map_state_name_to_model,
                                    in range(len(SM_params))]
                     except:
                         pass
-                    try:
-                        Hess_vals = [state_model.extra_params[param_name](Hess_params[i]) for i
-                                     in range(len(Hess_params))]
-                    except:
-                        pass
+
+                    approx_type_vals = dict()
+                    for approx_type in state_model.map_approx_type_to_model:
+                        try:
+                            approx_type_vals[approx_type] = [state_model.extra_params[param_name](approx_type_params[approx_type][i]) for i
+                                         in range(len(approx_type_params[approx_type]))]
+                        except:
+                            pass
+                    
                     try:
                         PyMC3_vals = [
                             state_model.extra_params[param_name](state_model.extra_params[param_name](PyMC3_params[i]))
@@ -509,22 +522,23 @@ def generate_state_report(map_state_name_to_model,
                 except:
                     pass
 
-                try:
-                    dict_to_add.update({
-                        'hessian_mean': np.average(Hess_vals),
-                        'hessian_std_err': np.std(Hess_vals),
-                        'hessian_p50': np.percentile(Hess_vals, 50),
-                        'hessian_p5':
-                            np.percentile(Hess_vals, 5),
-                        'hessian_p95':
-                            np.percentile(Hess_vals, 95),
-                        'hessian_p25':
-                            np.percentile(Hess_vals, 25),
-                        'hessian_p75':
-                            np.percentile(Hess_vals, 75)
-                    })
-                except:
-                    pass
+                for approx_type in approx_type_vals:
+                    try:
+                        dict_to_add.update({
+                            f'{approx_type.value[0]}_mean': np.average(approx_type_vals[approx_type]),
+                            f'{approx_type.value[0]}_std_err': np.std(approx_type_vals[approx_type]),
+                            f'{approx_type.value[0]}_p50': np.percentile(approx_type_vals[approx_type], 50),
+                            f'{approx_type.value[0]}_p5':
+                                np.percentile(approx_type_vals[approx_type], 5),
+                            f'{approx_type.value[0]}_p95':
+                                np.percentile(approx_type_vals[approx_type], 95),
+                            f'{approx_type.value[0]}_p25':
+                                np.percentile(approx_type_vals[approx_type], 25),
+                            f'{approx_type.value[0]}_p75':
+                                np.percentile(approx_type_vals[approx_type], 75)
+                        })
+                    except:
+                        pass
 
                 try:
                     dict_to_add.update({

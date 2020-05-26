@@ -179,6 +179,7 @@ class BayesModel(ABC):
         self.burn_in = burn_in
         self.max_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d')
         self.static_params = static_params
+        self.opt_simplified = opt_simplified
 
         if self.opt_smoothing:
             smoothing_str = 'smoothed_'
@@ -300,6 +301,9 @@ class BayesModel(ABC):
         self.loaded_bootstraps = False
         self.loaded_likelihood_samples = list()
         self.loaded_MCMC = list()
+        self.map_approx_type_to_means = dict()
+        self.map_approx_type_to_cov = dict()
+        self.map_approx_type_to_model = dict()
 
         self.extra_params = {key: partial(val, map_name_to_sorted_ind=self.map_name_to_sorted_ind) for key, val in
                              extra_params.items()}
@@ -440,14 +444,15 @@ class BayesModel(ABC):
                         predicted_tested) in [inv_deaths_indices[tmp_ind] for tmp_ind in deaths_indices]:
                     ind_use.append(int(x))
             else:
-                if tested_indices is None or tested_indices is not None and int(x) in [inv_cases_indices[tmp_ind] for tmp_ind in tested_indices]:
+                if tested_indices is None or tested_indices is not None and int(x) in [inv_cases_indices[tmp_ind] for
+                                                                                       tmp_ind in tested_indices]:
                     ind_use.append(int(x))
 
         # print('ind_use:', ind_use)
-        
+
         data_use = actual_tested + actual_dead
         data_use = [data_use[i] for i in ind_use]
-        
+
         def curve_fit_func(x_list, *params):
             positive_dists, deceased_dists, other_errs, sol, positive_vals, deceased_vals, \
             predicted_tested, actual_tested, predicted_dead, actual_dead = self._get_log_likelihood_precursor(
@@ -532,6 +537,21 @@ class BayesModel(ABC):
         # params_as_dict['sigma'] = 0.06 # quick hack
 
         return params_as_dict
+
+    @staticmethod
+    def make_PSD(cov):
+
+        eigenw, eigenv = np.linalg.eig(cov)
+
+        # get rid of negative eigenvalue contributions to make PSD
+        cov = np.zeros(cov.shape)
+        for ind, val in enumerate(eigenw):
+            vec = eigenv[:, ind]
+            if val > 0:
+                tmp_contrib = np.outer(vec, vec)
+                cov += tmp_contrib * val
+
+        return cov
 
     def get_covariance_matrix(self, in_params):
 
@@ -623,7 +643,10 @@ class BayesModel(ABC):
         params_as_dict = {key: params_as_list[i] for i, key in enumerate(self.sorted_names)}
 
         if opt_cov:
-            cov = self.get_covariance_matrix(p0)
+            try:
+                cov = self.get_covariance_matrix(p0)
+            except:
+                cov = None
         else:
             cov = None  # results.hess_inv # this fella only works for certain methods so avoid for now
 
@@ -745,17 +768,19 @@ class BayesModel(ABC):
                         tqdm(param_inds_to_plot)]
 
         data_plot_kwargs = {'markersize': 6, 'markeredgewidth': 0.5, 'markeredgecolor': 'black'}
-        self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
-                                                               plot_filename_filename=output_filename,
-                                                               data_plot_kwargs=data_plot_kwargs,
-                                                               offset=offset)
+        if not self.opt_simplified:
+            self._plot_all_solutions_sub_distinct_lines_with_alpha(sols_to_plot,
+                                                                   plot_filename_filename=output_filename,
+                                                                   data_plot_kwargs=data_plot_kwargs,
+                                                                   offset=offset)
         self._plot_all_solutions_sub_filled_quantiles(sols_to_plot,
                                                       plot_filename_filename=output_filename2,
                                                       data_plot_kwargs=data_plot_kwargs,
                                                       offset=offset)
-        self._plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(sols_to_plot,
-                                                                          plot_filename_filename=output_filename3,
-                                                                          data_plot_kwargs=data_plot_kwargs)
+        if not self.opt_simplified:
+            self._plot_all_solutions_sub_distinct_lines_with_alpha_cumulative(sols_to_plot,
+                                                                              plot_filename_filename=output_filename3,
+                                                                              data_plot_kwargs=data_plot_kwargs)
         self._plot_all_solutions_sub_filled_quantiles_cumulative(sols_to_plot,
                                                                  plot_filename_filename=output_filename4,
                                                                  data_plot_kwargs=data_plot_kwargs)
@@ -1273,10 +1298,10 @@ class BayesModel(ABC):
                 print('\nRe-fit std-errs for sigmas:')
                 self.pretty_print_params(np.sqrt(np.diagonal(all_data_cov_for_sigma)))
                 self.plot_correlation_matrix(self.cov2corr(all_data_cov_for_sigma), filename_str='numdifftools')
-                
+
                 for ind, name in enumerate(self.sorted_names):
                     if 'sigma' in name:
-                        all_data_cov[ind,:] = all_data_cov_for_sigma[ind,:]
+                        all_data_cov[ind, :] = all_data_cov_for_sigma[ind, :]
                         all_data_cov[:, ind] = all_data_cov_for_sigma[:, ind]
 
                 for key in all_data_params:
@@ -1337,8 +1362,71 @@ class BayesModel(ABC):
         print('all_data_cov:')
         print(all_data_cov)
 
-        self.hessian_model = sp.stats.multivariate_normal(mean=self.convert_params_as_dict_to_list(all_data_params),
-                                                          cov=all_data_cov, allow_singular=True)
+        self.map_approx_type_to_means[ApproxType.CF] = self.convert_params_as_dict_to_list(all_data_params)
+        self.map_approx_type_to_cov[ApproxType.CF] = all_data_cov
+        self.map_approx_type_to_model[ApproxType.CF] = sp.stats.multivariate_normal(
+            mean=self.convert_params_as_dict_to_list(all_data_params),
+            cov=all_data_cov, allow_singular=True)
+
+        self.render_additional_covariance_approximations(all_data_params)
+
+    def render_additional_covariance_approximations(self, all_data_params):
+        # Get other covariance approximations here
+
+        if ApproxType.NDT_Hess in self.model_approx_types:
+            approx_type = ApproxType.NDT_Hess
+            if True:
+                print(f'Trying {approx_type}...')
+                means = self.convert_params_as_dict_to_list(all_data_params)
+                hess = numdifftools.Hessian(self.get_log_likelihood)(means)
+
+                good_inds = list()
+                bad_inds = list(range(hess.shape[0]))
+                for i in range(hess.shape[0]):
+                    if np.isfinite(hess[i, i]):
+                        good_inds.append(i)
+                        bad_inds.remove(i)
+
+                hess = hess[good_inds, :]
+                hess = hess[:, good_inds]
+                print('hess:', hess.shape, hess)
+                cov = np.linalg.inv(-hess)
+                cov = self.make_PSD(cov)
+                cov = self.recover_sigma_entries_from_matrix(cov, sigma_inds=bad_inds)
+                print('cov:', cov.shape, cov)
+                self.plot_correlation_matrix(self.cov2corr(cov), filename_str=approx_type.value[1])
+                self.map_approx_type_to_means[approx_type] = means
+                self.map_approx_type_to_cov[approx_type] = cov
+                self.map_approx_type_to_model[approx_type] = sp.stats.multivariate_normal(mean=means,
+                                                                                          cov=cov, allow_singular=True)
+            else:  # except Exception as ee:
+                print('Error with', approx_type)
+                print('  error:', ee)
+
+        def jacobian_func(all_data_params):
+            all_data_params_as_dict = self.convert_params_as_list_to_dict(all_data_params)
+            positive_dists, deceased_dists, other_errs, sol, positive_vals, deceased_vals, \
+            predicted_tested, actual_tested, predicted_dead, actual_dead = self._get_log_likelihood_precursor(
+                all_data_params)
+            scaled_positive_dists = [x / all_data_params_as_dict['sigma_positive'] for x in positive_dists]
+            scaled_deceased_dists = [x / all_data_params_as_dict['sigma_deceased'] for x in deceased_dists]
+            return np.array(scaled_positive_dists + scaled_deceased_dists + other_errs)
+
+        if ApproxType.NDT_Jac in self.model_approx_types:
+            approx_type = ApproxType.NDT_Jac
+            jac = numdifftools.Jacobian(jacobian_func)(means)
+            print('jac:', jac.shape, jac)
+            hess = jac.T @ jac
+            # hess = self.remove_sigma_entries_from_matrix(hess)
+            print('hes:', hess.shape, hess)
+            cov = np.linalg.inv(hess)
+            # cov = self.recover_sigma_entries_from_matrix(cov)
+            print('cov:', cov.shape, cov)
+            self.plot_correlation_matrix(self.cov2corr(cov), filename_str=approx_type.value[1])
+            self.map_approx_type_to_means[approx_type] = means
+            self.map_approx_type_to_cov[approx_type] = cov
+            self.map_approx_type_to_model[approx_type] = sp.stats.multivariate_normal(mean=means,
+                                                                                      cov=cov, allow_singular=True)
 
     def render_bootstraps(self):
         '''
@@ -1546,7 +1634,7 @@ class BayesModel(ABC):
 
     @lru_cache(maxsize=10)
     def get_propensity_model(self, sample_scale_param, which_distro=WhichDistro.norm, opt_walk=False):
-        
+
         if sample_scale_param == 'empirical':
             cov = self.all_data_cov
             for ind, name in enumerate(self.sorted_names):
@@ -1557,26 +1645,26 @@ class BayesModel(ABC):
                 cov = cov / 100
             propensity_model = sp.stats.multivariate_normal(cov=cov, allow_singular=True)
         else:
-        
+
             sigma = {key: (val[1] - val[0]) / sample_scale_param for key, val in self.curve_fit_bounds.items()}
-    
+
             # overwrite sigma for values that are strictly positive multipliers of unknown scale
             for param_name in self.logarithmic_params:
                 sigma[
                     param_name] = 10 / sample_scale_param  # Note that I boost the width by a factor of 10 since it often gets too narrow
             sigma_as_list = [sigma[name] for name in self.sorted_names]
-    
+
             if which_distro in [WhichDistro.norm, WhichDistro.norm_trunc, WhichDistro.sphere]:
                 cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
                 propensity_model = sp.stats.multivariate_normal(cov=cov)
             elif which_distro in [WhichDistro.laplace, WhichDistro.laplace_trunc]:
                 propensity_model = sp.stats.laplace(scale=sigma_as_list)
-    
+
         return propensity_model
 
     def MCMC(self, p0, opt_walk=True,
-             sample_shape_param='empirical', # or an integer like 10 or 100
-             which_distro=WhichDistro.norm 
+             sample_shape_param='empirical',  # or an integer like 10 or 100
+             which_distro=WhichDistro.norm
              ):
         n_samples = self.n_likelihood_samples
         if opt_walk:
@@ -1587,7 +1675,7 @@ class BayesModel(ABC):
             MCMC_burn_in_frac = 0
 
         bounds_to_use = self.curve_fit_bounds
-        
+
         print('sigmas...')
         self.pretty_print_params(np.sqrt(np.diagonal(self.all_data_cov)))
 
@@ -1625,7 +1713,8 @@ class BayesModel(ABC):
             accepted = False
             n_attempts = 0
 
-            propensity_model = self.get_propensity_model(sample_shape_param, which_distro=which_distro, opt_walk=opt_walk)
+            propensity_model = self.get_propensity_model(sample_shape_param, which_distro=which_distro,
+                                                         opt_walk=opt_walk)
 
             while n_attempts < 100 and not accepted:  # this limits endless searches with wide sigmas
                 n_attempts += 1
@@ -1808,11 +1897,12 @@ class BayesModel(ABC):
 
         return in_matrix
 
-    def recover_sigma_entries_from_matrix(self, in_matrix):
+    def recover_sigma_entries_from_matrix(self, in_matrix, sigma_inds=None):
 
-        sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
+        if sigma_inds is None:
+            sigma_inds = [i for i, name in enumerate(self.sorted_names) if 'sigma' in name]
         normal_inds = [i for i in range(len(self.sorted_names)) if i not in sigma_inds]
-
+        print('normal_inds', normal_inds)
         # fill back in sigma entries
         in_matrix_with_sigmas = np.eye(len(self.sorted_names), len(self.sorted_names)) * 1e-8
         for ind_i, i in enumerate(normal_inds):
@@ -1830,14 +1920,14 @@ class BayesModel(ABC):
             corr = self.recover_sigma_entries_from_matrix(corr)
         return corr
 
-    def get_weighted_samples_via_hessian(self, n_samples=1000, ):
+    def get_weighted_samples_via_model(self, n_samples=1000, approx_type=ApproxType.CF):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
-        weight_sampled_params = self.hessian_model.rvs(n_samples)
+        weight_sampled_params = self.map_approx_type_to_model[approx_type].rvs(n_samples)
 
         log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
 
@@ -1861,10 +1951,9 @@ class BayesModel(ABC):
                 weighted_params, params, weights, log_probs = self.get_weighted_samples_via_statsmodels()
             elif approx_type == ApproxType.PyMC3:
                 weighted_params, params, weights, log_probs = self.get_weighted_samples_via_PyMC3()
-            elif approx_type == ApproxType.Hess:
-                weighted_params, params, weights, log_probs = self.get_weighted_samples_via_hessian()
             else:
-                raise ValueError
+                weighted_params, params, weights, log_probs = self.get_weighted_samples_via_model(
+                    approx_type=approx_type)
         else:
             weighted_params, params, weights, log_probs = self.get_weighted_samples_via_MVN(approx_type=approx_type)
 
@@ -1913,9 +2002,10 @@ class BayesModel(ABC):
         print(f'means for {approx_type.value[1]}:', means_as_list)
         print(f'std_devs {approx_type.value[1]}:', std_devs_as_list)
 
-        self.solve_and_plot_solution(in_params=means,
-                                     title=f'Mean of {filename_str.replace("_", " ")} Fit Solution',
-                                     plot_filename_filename=f'mean_of_{filename_str}_solution.png')
+        if not self.opt_simplified:
+            self.solve_and_plot_solution(in_params=means,
+                                         title=f'Mean of {filename_str.replace("_", " ")} Fit Solution',
+                                         plot_filename_filename=f'mean_of_{filename_str}_solution.png')
 
         if sum(std_devs_as_list) < 1e-6:
             cov = np.diag([1e-8 for _ in std_devs_as_list])
@@ -1946,6 +2036,14 @@ class BayesModel(ABC):
 
         predicted_vals = model.pdf(np.vstack(params))
 
+        tmp_dict = {'model': model, 'conf_ints': conf_ints, 'means': means, 'std_devs': std_devs,
+                    'cov': cov, 'corr': corr}
+        self.map_approx_type_to_MVN[approx_type] = tmp_dict
+
+
+        if self.opt_simplified:
+            return
+            
         # Pairplot!
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_pairplot.png')
         if not path.exists(full_output_filename) or self.opt_force_plot:
@@ -2034,9 +2132,6 @@ class BayesModel(ABC):
         # plt.savefig(path.join(self.plot_filename_base, 'MVN_actual_vs_predicted_vals_zoom.png'))
         # plt.close()
 
-        tmp_dict = {'model': model, 'conf_ints': conf_ints, 'means': means, 'std_devs': std_devs,
-                    'cov': cov, 'corr': corr}
-        self.map_approx_type_to_MVN[approx_type] = tmp_dict
 
     def get_weighted_samples_via_MVN(self, approx_type=ApproxType.LS, n_samples=10000):
         '''

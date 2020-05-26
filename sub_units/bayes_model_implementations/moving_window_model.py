@@ -34,7 +34,7 @@ class MovingWindowModel(BayesModel):
             model_approx_types = [ApproxType.SM]  # SM_acc comes along for the ride with SM
             print('Doing simplified models...')
         else:
-            model_approx_types = [ApproxType.Hess, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
             print('Doing all models...')
 
         # these kwargs will be added as object attributes
@@ -200,8 +200,8 @@ class MovingWindowModel(BayesModel):
             self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset, opt_plot=opt_plot, opt_print=False)
 
     def render_statsmodels_fit(self, opt_simplified=False, offset=7):
-        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset)
-        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=0)
+        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset, opt_plot=not opt_simplified)
+        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=0, opt_plot=True)
 
         tmp_dict = self.map_offset_to_statsmodels_dict[0]
         statsmodels_model_deceased = tmp_dict['statsmodels_model_deceased']

@@ -33,10 +33,14 @@ def run_everything():
     else:
         countries_plot_subfolder = _run_everything_sub(region=Region.countries)
         us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
-        us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
-        provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
-        return {Region.US_states: us_states_plot_subfolder, Region.countries: countries_plot_subfolder,
-            Region.US_counties: us_counties_plot_subfolder, Region.provinces: provinces_plot_subfolder}
+        #us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
+        #provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
+        return {
+            Region.US_states: us_states_plot_subfolder, 
+            Region.countries: countries_plot_subfolder,
+            #Region.US_counties: us_counties_plot_subfolder, 
+            #Region.provinces: provinces_plot_subfolder
+        }
 
 
 def _run_everything_sub(region=Region.US_states, override_run_states=None):
