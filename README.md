@@ -43,4 +43,4 @@ We model universal curves of reported COVID-19 daily infections and related deat
 ![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels_acc.png?)
 **Figure 3b:** Model parameter estimates for the week-over-week change in growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. States  higher in the list are candidates for new waves or outbreaks.
 
-More figures can be found in the Figure Browser links at the top of this page. This work has not yet been peer reviewed.
+More figures can be found in the Figure Browser links at the top of this page. This work is provided by [Koyote Science, LLC](http://www.koyotescience.com). This work has not yet been peer reviewed. 
