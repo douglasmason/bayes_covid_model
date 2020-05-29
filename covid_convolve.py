@@ -1,7 +1,7 @@
 from sub_units.bayes_model_implementations.convolution_model import \
     ConvolutionModel  # want to make an instance of this class for each state / set of params
 from sub_units.utils import run_everything as run_everything_imported  # for plotting the report across all states
-import sub_units.load_data as load_data  # only want to load this once, so import as singleton pattern
+import scrap_code.load_data as load_data  # only want to load this once, so import as singleton pattern
 import datetime
 #####
 # Set up model

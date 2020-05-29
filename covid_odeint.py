@@ -3,13 +3,13 @@ import numpy as np
 import arviz as az
 import matplotlib.pyplot as plt
 plt.style.use('seaborn-darkgrid')
-import sub_units.load_data as load_data
+import scrap_code.load_data as load_data
 from scipy.integrate import odeint
 from time import time as get_time
 import datetime
 from scipy.optimize import Bounds
 import matplotlib.dates as mdates
-import time
+
 ####
 # Load Data
 ####

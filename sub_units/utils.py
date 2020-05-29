@@ -30,7 +30,7 @@ class Region(Enum):
 
 
 class ApproxType(Enum):
-    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS CF NDT_Hess NDT_Jac SP_min'
+    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS SP_CF NDT_Hess NDT_Jac SP_min SP_LS NUTS'
     BS = ('BS', 'bootstrap')
     LS = ('LS', 'likelihood_samples')
     MCMC = ('MCMC', 'random_walk')
@@ -39,10 +39,12 @@ class ApproxType(Enum):
     Hess = ('Hess', 'hessian')
     SM_acc = ('SM_acc', 'statsmodels_acc')
     SM_TS = ('SM_TS', 'statsmodels_time_series')
-    CF = ('CF', 'curve_fit_covariance')
+    SP_CF = ('SP_CF', 'curve_fit_covariance')
     NDT_Hess = ('NDT_Hess', 'numdifftools_hessian')
     NDT_Jac = ('NDT_Jac', 'numdifftools_jacobian')
     SP_min = ('SP_min', 'scipy_minimize')
+    SP_LS = ('SP_LS', 'scipy_least_squares')
+    NUTS = ('NUTS', 'no_u_turn_random_walk')
 
     def __str__(self):
         return str(self.value)
@@ -59,6 +61,23 @@ class Stopwatch:
     def reset(self):
         self.time0 = get_time()
 
+
+# def render_whisker_plot_split(state_report,
+#                                    plot_param_name='alpha_2',
+#                                    output_filename_format_str='test_boxplot_for_{}_{}.png',
+#                                    opt_log=False,
+#                                    boxwidth=0.7,
+#                                    approx_types=[('SM', 'statsmodels')]):
+#     
+#     state_split = state_report['']
+#     for page in range(n_pages):
+#         if plot_param_name
+#         render_whisker_plot_simplified(state_report,
+#                                        plot_param_name='alpha_2',
+#                                        output_filename_format_str=output_filename_format_str.replace('.png', f'_page_{page}_of_{n_pages}.png'),
+#                                        opt_log=opt_log,
+#                                        boxwidth=boxwidth,
+#                                        approx_types=approx_types)
 
 def render_whisker_plot_simplified(state_report,
                                    plot_param_name='alpha_2',
@@ -81,6 +100,9 @@ def render_whisker_plot_simplified(state_report,
 
     small_state_report = state_report.iloc[tmp_ind]
     small_state_report.to_csv('simplified_state_report_{}.csv'.format(plot_param_name))
+
+    if ApproxType.SM_TS in approx_types:
+        approx_types.remove(ApproxType.SM_TS)
 
     for approx_type in approx_types:
         try:
@@ -219,10 +241,10 @@ def generate_state_prediction(map_state_name_to_model,
                 sols_to_plot_tested = list()
                 sols_to_plot_dead = list()
                 for sol in sols_to_plot:
-                    tested =  [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
+                    tested = [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
                     tested_range = np.cumsum(tested[start_ind_sol:])
 
-                    dead =  [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
+                    dead = [max(sol[1][i] - state_model.log_offset, 0) for i in range(len(sol[1]))]
                     dead_range = np.cumsum(dead[start_ind_sol:])
 
                     sols_to_plot_new_tested.append(tested)
@@ -334,7 +356,8 @@ def generate_state_report(map_state_name_to_model,
             approx_type_params = dict()
             for approx_type in state_model.map_approx_type_to_model:
                 if True:
-                    approx_type_params[approx_type], _, _, _ = state_model.get_weighted_samples_via_model(approx_type=approx_type)
+                    approx_type_params[approx_type], _, _, _ = state_model.get_weighted_samples_via_model(
+                        approx_type=approx_type)
                 else:
                     approx_type_params[approx_type] = [0]
 
@@ -359,8 +382,10 @@ def generate_state_report(map_state_name_to_model,
                     approx_type_vals = dict()
                     for approx_type in state_model.map_approx_type_to_model:
                         try:
-                            approx_type_vals[approx_type] = [approx_type_params[approx_type][i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                                         range(len(approx_type_params[approx_type]))]
+                            approx_type_vals[approx_type] = [
+                                approx_type_params[approx_type][i][state_model.map_name_to_sorted_ind[param_name]] for i
+                                in
+                                range(len(approx_type_params[approx_type]))]
                         except:
                             pass
 
@@ -406,11 +431,12 @@ def generate_state_report(map_state_name_to_model,
                     approx_type_vals = dict()
                     for approx_type in state_model.map_approx_type_to_model:
                         try:
-                            approx_type_vals[approx_type] = [state_model.extra_params[param_name](approx_type_params[approx_type][i]) for i
-                                         in range(len(approx_type_params[approx_type]))]
+                            approx_type_vals[approx_type] = [
+                                state_model.extra_params[param_name](approx_type_params[approx_type][i]) for i
+                                in range(len(approx_type_params[approx_type]))]
                         except:
                             pass
-                    
+
                     try:
                         PyMC3_vals = [
                             state_model.extra_params[param_name](state_model.extra_params[param_name](PyMC3_params[i]))
@@ -434,7 +460,7 @@ def generate_state_report(map_state_name_to_model,
                     offset = SM_acc_params[param_name]['offset']
                     SM_acc_mean = SM_acc_params[param_name]['slope2'] - SM_acc_params[param_name]['slope1']
                     SM_acc_std_err = np.sqrt(
-                            SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
+                        SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
                     SM_acc_vals = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err).rvs(1000)
 
                     dict_to_add.update({
@@ -600,12 +626,15 @@ def run_everything(run_states,
     map_state_name_to_model = dict()
 
     for state_ind, state in enumerate(run_states):
+        
         if state not in load_data.map_state_to_current_case_cnt:
+            print(f'{state} not in load_data.map_state_to_current_case_cnt')
+            print('\n'.join(sorted(load_data.map_state_to_current_case_cnt.keys())))
             continue
         print(
             f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, current cases {load_data.map_state_to_current_case_cnt[state]:,})...\n----\n----\n')
 
-        if True:
+        try:
             print('Building model with the following args...')
             for key in sorted(kwargs.keys()):
                 print(f'{key}: {kwargs[key]}')
@@ -625,9 +654,8 @@ def run_everything(run_states,
                 state_model.run_fits()
             map_state_name_to_model[state] = state_model
 
-        else:
-            print("Error with state", state)
-            continue
+        except:
+            print("Error getting model for state", state)
 
         plot_subfolder = state_model.plot_subfolder
 
@@ -635,7 +663,7 @@ def run_everything(run_states,
             state_report_filename = path.join(plot_subfolder, f'simplified_state_report.joblib')
             state_prediction_filename = path.join(plot_subfolder, f'simplified_state_prediction.joblib')
             filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
-            if state_ind in [0, 1, 4, 9, 100] or state_ind == len(run_states) - 1:
+            if state_ind in [0, 1, 4, 9, 19, 49, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999] or state_ind == len(run_states) - 1:
                 print('Reporting now and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
@@ -644,19 +672,18 @@ def run_everything(run_states,
                                               override_max_date_str,
                                               prediction_filename=state_prediction_filename)
                 for param_name in state_model.plot_param_names:
-                    render_whisker_plot_simplified(state_report,
-                                                   plot_param_name=param_name,
-                                                   output_filename_format_str=filename_format_str,
-                                                   opt_log=param_name in logarithmic_params,
-                                                   approx_types=state_model.model_approx_types)
-                    if ApproxType.SM in state_model.model_approx_types:
+                    if len(set(state_report['state'])) <= 65:
                         render_whisker_plot_simplified(state_report,
                                                        plot_param_name=param_name,
                                                        output_filename_format_str=filename_format_str,
                                                        opt_log=param_name in logarithmic_params,
-                                                       approx_types=[ApproxType.SM_acc])
-                    else:
-                        pass
+                                                       approx_types=state_model.model_approx_types)
+                        if ApproxType.SM in state_model.model_approx_types:
+                            render_whisker_plot_simplified(state_report,
+                                                           plot_param_name=param_name,
+                                                           output_filename_format_str=filename_format_str,
+                                                           opt_log=param_name in logarithmic_params,
+                                                           approx_types=[ApproxType.SM_acc])
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
@@ -713,7 +740,7 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
         map_state_to_html[state] = result
 
     for state in map_state_to_html:
-        state_lc = state.lower().replace(' ', '_').replace(':','')
+        state_lc = state.lower().replace(' ', '_').replace(':', '')
         if not path.exists(path.join(plot_browser_dir, state_lc)):
             os.mkdir(path.join(plot_browser_dir, state_lc))
         with open(path.join(plot_browser_dir, path.join(state_lc, 'index.html')), 'w') as f:

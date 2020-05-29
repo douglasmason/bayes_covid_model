@@ -1,7 +1,5 @@
 import os
 import requests
-from sub_units.bayes_model import ApproxType
-from sub_units.utils import Region
 import glob
 import logging
 import boto3
@@ -74,6 +72,7 @@ for days_back in tqdm(range(0, 7)):
 # Step 1b: Update load_data (this happens as soon as you import modules that use load_data)
 #####
 
+import datetime
 import covid_moving_window as covid
 
 #####
@@ -94,25 +93,34 @@ covid.opt_simplified = True  # set to True to just do statsmodels as a simplifie
 covid.override_run_states = None # ['Spain', 'Iceland']#covid.load_data.current_cases_ranked_non_us_states[:50] # if you want to do countries instead
 
 region_plot_subfolders = covid.run_everything()
+print('region_plot_subfolders:')
+print(region_plot_subfolders)
 
 #####
 # Step 3: Upload Figures to AWS
 #####
 
-for region, plot_subfolder in region_plot_subfolders.items():
-    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
-    print(hyperparamater_str)
+# Or... 
+# run in bash...
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 
-    first_level_files = glob.glob(plot_subfolder + '/*.*', recursive=True)
-    second_level_files = glob.glob(plot_subfolder + '/*/*.*', recursive=True)
-    files = first_level_files + second_level_files
-
-    # TODO: This is really inefficient -- takes 20-30 minutes! Mainly issue is that 
-    #   `aws s3 cp --recursive ...` uses parallel threads, and this is a serial upload
-    for file in tqdm(list(files)):
-        relative_filename = '/'.join(file.split('/')[1:])
-        print(f'Uploading {relative_filename}...')
-        upload_file(file, 'covid-figures', object_name=relative_filename)
+# for region, plot_subfolder in region_plot_subfolders.items():
+#     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
+#     print(hyperparamater_str)
+# 
+#     first_level_files = glob.glob(plot_subfolder + '/*.*', recursive=True)
+#     second_level_files = glob.glob(plot_subfolder + '/*/*.*', recursive=True)
+#     files = first_level_files + second_level_files
+# 
+#     # TODO: This is really inefficient -- takes 20-30 minutes! Mainly issue is that 
+#     #   `aws s3 cp --recursive ...` uses parallel threads, and this is a serial upload
+#     for file in tqdm(list(files)):
+#         relative_filename = '/'.join(file.split('/')[1:])
+#         print(f'Uploading {relative_filename}...')
+#         upload_file(file, 'covid-figures', object_name=relative_filename)
 
 
 ######
@@ -123,8 +131,12 @@ import os
 from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
-region_plot_subfolders = {Region.US_states: 'state_plots/2020_05_25_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
- Region.countries: 'state_plots/2020_05_25_date_smoothed_moving_window_21_days_countries_region_statsmodels'}
+region_plot_subfolders = {
+ # Region.provinces: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
+ Region.countries: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+ Region.US_states: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+ Region.US_counties: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+}
 
 
 # import importlib

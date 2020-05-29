@@ -1,4 +1,4 @@
-import sub_units.load_data as load_data
+import scrap_code.load_data as load_data
 from sub_units.utils import generate_plot_browser
 
 #####

@@ -10,6 +10,8 @@ from os import path
 import matplotlib
 import matplotlib.pyplot as plt
 
+import statsmodels.formula.api as smf
+
 plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
 import matplotlib.dates as mdates
@@ -21,7 +23,6 @@ class MovingWindowModel(BayesModel):
     def __init__(self,
                  state,
                  moving_window_size=21,
-                 timeseries_length_in_days=28,
                  optimizer_method='SLSQP',
                  opt_simplified=False,
                  model_type_name=None,
@@ -34,7 +35,10 @@ class MovingWindowModel(BayesModel):
             model_approx_types = [ApproxType.SM]  # SM_acc comes along for the ride with SM
             print('Doing simplified models...')
         else:
-            model_approx_types = [ApproxType.CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM, ApproxType.PyMC3]
+            model_approx_types = [ApproxType.SM] 
+            # [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS,
+            #                       ApproxType.LS,
+            #                       ApproxType.MCMC, ApproxType.SM, ApproxType.SM_TS, ApproxType.PyMC3]
             print('Doing all models...')
 
         # these kwargs will be added as object attributes
@@ -43,8 +47,7 @@ class MovingWindowModel(BayesModel):
                        'optimizer_method': optimizer_method,
                        'model_approx_types': model_approx_types,
                        'opt_simplified': opt_simplified,
-                       'timeseries_length_in_days': timeseries_length_in_days,
-                       'plot_two_vals': None, #['positive_slope', 'positive_intercept']
+                       'plot_two_vals': None,  # ['positive_slope', 'positive_intercept']
                        })
         super(MovingWindowModel, self).__init__(state, **kwargs)
 
@@ -190,18 +193,15 @@ class MovingWindowModel(BayesModel):
 
     def render_statsmodels_fit_timeseries(self, opt_simplified=False):
 
-        use_min_date = self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10)
+        use_min_date = self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case)
         use_max_date = self.max_date
         timeseries_length_in_days = (use_max_date - use_min_date).days
         for offset in reversed(range(timeseries_length_in_days)):
-            opt_plot = False
-            if offset == 0:
-                opt_plot = True
-            self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset, opt_plot=opt_plot, opt_print=False)
+            self.render_statsmodels_fit(opt_simplified=opt_simplified, offset=offset, opt_plot=False, opt_print=False)
 
-    def render_statsmodels_fit(self, opt_simplified=False, offset=7):
-        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=offset, opt_plot=not opt_simplified)
-        self._render_statsmodels_fit_sub(opt_simplified=opt_simplified, offset=0, opt_plot=True)
+    def render_statsmodels_fit_current_and_one_week_before(self, opt_simplified=False, offset=7):
+        self.render_statsmodels_fit(opt_simplified=opt_simplified, offset=offset, opt_plot=not opt_simplified)
+        self.render_statsmodels_fit(opt_simplified=opt_simplified, offset=0, opt_plot=True)
 
         tmp_dict = self.map_offset_to_statsmodels_dict[0]
         statsmodels_model_deceased = tmp_dict['statsmodels_model_deceased']
@@ -243,7 +243,7 @@ class MovingWindowModel(BayesModel):
 
         self.map_param_to_acc = map_param_to_acc
 
-    def _render_statsmodels_fit_sub(self, opt_simplified=False, offset=0, opt_plot=True, opt_print=True):
+    def render_statsmodels_fit(self, opt_simplified=False, offset=0, opt_plot=True, opt_print=True):
         '''
         Performs fit using statsmodels, since this is a standard linear regression. This model gives us standard errors.
         :return: 
@@ -290,8 +290,8 @@ class MovingWindowModel(BayesModel):
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': data_new_tested[i] + self.log_offset,
-                              'new_deceased': data_new_deceased[i] + self.log_offset,
+                              'new_positive': (max(data_new_tested[i], 0) if i < len(data_new_tested) and i >= 0 else 0) + self.log_offset,
+                              'new_deceased': (max(data_new_deceased[i], 0) if i < len(data_new_deceased) and i >= 0 else 0) + self.log_offset,
                               } for ind, i in
                              enumerate(range(len(data_new_tested) - moving_window_size - offset,
                                              len(data_new_tested) - offset))])
@@ -308,6 +308,9 @@ class MovingWindowModel(BayesModel):
         model_positive = smf.ols(formula='np.log(new_positive) ~ x + DOW',
                                  data=data)  # add 0.1 to avoid log(0)
         results_positive = model_positive.fit()
+        # print('offset:', offset)
+        # print(data)
+        # print(results_positive.summary())
         if opt_print:
             print(results_positive.summary())
         params_positive = dict(results_positive.params)
@@ -344,6 +347,9 @@ class MovingWindowModel(BayesModel):
         # print(np.diagonal(cov))
         # print('corr:')
         # print(corr)
+        
+        if not np.all(np.isfinite(cov)):
+            cov = np.diag([1e-8]*len(means_as_list))
 
         statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
 
@@ -377,7 +383,7 @@ class MovingWindowModel(BayesModel):
 
         # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
         cov = results_deceased.cov_params()
-
+            
         # get ordering of rows and cols correct
         mapping_list = [map_deceased_names_to_sorted_ind[name_mapping_deceased[col]] for col in cov.columns]
         inv_mapping_list = [mapping_list.index(i) for i in range(len(mapping_list))]
@@ -408,6 +414,10 @@ class MovingWindowModel(BayesModel):
             tmp_bse[param_name] = np.exp(tmp_bse.pop(param_name))
         statsmodels_bse = tmp_bse
 
+
+        if not np.all(np.isfinite(cov)):
+            cov = np.diag([1e-8]*len(means_as_list))
+            
         statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
         self.statsmodels_model_deceased = statsmodels_model_deceased
         self.statsmodels_model_positive = statsmodels_model_positive
@@ -473,6 +483,53 @@ class MovingWindowModel(BayesModel):
 
         return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
 
+
+    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
+
+        samples = self.all_PyMC3_samples_as_list
+        log_probs = self.all_PyMC3_log_probs_as_list
+        samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
+
+        sampled_ind = np.random.choice(len(samples), n_samples)
+        samples = [samples[i] for i in sampled_ind]
+        log_probs = [log_probs[i] for i in sampled_ind]
+
+        return samples, samples, [1] * len(samples), log_probs
+
+    def get_weighted_samples_via_statsmodels(self, n_samples=1000):
+        '''
+        Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
+        :param n_samples: how many samples to re-sample from the list of likelihood samples
+        :return: tuple of weight_sampled_params, params, weights, log_probs
+        '''
+
+        weight_sampled_params_positive = self.statsmodels_model_positive.rvs(n_samples)
+        weight_sampled_params_deceased = self.statsmodels_model_deceased.rvs(n_samples)
+
+        positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
+        map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
+        deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
+        map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
+
+        weight_sampled_params = list()
+        for i in range(n_samples):
+            positive_dict = self.convert_params_as_list_to_dict(weight_sampled_params_positive[i],
+                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_positive)
+            deceased_dict = self.convert_params_as_list_to_dict(weight_sampled_params_deceased[i],
+                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_deceased)
+            all_dict = positive_dict.copy()
+            all_dict.update(deceased_dict)
+            for param_name in self.sorted_names:
+                if 'sigma' in param_name:
+                    all_dict[param_name] = 1
+            for name in self.logarithmic_params:
+                all_dict[name] = np.exp(all_dict[name])
+            weight_sampled_params.append(self.convert_params_as_dict_to_list(all_dict.copy()))
+
+        log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
+
+        return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
+
     def run_fits_simplified(self):
         '''
         Builder that goes through each method in its proper sequence
@@ -482,119 +539,12 @@ class MovingWindowModel(BayesModel):
         if ApproxType.SM in self.model_approx_types:
             self.render_statsmodels_fit_timeseries(opt_simplified=True)
             self.plot_growth_rate_timeseries(plot_filename_filename='statsmodels_growth_rate_time_series.png')
-            self.render_statsmodels_fit(opt_simplified=True)
+            self.render_statsmodels_fit_current_and_one_week_before(opt_simplified=True)
             self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
 
         if ApproxType.PyMC3 in self.model_approx_types:
             self.render_PyMC3_fit(opt_simplified=True)
             self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.PyMC3)
-
-    def plot_growth_rate_timeseries(self,
-                                    plot_filename_filename=None,
-                                    data_plot_kwargs=dict()):
-        '''
-        Helper function to plot_all_solutions
-        :param plot_filename_filename: string to add to the plot filename
-        :return: None
-        '''
-
-        full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
-            print(f'{full_output_filename} already exists, skipping plot.')
-            return
-        
-        plt.close()
-        plt.clf()
-        fig, ax = plt.subplots()
-        plt.axhline(linestyle='--', y=0, color='black')
-
-        map_t_val_ind_to_tested_distro = dict()
-        map_t_val_ind_to_deceased_distro = dict()
-
-        use_min_date = self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case)
-        use_max_date = self.max_date
-        timeseries_length_in_days = (use_max_date - use_min_date).days
-        for offset in range(timeseries_length_in_days):
-            t_val = self.max_date - datetime.timedelta(days=offset)
-            bse = self.map_offset_to_statsmodels_dict[offset]['statsmodels_bse']
-            bse['sigma_positive'] = 0.1
-            bse['sigma_deceased'] = 0.1
-            sigmas_as_list = self.convert_params_as_dict_to_list(bse)
-            params = self.map_offset_to_statsmodels_dict[offset]['statsmodels_params']
-            params['sigma_positive'] = 0.1
-            params['sigma_deceased'] = 0.1
-            means_as_list = self.convert_params_as_dict_to_list(params)
-            cov = np.diag([max(1e-8, x ** 2) for x in sigmas_as_list])
-            model = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
-            map_t_val_ind_to_tested_distro[t_val] = model.rvs(1000)[:, self.map_name_to_sorted_ind['positive_slope']]
-            map_t_val_ind_to_deceased_distro[t_val] = model.rvs(1000)[:, self.map_name_to_sorted_ind['deceased_slope']]
-
-        sol_plot_date_range = sorted(map_t_val_ind_to_tested_distro.keys())
-        p5_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 5) for val_ind in sol_plot_date_range]
-        p25_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 25) for val_ind in
-                     sol_plot_date_range]
-        p50_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 50) for val_ind in
-                     sol_plot_date_range]
-        p75_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 75) for val_ind in
-                     sol_plot_date_range]
-        p95_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 95) for val_ind in
-                     sol_plot_date_range]
-
-        ax.fill_between(sol_plot_date_range,
-                        p5_curve,
-                        p95_curve,
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
-                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-                        )
-        ax.fill_between(sol_plot_date_range,
-                        p25_curve,
-                        p75_curve,
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
-                        edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
-                        )
-        ax.plot(sol_plot_date_range, p50_curve,
-                color="darkred", label='Deaths')
-
-        p5_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 5) for val_ind in sol_plot_date_range]
-        p25_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 25) for val_ind in
-                     sol_plot_date_range]
-        p50_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 50) for val_ind in
-                     sol_plot_date_range]
-        p75_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 75) for val_ind in
-                     sol_plot_date_range]
-        p95_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 95) for val_ind in
-                     sol_plot_date_range]
-
-        ax.fill_between(sol_plot_date_range,
-                        p5_curve,
-                        p95_curve,
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.3),
-                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-                        )
-        ax.fill_between(sol_plot_date_range,
-                        p25_curve,
-                        p75_curve,
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.6),
-                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-                        )
-        ax.plot(sol_plot_date_range, p50_curve,
-                color="darkgreen", label='Infections')
-
-        fig.autofmt_xdate()
-
-        # this removes the year from the x-axis ticks
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-
-        # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-        plt.ylabel('Daily Growth Rate')
-        # plt.ylim((1, sum(self.data_new_tested) * 100))
-        plt.xlim(min(map_t_val_ind_to_tested_distro.keys()), max(map_t_val_ind_to_tested_distro.keys()) + datetime.timedelta(days=5))
-        plt.legend()
-        # plt.title(f'{state} Data (points) and Model Predictions (lines)')
-        print(f'Printing {full_output_filename}...')
-        plt.savefig(full_output_filename, dpi=self.plot_dpi)
-        plt.close()
-        print('...done!')
 
     def render_PyMC3_fit(self, opt_simplified=False):
 

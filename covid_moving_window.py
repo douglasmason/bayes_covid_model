@@ -33,13 +33,13 @@ def run_everything():
     else:
         countries_plot_subfolder = _run_everything_sub(region=Region.countries)
         us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
-        #us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
-        #provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
+        us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
+        provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
         return {
-            Region.US_states: us_states_plot_subfolder, 
             Region.countries: countries_plot_subfolder,
-            #Region.US_counties: us_counties_plot_subfolder, 
-            #Region.provinces: provinces_plot_subfolder
+            Region.US_states: us_states_plot_subfolder, 
+            Region.US_counties: us_counties_plot_subfolder, 
+            Region.provinces: provinces_plot_subfolder
         }
 
 
@@ -74,11 +74,11 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
         if region == Region.US_states:
             override_run_states = load_data.current_cases_ranked_us_states
         elif region == Region.US_counties:
-            override_run_states = load_data.current_cases_ranked_us_counties[:50]
+            override_run_states = load_data.current_cases_ranked_us_counties[:300]
         elif region == Region.countries:
-            override_run_states = load_data.current_cases_ranked_non_us_states[:50]
+            override_run_states = load_data.current_cases_ranked_non_us_states[:100]
         elif region == Region.provinces:
-            override_run_states = load_data.current_cases_ranked_non_us_provinces[:50]
+            override_run_states = load_data.current_cases_ranked_non_us_provinces[:100]
     
         override_run_states = [x for x in override_run_states if not x.startswith(' ')]
 
