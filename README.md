@@ -1,6 +1,6 @@
 # bayes_covid_model
 
-**[Top Nations, U.S. States, and U.S. Counties by Likelihood of an Outbreak](#nations-with-highest-likelihood-of-an-outbreak)**
+**[Top Nations, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#nations-with-highest-likelihood-of-an-outbreak)**
 
 **Latest results and three-month projections provided in** 
 * [US States Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_US_states/index.html)
@@ -47,7 +47,7 @@ We model universal curves of reported COVID-19 daily infections and related deat
 
 More figures can be found in the Figure Browser links at the top of this page. 
 
-## Nations with Highest Likelihood of an Outbreak
+## Nations with Highest Likelihood of Case Acceleration
 Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 -|-|-|-|-|-
 1|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|0.06718|1.164e-21|0.04007|6.024e-06
@@ -72,7 +72,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 20|[Chile](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/chile/index.html)|0.06894|4.322e-67|0.008531|0.0969
 
 
-## U.S. States with Highest Likelihood of an Outbreak
+## U.S. States with Highest Likelihood of Case Acceleration
 Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 -|-|-|-|-|-
 1|[US: Wisconsin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_wisconsin/index.html)|0.02899|9.347e-28|0.02669|1.04e-06
@@ -91,7 +91,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 14|[US: Georgia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_georgia/index.html)|0.002501|0.3425|0.01507|0.03438
 15|[US: Guam](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_guam/index.html)|0.06501|0.02727|0.0728|0.06838
 
-## U.S. Counties with Highest Likelihood of an Outbreak, Among Top 500 by Current Case Count
+## U.S. Counties with Highest Likelihood of Case Acceleration, Among Top 500 by Current Case Count
 Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 -|-|-|-|-|-
 1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|0.004445|0.3855|0.1247|7.721e-09
