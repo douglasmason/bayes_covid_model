@@ -74,7 +74,7 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
         if region == Region.US_states:
             override_run_states = load_data.current_cases_ranked_us_states
         elif region == Region.US_counties:
-            override_run_states = load_data.current_cases_ranked_us_counties[:1000]
+            override_run_states = load_data.current_cases_ranked_us_counties
         elif region == Region.countries:
             override_run_states = load_data.current_cases_ranked_non_us_states[:100]
         elif region == Region.provinces:

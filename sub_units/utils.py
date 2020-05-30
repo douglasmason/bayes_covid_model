@@ -634,7 +634,7 @@ def run_everything(run_states,
         print(
             f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, current cases {load_data.map_state_to_current_case_cnt[state]:,})...\n----\n----\n')
 
-        if True:
+        try:
             print('Building model with the following args...')
             for key in sorted(kwargs.keys()):
                 print(f'{key}: {kwargs[key]}')
@@ -654,7 +654,7 @@ def run_everything(run_states,
                 state_model.run_fits()
             map_state_name_to_model[state] = state_model
 
-        else:
+        except:
             print("Error getting model for state", state)
 
         plot_subfolder = state_model.plot_subfolder
@@ -801,6 +801,13 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                         with tag("a", href=full_report_filename):
                             text(f'Full Report')
                     for state in alphabetical_states:
+
+                        if state.lower().startswith('us:_'):
+                            print_state = state[4:]
+                        else:
+                            print_state = state
+                        print_state = print_state.title().replace('_', ' ').replace(' Of', ' of')
+
                         state_lc = state.lower().replace(' ', '_').replace(':', '')
                         tmp_url = state_lc + '/index.html'
                         with tag('li'):
