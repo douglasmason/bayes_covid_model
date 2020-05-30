@@ -4,6 +4,7 @@ import numpy as np
 import datetime
 from sub_units.utils import ApproxType
 import pandas as pd
+import joblib
 
 
 class FrechetModel(BayesModel):
@@ -11,7 +12,7 @@ class FrechetModel(BayesModel):
     # add model_type_str to kwargs when instantiating super
     def __init__(self,
                  *args,
-                 optimizer_method='Nelder-Mead',  # 'Nelder-Mead', #'SLSQP',
+                 optimizer_method='BFGS',  # 'Nelder-Mead', #'SLSQP',
                  burn_in=0,
                  **kwargs):
         kwargs.update({'model_type_name': 'frechet',
@@ -22,8 +23,10 @@ class FrechetModel(BayesModel):
                        'deaths_cnt_threshold': 100
                        })
 
+        #model_approx_types = [ApproxType.PyMC3]
+        #model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.PyMC3]
         model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC]
-        #[ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM]
+        # model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM]
         kwargs.update({'model_approx_types': model_approx_types})
         super(FrechetModel, self).__init__(*args, **kwargs)
         self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
@@ -33,25 +36,6 @@ class FrechetModel(BayesModel):
         # self.cases_indices = [i for i in cases_indices if self.data_new_tested[i] > 0]
         # self.deaths_indices = [i for i in deaths_indices if self.data_new_dead[i] > 0]
 
-    @staticmethod
-    def _ODE_system(y, t, *p):
-        '''
-        system of ODEs to simulate
-        '''
-
-        def sigmoid_interp(t, loc, level1, level2, width=1.0):
-            '''
-            helper function for interpolation
-            :return: float
-            '''
-            sigmoid_val = 1 / (1 + np.exp(-(t - loc) / width))
-            return sigmoid_val * (level2 - level1) + level1
-
-        di = sigmoid_interp(t, p[2], p[0], p[1]) * y[0]
-        # NB: rates will "flatten" things out, but they have limited ability to represent delay
-        #     for that you may need delay ODE solvers
-        return [di]
-
     # from https://en.wikipedia.org/wiki/Fréchet_distribution
     @staticmethod
     def frechet_pdf(x, a, s, m, mult):
@@ -59,8 +43,8 @@ class FrechetModel(BayesModel):
             raise ValueError
         if x == m and a > 1 or x == m and a > 0:
             return 1
-        return np.exp((a / s) * ((x - m) / s) ** (-1 - a) * np.exp(-((x - m) / s) ** -a) * mult)
-    
+        return (a / s) * ((x - m) / s) ** (-1 - a) * np.exp(-((x - m) / s) ** -a) * mult
+
     def run_simulation(self, in_params, **kwargs):
         '''
         run combined ODE and convolution simulation
@@ -74,11 +58,10 @@ class FrechetModel(BayesModel):
 
         # print('t_vals:', self.t_vals)
 
-
         positive = np.array([self.frechet_pdf(x, params['alpha_positive'], params['s_positive'], params['m_positive'],
-                                         params['mult_positive']) for x in self.t_vals])
+                                              params['mult_positive']) for x in self.t_vals])
         deceased = np.array([self.frechet_pdf(x, params['alpha_deceased'], params['s_deceased'], params['m_deceased'],
-                                         params['mult_deceased']) for x in self.t_vals])
+                                              params['mult_deceased']) for x in self.t_vals])
 
         return np.vstack([np.zeros_like(positive),
                           np.maximum(positive, 0),
@@ -146,3 +129,161 @@ class FrechetModel(BayesModel):
 
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals, \
                predicted_tested, actual_tested, predicted_dead, actual_dead
+
+    def render_PyMC3_fit(self, opt_simplified=False):
+
+        import theano.tensor as tt
+        import pymc3 as pm
+        from theano.compile.ops import as_op
+
+        success = False
+        print(f'Loading from {self.PyMC3_filename}...')
+        try:
+            PyMC3_dict = joblib.load(self.PyMC3_filename)
+            all_PyMC3_samples_as_list = PyMC3_dict['all_PyMC3_samples_as_list']
+            all_PyMC3_log_probs_as_list = PyMC3_dict['all_PyMC3_log_probs_as_list']
+            success = True
+            self.loaded_PyMC3 = True
+        except:
+            print('...Loading failed!')
+            self.loaded_PyMC3 = False
+
+        # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
+        if (not success and self.opt_calc) or self.opt_force_calc:
+
+            print('Massaging data into dataframe...')
+
+            # PyMC3 requires a Pandas dataframe, so let's get cooking!
+            data_as_list_of_dicts = [{'new_tested': max(self.data_new_tested[i], 0) + self.log_offset,
+                                      'new_dead': max(self.data_new_dead[i], 0) + self.log_offset,
+                                      'log_new_tested': np.log(max(self.data_new_tested[i], 0) + self.log_offset),
+                                      'log_new_dead': np.log(max(self.data_new_dead[i], 0) + self.log_offset),
+                                      'orig_ind': i + self.burn_in,
+                                      'x': i,
+                                      } for ind, i in enumerate(
+                range(len(self.data_new_tested)))]
+
+            data = pd.DataFrame(data_as_list_of_dicts)
+
+            ind_offset = 0  # had to hand-tune this to zero
+            data['DOW'] = [str((x + ind_offset) % 7) for x in data['orig_ind']]
+            data['day1'] = [1 if (x + ind_offset) % 7 == 1 else 0 for x in data['orig_ind']]
+            data['day2'] = [1 if (x + ind_offset) % 7 == 2 else 0 for x in data['orig_ind']]
+            data['day3'] = [1 if (x + ind_offset) % 7 == 3 else 0 for x in data['orig_ind']]
+            data['day4'] = [1 if (x + ind_offset) % 7 == 4 else 0 for x in data['orig_ind']]
+            data['day5'] = [1 if (x + ind_offset) % 7 == 5 else 0 for x in data['orig_ind']]
+            data['day6'] = [1 if (x + ind_offset) % 7 == 6 else 0 for x in data['orig_ind']]
+
+            print('day_of_threshold_met_case:', self.day_of_threshold_met_case)
+            start_ind = self.day_of_threshold_met_case
+            x = data['x'].values[start_ind:]
+
+            print('Running PyMC3 fit...')
+            with pm.Model() as model_positive:  # model specifications in PyMC3 are wrapped in a with-statement
+                # Define priors
+                a = pm.Uniform('alpha_positive', 1e-8, 1000)
+                s = pm.Uniform('s_positive', 1e-3, 1000)
+                m = pm.Uniform('m_positive', -100, 100)
+                mult = pm.Uniform('mult_positive', 1e-8, 1e12)
+                sigma = pm.HalfNormal('sigma_positive', sigma=1)
+
+                curve = pm.Deterministic('curve_positive',
+                                         tt.log((a / s) * tt.power(((x - m) / s), (-1 - a)) * tt.exp(
+                                             -tt.power(((x - m) / s), -a)) * mult))
+
+                # Define likelihood
+                Y_obs = pm.Normal('new_tested',
+                                  mu=curve,
+                                  sigma=sigma,
+                                  observed=data['log_new_tested'].values[start_ind:]
+                                  )
+
+                # Inference!
+                # print("Searching for MAP...")
+                MAP = {key: val for key, val in self.all_data_params.items() if 'positive' in key}
+                # MAP = pm.find_MAP(model=model_positive, start=start_params)
+                # print('...done! MAP:')
+                # print(MAP)
+                positive_trace = pm.sample(2000, start=MAP)
+
+            positive_trace_as_dict = {name: positive_trace.get_values(name) for name in self.sorted_names if
+                                      'positive' in name}
+            positive_trace_as_list_of_dicts = list()
+            for i in range(len(positive_trace.get_values('alpha_positive'))):
+                dict_to_add = dict()
+                for name in positive_trace_as_dict:
+                    dict_to_add.update({name: positive_trace_as_dict[name][i]})
+                positive_trace_as_list_of_dicts.append(dict_to_add)
+
+            print('day_of_threshold_met_death:', self.day_of_threshold_met_death)
+            start_ind = self.day_of_threshold_met_death
+            x = data['x'].values[start_ind:]
+
+            with pm.Model() as model_deceased:  # model specifications in PyMC3 are wrapped in a with-statement
+
+                # Define priors
+                a = pm.Uniform('alpha_deceased', 1e-8, 1000)
+                s = pm.Uniform('s_deceased', 1e-3, 1000)
+                m = pm.Uniform('m_deceased', -100, 100)
+                mult = pm.Uniform('mult_deceased', 1e-8, 1e12)
+                sigma = pm.HalfNormal('sigma_deceased', sigma=1)
+
+                curve = pm.Deterministic('curve_deceased',
+                                         tt.log(tt.maximum((a / s) * tt.power(((x - m) / s), (-1 - a)) * tt.exp(
+                                             -tt.power(((x - m) / s), -a)) * mult, 0) + self.log_offset))
+
+                # Define likelihood
+                Y_obs = pm.Normal('new_dead',
+                                  mu=curve,
+                                  sigma=sigma,
+                                  observed=data['log_new_dead'].values[start_ind:]
+                                  )
+
+                # Inference!
+                # print("Searching for MAP...")
+                MAP = {key: val for key, val in self.all_data_params.items() if 'deceased' in key}
+                # MAP = pm.find_MAP(model=model_positive, start=start_params)
+                # print('...done! MAP:')
+                # print(MAP)
+                deceased_trace = pm.sample(2000, start=MAP)
+
+            deceased_trace_as_dict = {name: deceased_trace.get_values(name) for name in self.sorted_names if
+                                      'deceased' in name}
+            deceased_trace_as_list_of_dicts = list()
+            for i in range(len(deceased_trace.get_values('alpha_deceased'))):
+                dict_to_add = dict()
+                for name in deceased_trace_as_dict:
+                    dict_to_add.update({name: deceased_trace_as_dict[name][i]})
+                deceased_trace_as_list_of_dicts.append(dict_to_add)
+
+            trace_as_list_of_dicts = list()
+            for positive_params, deceased_params in zip(positive_trace_as_list_of_dicts,
+                                                        deceased_trace_as_list_of_dicts):
+                dict_to_add = positive_params.copy()
+                dict_to_add.update(deceased_params)
+                trace_as_list_of_dicts.append(dict_to_add)
+
+            for tmp_dict in trace_as_list_of_dicts:
+                for key in tmp_dict:
+                    if key in self.logarithmic_params:
+                        tmp_dict[key] = np.exp(tmp_dict[key])
+
+            all_PyMC3_samples_as_list = [self.convert_params_as_dict_to_list(tmp_dict) for tmp_dict in
+                                         trace_as_list_of_dicts]
+            all_PyMC3_log_probs_as_list = [self.get_log_likelihood(params) for params in trace_as_list_of_dicts]
+
+            tmp_dict = {'all_PyMC3_samples_as_list': all_PyMC3_samples_as_list,
+                        'all_PyMC3_log_probs_as_list': all_PyMC3_log_probs_as_list}
+
+            print(f'saving PyMC3 trace to {self.PyMC3_filename}...')
+            joblib.dump(tmp_dict, self.PyMC3_filename)
+            print('...done!')
+
+        self.all_PyMC3_samples_as_list = all_PyMC3_samples_as_list
+        self.all_PyMC3_log_probs_as_list = all_PyMC3_log_probs_as_list
+
+        # Plot all solutions...
+        self.plot_all_solutions(approx_type=ApproxType.PyMC3)
+
+        # Get and plot parameter distributions from bootstraps
+        self.render_and_plot_cred_int(approx_type=ApproxType.PyMC3)

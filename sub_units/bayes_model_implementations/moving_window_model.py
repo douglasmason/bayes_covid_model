@@ -438,18 +438,6 @@ class MovingWindowModel(BayesModel):
                 self.render_and_plot_cred_int(approx_type=ApproxType.SM)
             self.plot_all_solutions(approx_type=ApproxType.SM, offset=offset)
 
-    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
-
-        samples = self.all_PyMC3_samples_as_list
-        log_probs = self.all_PyMC3_log_probs_as_list
-        samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
-
-        sampled_ind = np.random.choice(len(samples), n_samples)
-        samples = [samples[i] for i in sampled_ind]
-        log_probs = [log_probs[i] for i in sampled_ind]
-
-        return samples, samples, [1] * len(samples), log_probs
-
     def get_weighted_samples_via_statsmodels(self, n_samples=1000):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
@@ -483,18 +471,6 @@ class MovingWindowModel(BayesModel):
 
         return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
 
-
-    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
-
-        samples = self.all_PyMC3_samples_as_list
-        log_probs = self.all_PyMC3_log_probs_as_list
-        samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
-
-        sampled_ind = np.random.choice(len(samples), n_samples)
-        samples = [samples[i] for i in sampled_ind]
-        log_probs = [log_probs[i] for i in sampled_ind]
-
-        return samples, samples, [1] * len(samples), log_probs
 
     def get_weighted_samples_via_statsmodels(self, n_samples=1000):
         '''

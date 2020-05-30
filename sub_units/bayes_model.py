@@ -697,7 +697,7 @@ class BayesModel(ABC):
             plt.ylabel('cumulative numbers')
             plt.xlabel('day')
             plt.ylabel('new people each day')
-            plt.ylim((0.5, None))
+            plt.ylim((0.5, max(self.data_new_tested) * 100))
             plt.xlim((self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case - 10), None))
             plt.legend()
             if title is not None:
@@ -1910,7 +1910,11 @@ class BayesModel(ABC):
         if opt_replace_sigma:
             cov = self.remove_sigma_entries_from_matrix(cov)
         std_devs_mat = np.diag(np.sqrt(np.diagonal(cov)))
-        cov_inv = np.linalg.inv(std_devs_mat)
+        try:
+            cov_inv = np.linalg.inv(std_devs_mat)
+        except:
+            print('Error inverting covariance matrix!')
+            cov_inv = np.eye(cov.shape[0])
         corr = cov_inv @ cov @ cov_inv
         if opt_replace_sigma:
             corr = self.recover_sigma_entries_from_matrix(corr)
@@ -2302,14 +2306,15 @@ class BayesModel(ABC):
         # self.solve_and_plot_solution(title='Test Plot with Default Parameters',
         #                              plot_filename_filename='test_plot.png')
 
-        self.render_all_data_fit()
-
-        # Plot all-data solution 
-        self.solve_and_plot_solution(in_params=self.all_data_params,
-                                     title='All-Data Solution',
-                                     plot_filename_filename='all_data_solution.png')
-
-        self.render_additional_covariance_approximations(self.all_data_params)
+        if ApproxType.SP_CF in self.model_approx_types:
+            self.render_all_data_fit()
+    
+            # Plot all-data solution 
+            self.solve_and_plot_solution(in_params=self.all_data_params,
+                                         title='All-Data Solution',
+                                         plot_filename_filename='all_data_solution.png')
+    
+            self.render_additional_covariance_approximations(self.all_data_params)
 
         if ApproxType.SM in self.model_approx_types:
             if True:
@@ -2368,10 +2373,10 @@ class BayesModel(ABC):
         # self.render_all_data_fit(passed_params=self.all_data_params)
 
         if ApproxType.PyMC3 in self.model_approx_types:
-            try:
+            if True:
                 # Do statsmodels
                 self.render_PyMC3_fit()
-            except:
+            else:
                 print('Error calculating and rendering PyMC3 fit')
 
         if ApproxType.LS in self.model_approx_types:
@@ -2607,3 +2612,15 @@ class BayesModel(ABC):
         plt.savefig(full_output_filename, dpi=self.plot_dpi)
         plt.close()
         print('...done!')
+
+    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
+
+        samples = self.all_PyMC3_samples_as_list
+        log_probs = self.all_PyMC3_log_probs_as_list
+        samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
+
+        sampled_ind = np.random.choice(len(samples), n_samples)
+        samples = [samples[i] for i in sampled_ind]
+        log_probs = [log_probs[i] for i in sampled_ind]
+
+        return samples, samples, [1] * len(samples), log_probs

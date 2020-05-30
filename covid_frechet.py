@@ -71,11 +71,11 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
         if region == Region.US_states:
             override_run_states = load_data.current_cases_ranked_us_states
         elif region == Region.US_counties:
-            override_run_states = load_data.current_cases_ranked_us_counties[:200]
+            override_run_states = load_data.current_cases_ranked_us_counties[:70]
         elif region == Region.countries:
             override_run_states = load_data.current_cases_ranked_non_us_states[:70]
         elif region == Region.provinces:
-            override_run_states = load_data.current_cases_ranked_non_us_provinces[:100]
+            override_run_states = load_data.current_cases_ranked_non_us_provinces[:70]
 
         override_run_states = [x for x in override_run_states if not x.startswith(' ')]
 
@@ -132,24 +132,24 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
 
     curve_fit_bounds = {'alpha_positive': (1e-8, 1000),
                         's_positive': (1e-3, 1000),
-                        'm_positive': (-100, 100),
+                        'm_positive': (-1000, 1000),
                         'mult_positive': (1e-8, 1e12),
                         'alpha_deceased': (1e-8, 1000),
                         's_deceased': (1e-3, 1000),
-                        'm_deceased': (-100, 100),
+                        'm_deceased': (-1000, 1000),
                         'mult_deceased': (1e-8, 1e12),
                         'sigma_positive': (0, 100),
                         'sigma_deceased': (0, 100),
                         }
 
-    test_params = {'alpha_positive': 1,
+    test_params = {'alpha_positive': 8,
                    's_positive': 200,
-                   'm_positive': 12,
-                   'mult_positive': 3400,
-                   'alpha_deceased': 1,
+                   'm_positive': -50,
+                   'mult_positive': 2e6,
+                   'alpha_deceased': 8,
                    's_deceased': 140,
-                   'm_deceased': 30,
-                   'mult_deceased': 2000,
+                   'm_deceased': -50,
+                   'mult_deceased': 1e5,
                    'sigma_positive': 0.5,
                    'sigma_deceased': 0.3,
                    }

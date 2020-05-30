@@ -102,6 +102,7 @@ print(region_plot_subfolders)
 
 # Or... 
 # run in bash...
+# TODO: get this part working using these fast CLIs rather than boto3 as below
 # HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 # HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 # HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
@@ -115,7 +116,7 @@ print(region_plot_subfolders)
 #     second_level_files = glob.glob(plot_subfolder + '/*/*.*', recursive=True)
 #     files = first_level_files + second_level_files
 # 
-#     # TODO: This is really inefficient -- takes 20-30 minutes! Mainly issue is that 
+#     # This is really inefficient -- takes 20-30 minutes! Mainly issue is that 
 #     #   `aws s3 cp --recursive ...` uses parallel threads, and this is a serial upload
 #     for file in tqdm(list(files)):
 #         relative_filename = '/'.join(file.split('/')[1:])
@@ -138,7 +139,6 @@ region_plot_subfolders = {
  Region.US_counties: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 }
 
-
 # import importlib
 # importlib.reload(generate_figure_browser)
 
@@ -148,7 +148,7 @@ for region, plot_subfolder in region_plot_subfolders.items():
 
     data_dir = plot_subfolder
     regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f))]
-    print(regions_to_present)
+    print(sorted(regions_to_present))
 
     # Regenerate Figures
     generate_figure_browser.hyperparameter_str = hyperparamater_str + '/'
@@ -161,7 +161,7 @@ for region, plot_subfolder in region_plot_subfolders.items():
 ######
 
 # TODO: Update static_figures with most recent version
-# TODO: Update README.md to link to new CSV file
+# TODO: Update README.md to link to new CSV files
 
 # Do this by hand
 # TODO: Figure out how to do this automatically instead of by hand
