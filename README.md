@@ -91,7 +91,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 14|[US: Georgia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_georgia/index.html)|0.002501|0.3425|0.01507|0.03438
 15|[US: Guam](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_guam/index.html)|0.06501|0.02727|0.0728|0.06838
 
-## U.S. Counties with Highest Likelihood of an Outbreak
+## U.S. Counties with Highest Likelihood of an Outbreak, Among Top 500 by Current Case Count
 Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 -|-|-|-|-|-
 1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|0.004445|0.3855|0.1247|7.721e-09
