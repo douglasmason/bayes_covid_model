@@ -1,6 +1,6 @@
 # bayes_covid_model
 
-**[Top Nations, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#nations-with-highest-likelihood-of-an-outbreak)**
+**[Top Nations, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#nations-with-highest-likelihood-of-case-acceleration)**
 
 **Latest results and three-month projections provided in** 
 * [US States Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_US_states/index.html)
