@@ -21,9 +21,7 @@
 
 *We've  implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to beautifully and easily find their nation, province, or county, and the metrics that matter to them, please contact the contributors.*
 
-*To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`.*
-
-*To run the code that generates the daily updates, clone repo and execute `python daily_cron_job.py`.*
+*To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`, for the daily updates execute `python daily_cron_job.py`, and to refresh the tables execute `python post_analysis.py`*
 
 We model universal curves of reported COVID-19 daily infections and related deaths using a linear regression with standard errors and a weekly profile in the log space (making it an exponential regression in linear space). Using currently available data from [N. Y. Times](https://github.com/nytimes/covid-19-data) and [Johns Hopkins University](https://github.com/CSSEGISandData/COVID-19), we fit our model parameters to the most recent three weeks and provide projections for the next three months, assuming that the same growth rate continues during that time. In addition, we provide a time-series of growth rates for each region, as well estimates of the current week-over-week change in growth rate and its statistical significance, an indicator of where new waves or outbreaks may be occuring.
 
@@ -93,7 +91,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 14|[US: Georgia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_georgia/index.html)|0.002501|0.3425|0.01507|0.03438
 15|[US: Guam](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_guam/index.html)|0.06501|0.02727|0.0728|0.06838
 
-## U.S. Counties with Highest Likelihood of an Outbreak
+## U.S. Counties with Highest Likelihood of an Outbreak, Among Top 500 by Current Case Count
 Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 -|-|-|-|-|-
 1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|0.004445|0.3855|0.1247|7.721e-09
