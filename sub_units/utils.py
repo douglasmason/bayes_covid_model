@@ -713,6 +713,12 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
     map_state_to_html = dict()
     for state in alphabetical_states:
 
+        if state.lower().startswith('us:_'):
+            print_state = state[4:]
+        else:
+            print_state = state
+        print_state = print_state.title().replace('_', ' ').replace(' Of', ' of')
+        
         state_lc = state.lower().replace(' ', '_')
         doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
 
@@ -723,7 +729,7 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
             with tag('body'):
                 with tag('div', id='photo-container'):
                     with tag('h2'):
-                        text(state)
+                        text(print_state)
                     with tag('ul'):
                         with tag('li'):
                             with tag('a', href='../index.html'):
@@ -797,11 +803,6 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                     for state in alphabetical_states:
                         state_lc = state.lower().replace(' ', '_').replace(':', '')
                         tmp_url = state_lc + '/index.html'
-                        if state.lower().startswith('us:_'):
-                            print_state = state[4:]
-                        else:
-                            print_state = state
-                        print_state = print_state.title().replace('_', ' ').replace(' Of', ' of')
                         with tag('li'):
                             with tag("a", href=tmp_url):
                                 text(print_state)

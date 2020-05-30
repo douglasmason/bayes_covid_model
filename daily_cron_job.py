@@ -141,7 +141,9 @@ region_plot_subfolders = {
 
 # import importlib
 # importlib.reload(generate_figure_browser)
-
+# git add plot_browser_moving_window_statsmodels_only_countries/
+# git add plot_browser_moving_window_statsmodels_only_US_states/
+# git add plot_browser_moving_window_statsmodels_only_US_counties/
 for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
     print(hyperparamater_str)
