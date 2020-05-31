@@ -1,34 +1,35 @@
 # bayes_covid_model
 
-**[Top Nations, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#nations-with-highest-likelihood-of-case-acceleration)**
+**[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Case Acceleration](#nations-with-highest-likelihood-of-case-acceleration)**
 
 **Latest results and three-month projections provided in** 
+* [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html)
 * [US States Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_US_states/index.html)
 * [US Counties Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_US_counties/index.html) 
-* [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html)
+
 
 **Tabulated projections can be found at**
+* [International Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv)
 * [US States Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_prediction.csv)
 * [US Counties Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_prediction.csv)  
-* [International Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv)
 
 **Parameter estimates can be found at**
+* [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv)
 * [US States Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_report.csv)
 * [US Counties Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_report.csv)
-* [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv)
 
-*Thank You to Digital Ocean and Black Sails Consulting for access to compute resources for this project.*
+*We gratefully acknowledge Digital Ocean and Black Sails Consulting for access to compute resources for this project.*
 
 *We've  implemented a simple photo browser to help readers deep-dive. If you would like to design an interface for people to beautifully and easily find their nation, province, or county, and the metrics that matter to them, please contact the contributors.*
 
 *To run the code that generates the paper figures, clone repo and execute `python paper_figures_convolution.py; python paper_figures_moving_window.py`, for the daily updates execute `python daily_cron_job.py`, and to refresh the tables execute `python post_analysis.py`*
 
-We model universal curves of reported COVID-19 daily infections and related deaths using a linear regression with standard errors and a weekly profile in the log space (making it an exponential regression in linear space). Using currently available data from [N. Y. Times](https://github.com/nytimes/covid-19-data) and [Johns Hopkins University](https://github.com/CSSEGISandData/COVID-19), we fit our model parameters to the most recent three weeks and provide projections for the next three months, assuming that the same growth rate continues during that time. In addition, we provide a time-series of growth rates for each region, as well estimates of the current week-over-week change in growth rate and its statistical significance, an indicator of where new waves or outbreaks may be occuring.
+We model universal curves of reported COVID-19 daily infections and related deaths using a linear regression with standard errors and a weekly profile in the log space (making it an exponential regression in linear space). Using currently available data from [N.Y. Times](https://github.com/nytimes/covid-19-data) and [Johns Hopkins University](https://github.com/CSSEGISandData/COVID-19), we fit our model parameters to the most recent three weeks and provide projections for the next three months, assuming no new mitigating factors and the same growth rate continues during that time. In addition, we provide a time-series of growth rates for each locale, as well estimates for the current week-to-week change in growth rate and its statistical significance, an indicator of where new clusters or outbreaks may be occuring.
 
 ## Example Figures
 
 ![boxplot](/static_figures/country_name_field.png?)
-**Figure 1:** Week-over-week change in daily growth rate vs. daily growth rate among nations, filtered to nations where the likelihood to have this magnitude of change in daily growth rate or greater (the p-value) is less than 10%. Nations in the top-right are likely to be accelerating an already high growth rate, in the top-left are likely to be reversing negative growth rate, in the bottom-left are likely to be accelerating an already strongly negative growth rate, and in the bottom-right are likely to be reversing a positive growth rate. This plot is generated from the [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv).
+**Figure 1:** Week-to-week change in daily growth rate vs. daily growth rate among nations, filtered to nations where the likelihood to have this magnitude of change in daily growth rate or greater (the p-value) is less than 10%. Nations in the top-right are likely to be accelerating an already high growth rate, in the top-left are likely to be reversing negative growth rate, in the bottom-left are likely to be accelerating an already strongly negative growth rate, and in the bottom-right are likely to be reversing a positive growth rate. This plot is generated from the [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv).
 
 ![boxplot](/static_figures/statsmodels_solutions_filled_quantiles.png?)
 **Figure 2a:** Three-week moving-window model prediction curves for three months and COVID-19 Daily Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively.
@@ -47,8 +48,8 @@ We model universal curves of reported COVID-19 daily infections and related deat
 
 More figures can be found in the Figure Browser links at the top of this page. 
 
-## Nations with Highest Likelihood of Case Acceleration
-Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
+## Countries with Highest Likelihood of Case Acceleration
+Rank|Country|Infections Growth Rate|p-value|Week-to-Week Change|p-value
 -|-|-|-|-|-
 1|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|0.06718|1.164e-21|0.04007|6.024e-06
 2|[Malaysia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malaysia/index.html)|0.03432|0.03329|0.08575|1.837e-05
@@ -73,7 +74,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 
 
 ## U.S. States with Highest Likelihood of Case Acceleration
-Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
+Rank|State|Infections Growth Rate|p-value|Week-to-Week Change|p-value
 -|-|-|-|-|-
 1|[US: Wisconsin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_wisconsin/index.html)|0.02899|9.347e-28|0.02669|1.04e-06
 2|[US: Vermont](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_vermont/index.html)|0.02526|0.07554|0.09725|2.256e-05
@@ -92,7 +93,7 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 15|[US: Guam](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_guam/index.html)|0.06501|0.02727|0.0728|0.06838
 
 ## U.S. Counties with Highest Likelihood of Case Acceleration, Among Top 500 by Current Case Count
-Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
+Rank|State:County|Infections Growth Rate|p-value|Week-to-Week Change|p-value
 -|-|-|-|-|-
 1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|0.004445|0.3855|0.1247|7.721e-09
 2|[US: Texas: Galveston](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_texas_galveston/index.html)|0.06112|0.0001693|0.1537|2.732e-08
@@ -176,4 +177,4 @@ Rank|State|Infections Growth Rate|(p-value)|Change Week-over-Week|(p-value)
 80|[US: New Jersey: Somerset](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_new_jersey_somerset/index.html)|-0.03928|4.336e-05|0.01917|0.09089
 
 
-This work is provided by [Koyote Science, LLC](http://www.koyotescience.com) and has not been peer reviewed. 
+This work is provided by [Koyote Science, LLC](http://www.koyotescience.com) and [Nexus iR&D Laboratory, LLC](http://www.nexusilab.com), and has not been peer reviewed.
