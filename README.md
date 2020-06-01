@@ -94,7 +94,8 @@ Rank|State|Infections Growth Rate|p-value|Week-to-Week Change|p-value
 
 ## U.S. Counties with Highest Likelihood of Case Acceleration, Among Top 500 by Current Case Count
 Rank|State:County|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate|Week-to-Week Change in Day-over-Day Growth Rate|p-value
--|-|-|-|-|-1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|2425|0.4455%|13.28%|7.721e-09
+-|-|-|-|-|-
+1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|2425|0.4455%|13.28%|7.721e-09
 2|[US: Texas: Galveston](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_texas_galveston/index.html)|786|6.303%|16.61%|2.732e-08
 3|[US: New York: Nassau](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_new_york_nassau/index.html)|40140|-4.188%|1.895%|1.047e-07
 4|[US: Missouri: Kansas City](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_missouri_kansas_city/index.html)|1108|3.065%|6.737%|1.525e-07
