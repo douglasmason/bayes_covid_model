@@ -49,7 +49,7 @@ We model universal curves of reported COVID-19 daily infections and related deat
 More figures can be found in the Figure Browser links at the top of this page. 
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|Country|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate|Absolute Week-to-Week Change in Day-over-Day Growth Rate|p-value
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Day-over-Day Growth Rate|Absolute Week-over-Week Change in Day-over-Day Growth Rate|p-value
 -|-|-|-|-|-
 1|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|281.4|6.949%|4.089%|6.024e-06
 2|[Malaysia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malaysia/index.html)|82.0|3.491%|8.953%|1.837e-05
@@ -75,7 +75,7 @@ Rank|Country|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate
 
 
 ## U.S. States with Highest Likelihood of Case Acceleration
-Rank|State|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate|Absolute Week-to-Week Change in Day-over-Day Growth Rate|p-value
+Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Day-over-Day Growth Rate|Absolute Week-over-Week Change in Day-over-Day Growth Rate|p-value
 -|-|-|-|-|-
 1|[US: Wisconsin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_wisconsin/index.html)|446.6|2.941%|2.705%|1.04e-06
 2|[US: Vermont](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_vermont/index.html)|3.6|2.558%|10.21%|2.256e-05
@@ -95,7 +95,7 @@ Rank|State|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate|A
 
 
 ## U.S. Counties with Highest Likelihood of Case Acceleration, Among Top 500 by Current Case Count
-Rank|State:County|7-Day Avg. New Daily Infections|Infections Day-over-Day Growth Rate|Absolute Week-to-Week Change in Day-over-Day Growth Rate|p-value
+Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Day-over-Day Growth Rate|Absolute Week-over-Week Change in Day-over-Day Growth Rate|p-value
 -|-|-|-|-|-
 1|[US: Georgia: Hall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_georgia_hall/index.html)|20.7|0.4455%|13.28%|7.721e-09
 2|[US: Texas: Galveston](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_texas_galveston/index.html)|9.3|6.303%|16.61%|2.732e-08
