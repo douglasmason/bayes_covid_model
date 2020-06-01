@@ -40,11 +40,14 @@ We model universal curves of reported COVID-19 daily infections and related deat
 ![boxplot](/static_figures/statsmodels_growth_rate_time_series.png?)
 **Figure 2c:** Three-week moving-window model growth rate curves for three months and COVID-19 Cumulative Reported Cases and Related Deaths in the U.S.
 
+![boxplot](/static_figures/acceleration_diagram.png?)
+**Figure 3a:** Schematic diagram demonstrating how the Week-over-Week Change in 3-Week Avg. Daily Relative Growth Rate is computed.
+
 ![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels.png?)
-**Figure 3a:** Model parameter estimates for the current growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
+**Figure 3b:** Model parameter estimates for the current growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
 
 ![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels_acc.png?)
-**Figure 3b:** Model parameter estimates for the week-over-week change in growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. States  higher in the list are candidates for new waves or outbreaks.
+**Figure 3c:** Model parameter estimates for the week-over-week change in growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. States  higher in the list are candidates for new waves or outbreaks.
 
 More figures can be found in the Figure Browser links at the top of this page. 
 
