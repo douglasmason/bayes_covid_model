@@ -52,7 +52,7 @@ We model universal curves of reported COVID-19 daily infections and related deat
 More figures can be found in the Figure Browser links at the top of this page. 
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-to-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|281.4|6.949%|4.089%|6.024e-06
 2|[Malaysia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malaysia/index.html)|82.0|3.491%|8.953%|1.837e-05
