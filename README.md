@@ -1,6 +1,6 @@
 # bayes_covid_model
 
-**[Leading Countries, U.S. States, and U.S. State Counties by Daily Relative Growth Rate](#countries-with-highest-daily-relative-growth-rates)**
+**[Leading Countries, U.S. States, and U.S. State Counties by Daily Relative Growth Rate](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
 
 **[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
 
@@ -53,8 +53,8 @@ We model universal curves of reported COVID-19 daily infections and related deat
 
 More figures can be found in the Figure Browser links at the top of this page. 
 
-## Countries with Highest Daily Relative Growth Rates
-Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+## Countries with Highest Likelihood of Exponential Growth in Infections
+Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
 -|-|-|-|-
 1|[Bolivia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bolivia/index.html)|550.7|6.925%|5.776e-75
 2|[Egypt](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/egypt/index.html)|1254.3|7.319%|1.147e-56
@@ -139,9 +139,10 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 81|[Nicaragua](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/nicaragua/index.html)|51.3|8.881%|0.09997
 
 
-## U.S. States with Highest Daily Relative Growth Rate
-Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
--|-|-|-|-|-
+
+## U.S. States with Highest Likelihood of Exponential Growth in Infections
+Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
 1|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|5.718e-27
 2|[US: Mississippi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_mississippi/index.html)|330.0|1.873%|2.11e-13
 3|[US: Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|4.756e-13
@@ -161,13 +162,9 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 17|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|0.02985
 18|[US: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|0.06991
 
-
-
-
-
-## U.S. Counties with Highest Likelihood of Case Acceleration
-Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
--|-|-|-|-|-
+## U.S. Counties with Highest Likelihood of Exponential Growth in Infections
+Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
 1|[US: Indiana: Marshall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_indiana_marshall/index.html)|7.4|12.33%|6.522e-45
 2|[US: Arkansas: Benton](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_arkansas_benton/index.html)|51.6|18.81%|6.442e-41
 3|[US: Arkansas: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_arkansas_washington/index.html)|45.3|16.37%|4.853e-32
@@ -421,8 +418,8 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
--|-|-|-|-
+Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+-|-|-|-|-|-
 1|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|15.94%|2.598e-09
 2|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|12.58%|4.517e-06
 3|[Philippines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/philippines/index.html)|618.3|6.704%|6.614%|1.028e-05
@@ -487,7 +484,8 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 
 ## U.S. States with Highest Likelihood of Case Acceleration
 Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
--|-|-|-|-|-1|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|13.42%|1.592e-05
+-|-|-|-|-|-
+1|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|13.42%|1.592e-05
 2|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
 3|[US: Oregon](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_oregon/index.html)|52.6|-0.759%|4.453%|0.0003193
 4|[US: South Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_carolina/index.html)|285.6|3.626%|2.137%|0.0006979
