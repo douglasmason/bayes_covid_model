@@ -1,6 +1,6 @@
 # bayes_covid_model
 
-**[Leading Countries, U.S. States, and U.S. State Counties by Daily Relative Growth Rate](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
+**[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Positive Exponential Growth in Infections](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
 
 **[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
 
