@@ -150,7 +150,8 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 
 ## U.S. Counties with Highest Likelihood of Exponential Growth in Infections
 Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
--|-|-|-|-1|[Indiana: Marshall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_indiana_marshall/index.html)|7.4|12.33%|6.522e-45
+-|-|-|-|-
+1|[Indiana: Marshall](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_indiana_marshall/index.html)|7.4|12.33%|6.522e-45
 2|[Arkansas: Benton](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_arkansas_benton/index.html)|51.6|18.81%|6.442e-41
 3|[Arkansas: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_arkansas_washington/index.html)|45.3|16.37%|4.853e-32
 4|[Alabama: Morgan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_alabama_morgan/index.html)|14.0|12.9%|9.959e-32
