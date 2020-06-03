@@ -97,46 +97,33 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 39|[Peru](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/peru/index.html)|5755.4|3.493%|5.237e-06
 40|[El Salvador](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/el_salvador/index.html)|87.3|1.833%|5.333e-06
 41|[Rwanda](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/rwanda/index.html)|6.4|11.01%|5.595e-06
-42|[Namibia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/namibia/index.html)|0.6|13.66%|5.898e-06
-43|[Pakistan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/pakistan/index.html)|2670.4|3.631%|7.236e-06
-44|[Mali](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/mali/index.html)|39.1|3.052%|3.957e-05
-45|[Guatemala](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/guatemala/index.html)|233.1|5.172%|5.092e-05
-46|[Taiwan*](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/taiwan*/index.html)|0.3|7.768%|5.376e-05
-47|[Maldives](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/maldives/index.html)|57.6|3.83%|7.176e-05
-48|[Suriname](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/suriname/index.html)|6.1|18.59%|0.0001588
-49|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|0.0003705
-50|[Sri Lanka](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sri_lanka/index.html)|52.0|7.9%|0.0004692
-51|[Saint Vincent and the Grenadines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/saint_vincent_and_the_grenadines/index.html)|1.1|12.22%|0.0007424
-52|[Albania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/albania/index.html)|19.3|5.05%|0.00103
-53|[Venezuela](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/venezuela/index.html)|86.9|8.827%|0.001175
-54|[Jamaica](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/jamaica/index.html)|3.7|5.418%|0.0012
-55|[Central African Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/central_african_republic/index.html)|56.9|17.22%|0.003765
-56|[Angola](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/angola/index.html)|2.3|9.45%|0.006334
-57|[Trinidad and Tobago](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/trinidad_and_tobago/index.html)|0.1|4.591%|0.006541
-58|[Antigua and Barbuda](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/antigua_and_barbuda/index.html)|0.1|4.591%|0.006541
-59|[Iceland](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iceland/index.html)|0.3|4.591%|0.006541
-60|[Honduras](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/honduras/index.html)|160.9|3.268%|0.0076
-61|[Malaysia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malaysia/index.html)|39.0|4.025%|0.0144
-62|[Cote d'Ivoire](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/cote_d'ivoire/index.html)|78.1|2.749%|0.01447
-63|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|0.01479
-64|[Tunisia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/tunisia/index.html)|5.0|9.409%|0.01746
-65|[Indonesia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/indonesia/index.html)|626.3|1.09%|0.01774
-66|[Sweden](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sweden/index.html)|592.7|0.7754%|0.02126
-67|[Burma](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/burma/index.html)|3.7|7.015%|0.0257
-68|[Dominican Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/dominican_republic/index.html)|355.4|1.135%|0.02697
-69|[Comoros](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/comoros/index.html)|6.4|18.9%|0.02909
-70|[Mozambique](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/mozambique/index.html)|13.4|2.628%|0.0362
-71|[Benin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/benin/index.html)|5.1|15.25%|0.03696
-72|[Yemen](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/yemen/index.html)|21.4|2.754%|0.03867
-73|[Cambodia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/cambodia/index.html)|0.1|4.591%|0.04895
-74|[Bahrain](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bahrain/index.html)|420.7|1.798%|0.05171
-75|[Paraguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/paraguay/index.html)|19.4|3.328%|0.05394
-76|[Sudan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sudan/index.html)|190.6|1.534%|0.0588
-77|[West Bank and Gaza](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/west_bank_and_gaza/index.html)|3.1|11.53%|0.06547
-78|[Ghana](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ghana/index.html)|168.6|2.52%|0.06604
-79|[Uruguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/uruguay/index.html)|5.3|3.313%|0.0672
-80|[Mauritius](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/mauritius/index.html)|0.1|4.591%|0.0814
-81|[Nicaragua](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/nicaragua/index.html)|51.3|8.881%|0.09997
+42|[Pakistan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/pakistan/index.html)|2670.4|3.631%|7.236e-06
+43|[Mali](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/mali/index.html)|39.1|3.052%|3.957e-05
+44|[Guatemala](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/guatemala/index.html)|233.1|5.172%|5.092e-05
+45|[Maldives](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/maldives/index.html)|57.6|3.83%|7.176e-05
+46|[Suriname](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/suriname/index.html)|6.1|18.59%|0.0001588
+47|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|0.0003705
+48|[Sri Lanka](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sri_lanka/index.html)|52.0|7.9%|0.0004692
+49|[Albania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/albania/index.html)|19.3|5.05%|0.00103
+50|[Venezuela](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/venezuela/index.html)|86.9|8.827%|0.001175
+51|[Central African Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/central_african_republic/index.html)|56.9|17.22%|0.003765
+52|[Honduras](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/honduras/index.html)|160.9|3.268%|0.0076
+53|[Malaysia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malaysia/index.html)|39.0|4.025%|0.0144
+54|[Cote d'Ivoire](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/cote_d'ivoire/index.html)|78.1|2.749%|0.01447
+55|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|0.01479
+56|[Indonesia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/indonesia/index.html)|626.3|1.09%|0.01774
+57|[Sweden](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sweden/index.html)|592.7|0.7754%|0.02126
+58|[Dominican Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/dominican_republic/index.html)|355.4|1.135%|0.02697
+59|[Comoros](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/comoros/index.html)|6.4|18.9%|0.02909
+60|[Mozambique](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/mozambique/index.html)|13.4|2.628%|0.0362
+61|[Benin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/benin/index.html)|5.1|15.25%|0.03696
+62|[Yemen](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/yemen/index.html)|21.4|2.754%|0.03867
+63|[Bahrain](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bahrain/index.html)|420.7|1.798%|0.05171
+64|[Paraguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/paraguay/index.html)|19.4|3.328%|0.05394
+65|[Sudan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sudan/index.html)|190.6|1.534%|0.0588
+66|[Ghana](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ghana/index.html)|168.6|2.52%|0.06604
+67|[Uruguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/uruguay/index.html)|5.3|3.313%|0.0672
+68|[Nicaragua](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/nicaragua/index.html)|51.3|8.881%|0.09997
 
 
 
@@ -156,11 +143,9 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 11|[US: Wisconsin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_wisconsin/index.html)|436.3|1.871%|0.002627
 12|[US: Virginia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virginia/index.html)|985.3|1.411%|0.003779
 13|[US: Missouri](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_missouri/index.html)|205.1|1.423%|0.01273
-14|[US: Vermont](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_vermont/index.html)|3.0|3.219%|0.01362
-15|[US: Guam](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_guam/index.html)|1.1|8.132%|0.01373
-16|[US: Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|0.02062
-17|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|0.02985
-18|[US: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|0.06991
+14|[US: Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|0.02062
+15|[US: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|0.06991
+
 
 ## U.S. Counties with Highest Likelihood of Exponential Growth in Infections
 Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
@@ -417,6 +402,7 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 250|[US: Maryland: Baltimore city](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_maryland_baltimore_city/index.html)|98.6|2.228%|0.09767
 
 
+
 ## Countries with Highest Likelihood of Case Acceleration
 Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
@@ -436,73 +422,58 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 14|[Malawi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/malawi/index.html)|36.7|20.95%|17.12%|0.000531
 15|[Australia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/australia/index.html)|12.9|-0.3855%|4.161%|0.0009972
 16|[Libya](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/libya/index.html)|15.0|32%|14.3%|0.001175
-17|[Brunei](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/brunei/index.html)|0.0|0%|8.837%|0.001206
-18|[Slovenia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/slovenia/index.html)|0.9|-4.146%|11.1%|0.001303
-19|[Suriname](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/suriname/index.html)|6.1|18.59%|16.83%|0.001398
-20|[Romania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/romania/index.html)|155.4|-1.813%|1.862%|0.001904
-21|[Bosnia and Herzegovina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bosnia_and_herzegovina/index.html)|17.0|-2.69%|3.045%|0.001911
-22|[Taiwan*](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/taiwan*/index.html)|0.3|7.768%|11.73%|0.002644
-23|[Ukraine](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ukraine/index.html)|473.0|0.2329%|1.825%|0.002772
-24|[Denmark](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/denmark/index.html)|43.9|-2.989%|2.02%|0.003513
-25|[Ghana](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ghana/index.html)|168.6|2.52%|7.823%|0.00363
-26|[Kyrgyzstan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/kyrgyzstan/index.html)|53.9|5.512%|3.959%|0.005797
-27|[Netherlands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/netherlands/index.html)|153.1|-1.062%|1.934%|0.006235
-28|[Benin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/benin/index.html)|5.1|15.25%|35.52%|0.006483
-29|[Antigua and Barbuda](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/antigua_and_barbuda/index.html)|0.1|4.591%|4.591%|0.006541
-30|[Trinidad and Tobago](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/trinidad_and_tobago/index.html)|0.1|4.591%|4.591%|0.006541
-31|[Tanzania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/tanzania/index.html)|0.0|0%|15.06%|0.006541
-32|[Holy See](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/holy_see/index.html)|0.0|0%|4.591%|0.006541
-33|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|362.7|8.774%|2.544%|0.006561
-34|[Albania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/albania/index.html)|19.3|5.05%|5.461%|0.007544
-35|[Kenya](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/kenya/index.html)|106.4|9.122%|4.518%|0.008482
-36|[Cote d'Ivoire](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/cote_d'ivoire/index.html)|78.1|2.749%|3.826%|0.01002
-37|[Azerbaijan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/azerbaijan/index.html)|218.9|4.329%|1.589%|0.01166
-38|[North Macedonia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/north_macedonia/index.html)|53.9|4.51%|2.36%|0.01856
-39|[Saint Vincent and the Grenadines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/saint_vincent_and_the_grenadines/index.html)|1.1|12.22%|8.912%|0.02006
-40|[Rwanda](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/rwanda/index.html)|6.4|11.01%|8.635%|0.02445
-41|[Russia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/russia/index.html)|8692.0|-0.9354%|0.4404%|0.02694
-42|[Dominican Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/dominican_republic/index.html)|355.4|1.135%|1.47%|0.03021
-43|[Montenegro](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/montenegro/index.html)|0.0|0%|3.639%|0.03202
-44|[Andorra](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/andorra/index.html)|11.6|3.257%|12.53%|0.03524
-45|[Costa Rica](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/costa_rica/index.html)|21.3|4.793%|2.385%|0.04122
-46|[Burma](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/burma/index.html)|3.7|7.015%|9.465%|0.04231
-47|[Sri Lanka](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sri_lanka/index.html)|52.0|7.9%|4.886%|0.04513
-48|[Bolivia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bolivia/index.html)|550.7|6.925%|0.9448%|0.04581
-49|[Guinea-Bissau](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/guinea-bissau/index.html)|23.0|-3.842%|6.067%|0.05213
-50|[Jamaica](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/jamaica/index.html)|3.7|5.418%|4.843%|0.05568
-51|[Pakistan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/pakistan/index.html)|2670.4|3.631%|1.866%|0.05592
-52|[Norway](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/norway/index.html)|10.3|-3.233%|1.909%|0.059
-53|[Zimbabwe](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/zimbabwe/index.html)|21.4|21.47%|9.169%|0.06107
-54|[Switzerland](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/switzerland/index.html)|16.1|-5.086%|1.928%|0.06659
-55|[Sao Tome and Principe](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sao_tome_and_principe/index.html)|6.1|9.753%|18.98%|0.07567
-56|[Tunisia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/tunisia/index.html)|5.0|9.409%|9.612%|0.07876
-57|[Uruguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/uruguay/index.html)|5.3|3.313%|4.456%|0.07878
-58|[United Kingdom](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/united_kingdom/index.html)|1827.6|-3.502%|1.748%|0.08423
-
+17|[Suriname](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/suriname/index.html)|6.1|18.59%|16.83%|0.001398
+18|[Romania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/romania/index.html)|155.4|-1.813%|1.862%|0.001904
+19|[Bosnia and Herzegovina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bosnia_and_herzegovina/index.html)|17.0|-2.69%|3.045%|0.001911
+20|[Ukraine](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ukraine/index.html)|473.0|0.2329%|1.825%|0.002772
+21|[Denmark](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/denmark/index.html)|43.9|-2.989%|2.02%|0.003513
+22|[Ghana](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/ghana/index.html)|168.6|2.52%|7.823%|0.00363
+23|[Kyrgyzstan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/kyrgyzstan/index.html)|53.9|5.512%|3.959%|0.005797
+24|[Netherlands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/netherlands/index.html)|153.1|-1.062%|1.934%|0.006235
+25|[Benin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/benin/index.html)|5.1|15.25%|35.52%|0.006483
+26|[Iraq](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/iraq/index.html)|362.7|8.774%|2.544%|0.006561
+27|[Albania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/albania/index.html)|19.3|5.05%|5.461%|0.007544
+28|[Kenya](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/kenya/index.html)|106.4|9.122%|4.518%|0.008482
+29|[Cote d'Ivoire](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/cote_d'ivoire/index.html)|78.1|2.749%|3.826%|0.01002
+30|[Azerbaijan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/azerbaijan/index.html)|218.9|4.329%|1.589%|0.01166
+31|[North Macedonia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/north_macedonia/index.html)|53.9|4.51%|2.36%|0.01856
+32|[Rwanda](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/rwanda/index.html)|6.4|11.01%|8.635%|0.02445
+33|[Russia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/russia/index.html)|8692.0|-0.9354%|0.4404%|0.02694
+34|[Dominican Republic](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/dominican_republic/index.html)|355.4|1.135%|1.47%|0.03021
+35|[Andorra](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/andorra/index.html)|11.6|3.257%|12.53%|0.03524
+36|[Costa Rica](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/costa_rica/index.html)|21.3|4.793%|2.385%|0.04122
+37|[Sri Lanka](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sri_lanka/index.html)|52.0|7.9%|4.886%|0.04513
+38|[Bolivia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bolivia/index.html)|550.7|6.925%|0.9448%|0.04581
+39|[Guinea-Bissau](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/guinea-bissau/index.html)|23.0|-3.842%|6.067%|0.05213
+40|[Pakistan](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/pakistan/index.html)|2670.4|3.631%|1.866%|0.05592
+41|[Norway](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/norway/index.html)|10.3|-3.233%|1.909%|0.059
+42|[Zimbabwe](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/zimbabwe/index.html)|21.4|21.47%|9.169%|0.06107
+43|[Switzerland](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/switzerland/index.html)|16.1|-5.086%|1.928%|0.06659
+44|[Sao Tome and Principe](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/sao_tome_and_principe/index.html)|6.1|9.753%|18.98%|0.07567
+45|[Uruguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/uruguay/index.html)|5.3|3.313%|4.456%|0.07878
+46|[United Kingdom](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/united_kingdom/index.html)|1827.6|-3.502%|1.748%|0.08423
 
 
 
 ## U.S. States with Highest Likelihood of Case Acceleration
 Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
-1|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|13.42%|1.592e-05
-2|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
-3|[US: Oregon](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_oregon/index.html)|52.6|-0.759%|4.453%|0.0003193
-4|[US: South Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_carolina/index.html)|285.6|3.626%|2.137%|0.0006979
-5|[US: Colorado](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_colorado/index.html)|317.4|-0.3801%|1.955%|0.00156
-6|[US: Hawaii](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_hawaii/index.html)|1.4|1.951%|14.42%|0.002698
-7|[US: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|3.522%|0.01114
-8|[US: Alaska](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alaska/index.html)|10.9|13.31%|10.86%|0.01238
-9|[US: Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|2.291%|0.01877
-10|[US: Vermont](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_vermont/index.html)|3.0|3.219%|4.743%|0.0199
-11|[US: Mississippi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_mississippi/index.html)|330.0|1.873%|1.097%|0.02295
-12|[US: Missouri](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_missouri/index.html)|205.1|1.423%|2.04%|0.03169
-13|[US: Kentucky](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kentucky/index.html)|176.3|0.4149%|3.629%|0.03272
-14|[US: Utah](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_utah/index.html)|226.0|2.27%|1.607%|0.03287
-15|[US: Kansas](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kansas/index.html)|109.4|-2.488%|2.135%|0.04497
-16|[US: South Dakota](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_dakota/index.html)|59.1|-0.1413%|2.911%|0.0519
-17|[US: Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|1.533%|0.05571
-18|[US: Pennsylvania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_pennsylvania/index.html)|635.3|-1.915%|0.7352%|0.09979
+1|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
+2|[US: Oregon](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_oregon/index.html)|52.6|-0.759%|4.453%|0.0003193
+3|[US: South Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_carolina/index.html)|285.6|3.626%|2.137%|0.0006979
+4|[US: Colorado](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_colorado/index.html)|317.4|-0.3801%|1.955%|0.00156
+5|[US: Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|3.522%|0.01114
+6|[US: Alaska](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alaska/index.html)|10.9|13.31%|10.86%|0.01238
+7|[US: Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|2.291%|0.01877
+8|[US: Mississippi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_mississippi/index.html)|330.0|1.873%|1.097%|0.02295
+9|[US: Missouri](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_missouri/index.html)|205.1|1.423%|2.04%|0.03169
+10|[US: Kentucky](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kentucky/index.html)|176.3|0.4149%|3.629%|0.03272
+11|[US: Utah](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_utah/index.html)|226.0|2.27%|1.607%|0.03287
+12|[US: Kansas](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kansas/index.html)|109.4|-2.488%|2.135%|0.04497
+13|[US: South Dakota](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_dakota/index.html)|59.1|-0.1413%|2.911%|0.0519
+14|[US: Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|1.533%|0.05571
+15|[US: Pennsylvania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_pennsylvania/index.html)|635.3|-1.915%|0.7352%|0.09979
+
 
 
 
