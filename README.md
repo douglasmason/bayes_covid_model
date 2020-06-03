@@ -461,21 +461,22 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 ## U.S. States with Highest Likelihood of Case Acceleration
 Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
-1|[California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|5.718e-27
-2|[Mississippi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_mississippi/index.html)|330.0|1.873%|2.11e-13
-3|[Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|4.756e-13
-4|[South Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_carolina/index.html)|285.6|3.626%|1.525e-09
-5|[Arkansas](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arkansas/index.html)|234.0|4.655%|7.816e-09
-6|[North Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_north_carolina/index.html)|795.4|2.666%|1.477e-05
-7|[Puerto Rico](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_puerto_rico/index.html)|87.3|1.87%|4.035e-05
-8|[West Virginia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_west_virginia/index.html)|40.3|4.848%|0.0002246
-9|[Alaska](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alaska/index.html)|10.9|13.31%|0.0003138
-10|[Utah](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_utah/index.html)|226.0|2.27%|0.002098
-11|[Wisconsin](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_wisconsin/index.html)|436.3|1.871%|0.002627
-12|[Virginia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virginia/index.html)|985.3|1.411%|0.003779
-13|[Missouri](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_missouri/index.html)|205.1|1.423%|0.01273
-14|[Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|0.02062
-15|[Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|0.06991
+|[California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
+2|[Oregon](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_oregon/index.html)|52.6|-0.759%|4.453%|0.0003193
+3|[South Carolina](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_carolina/index.html)|285.6|3.626%|2.137%|0.0006979
+4|[Colorado](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_colorado/index.html)|317.4|-0.3801%|1.955%|0.00156
+5|[Washington](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_washington/index.html)|282.3|1.705%|3.522%|0.01114
+6|[Alaska](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alaska/index.html)|10.9|13.31%|10.86%|0.01238
+7|[Arizona](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_arizona/index.html)|628.6|2.062%|2.291%|0.01877
+8|[Mississippi](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_mississippi/index.html)|330.0|1.873%|1.097%|0.02295
+9|[Missouri](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_missouri/index.html)|205.1|1.423%|2.04%|0.03169
+10|[Kentucky](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kentucky/index.html)|176.3|0.4149%|3.629%|0.03272
+11|[Utah](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_utah/index.html)|226.0|2.27%|1.607%|0.03287
+12|[Kansas](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_kansas/index.html)|109.4|-2.488%|2.135%|0.04497
+13|[South Dakota](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_south_dakota/index.html)|59.1|-0.1413%|2.911%|0.0519
+14|[Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|1.533%|0.05571
+15|[Pennsylvania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_pennsylvania/index.html)|635.3|-1.915%|0.7352%|0.09979
+
 
 
 
