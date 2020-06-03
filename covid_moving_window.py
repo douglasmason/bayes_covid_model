@@ -15,9 +15,12 @@ moving_window_size = 21  # three weeks
 opt_force_calc = False
 opt_force_plot = False
 opt_simplified = False  # set to True to just do statsmodels as a simplified daily service
+opt_plot = True
+opt_truncate = True
 override_run_states = None
 override_max_date_str = None
-
+override_region = Region.US_counties
+opt_report = True
 
 # ['total', 'Virginia', 'Arkansas', 'Connecticut', 'Alaska', 'South Dakota', 'Hawaii', 'Vermont', 'Wyoming'] # None
 
@@ -26,20 +29,19 @@ override_max_date_str = None
 ###
 
 def run_everything():
-
     if override_run_states is not None:
-        countries_plot_subfolder = _run_everything_sub(region=Region.countries, override_run_states=override_run_states)
+        countries_plot_subfolder = _run_everything_sub(region=override_region, override_run_states=override_run_states)
         return {Region.countries: countries_plot_subfolder}
     else:
-        countries_plot_subfolder = _run_everything_sub(region=Region.countries)
-        us_states_plot_subfolder = _run_everything_sub(region=Region.US_states)
-        us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties)
-        provinces_plot_subfolder = _run_everything_sub(region=Region.provinces)
+        us_counties_plot_subfolder = _run_everything_sub(region=Region.US_counties, override_run_states=override_run_states)
+        countries_plot_subfolder = _run_everything_sub(region=Region.countries, override_run_states=override_run_states)
+        us_states_plot_subfolder = _run_everything_sub(region=Region.US_states, override_run_states=override_run_states)
+        # provinces_plot_subfolder = _run_everything_sub(region=Region.provinces, override_run_states=override_run_states)
         return {
+            Region.US_counties: us_counties_plot_subfolder,
             Region.countries: countries_plot_subfolder,
             Region.US_states: us_states_plot_subfolder, 
-            Region.US_counties: us_counties_plot_subfolder, 
-            Region.provinces: provinces_plot_subfolder
+            # Region.provinces: provinces_plot_subfolder
         }
 
 
@@ -51,12 +53,13 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
 
     load_data.current_cases_ranked_non_us_provinces = [x for x in load_data.current_cases_ranked_non_us_provinces \
                                                        if not x.startswith('US:')]
-    
+
     # Remove provinces without enough data
     new_provinces = list()
     for province in load_data.current_cases_ranked_non_us_provinces:
         tmp_dict = load_data.get_state_data(province)
-        if tmp_dict['series_data'].shape[1] < 3 or tmp_dict['series_data'].shape[0] < 30 or province.startswith('China:'):
+        if tmp_dict['series_data'].shape[1] < 3 or tmp_dict['series_data'].shape[0] < 30 or province.startswith(
+                'China:'):
             print(f'Removing province {province}')
             if tmp_dict['series_data'].shape[1] >= 3:
                 print(f'  with tmp_dict["series_data"].shape = {tmp_dict["series_data"].shape}')
@@ -65,7 +68,6 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
             print(f'  with tmp_dict["series_data"].shape = {tmp_dict["series_data"].shape}')
             new_provinces.append(province)
     load_data.current_cases_ranked_non_us_provinces = new_provinces
-    
 
     print('load_data.current_cases_ranked_non_us_provinces')
     [print(x) for x in sorted(load_data.current_cases_ranked_non_us_provinces)]
@@ -74,12 +76,18 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
         if region == Region.US_states:
             override_run_states = load_data.current_cases_ranked_us_states
         elif region == Region.US_counties:
-            override_run_states = load_data.current_cases_ranked_us_counties
+            if opt_truncate:
+                override_run_states = load_data.current_cases_ranked_us_counties[:100]
+            else:
+                override_run_states = load_data.current_cases_ranked_us_counties
         elif region == Region.countries:
-            override_run_states = load_data.current_cases_ranked_non_us_states[:100]
+            if opt_truncate:
+                override_run_states = load_data.current_cases_ranked_non_us_states[:100]
+            else:
+                override_run_states = load_data.current_cases_ranked_non_us_states
         elif region == Region.provinces:
-            override_run_states = load_data.current_cases_ranked_non_us_provinces[:200]
-    
+            override_run_states = load_data.current_cases_ranked_non_us_provinces[:100]
+
         override_run_states = [x for x in override_run_states if not x.startswith(' ')]
 
     print('Gonna run these states:')
@@ -216,12 +224,14 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
                                              static_params=static_params,
                                              opt_force_calc=opt_force_calc,
                                              opt_force_plot=opt_force_plot,
+                                             opt_plot=opt_plot,
                                              logarithmic_params=logarithmic_params,
                                              extra_params=extra_params,
                                              plot_param_names=plot_param_names,
                                              opt_statsmodels=True,
                                              opt_simplified=opt_simplified,
                                              override_max_date_str=override_max_date_str,
+                                             opt_report=opt_report
                                              )
 
     return plot_subfolder

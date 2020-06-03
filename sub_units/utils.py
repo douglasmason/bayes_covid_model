@@ -7,6 +7,7 @@ pd.plotting.register_matplotlib_converters()  # addresses complaints about Times
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import matplotlib.ticker as mtick
 import joblib
 from scipy.stats import norm as sp_norm
 
@@ -116,6 +117,9 @@ def render_whisker_plot_simplified(state_report,
         except:
             pass
 
+    def convert_growth_rate_to_perc(x):
+        return np.exp(x) - 1
+
     map_approx_type_to_boxes = dict()
     for approx_type in approx_types:
         try:
@@ -126,11 +130,11 @@ def render_whisker_plot_simplified(state_report,
                 new_box = \
                     {
                         'label': approx_type.value[1],
-                        'whislo': row[f'{param_name_abbr}_p5'].values[0],  # Bottom whisker position
-                        'q1': row[f'{param_name_abbr}_p25'].values[0],  # First quartile (25th percentile)
-                        'med': row[f'{param_name_abbr}_p50'].values[0],  # Median         (50th percentile)
-                        'q3': row[f'{param_name_abbr}_p75'].values[0],  # Third quartile (75th percentile)
-                        'whishi': row[f'{param_name_abbr}_p95'].values[0],  # Top whisker position
+                        'whislo': convert_growth_rate_to_perc(row[f'{param_name_abbr}_p5'].values[0]),  # Bottom whisker position
+                        'q1': convert_growth_rate_to_perc(row[f'{param_name_abbr}_p25'].values[0]),  # First quartile (25th percentile)
+                        'med': convert_growth_rate_to_perc(row[f'{param_name_abbr}_p50'].values[0]),  # Median         (50th percentile)
+                        'q3': convert_growth_rate_to_perc(row[f'{param_name_abbr}_p75'].values[0]),  # Third quartile (75th percentile)
+                        'whishi': convert_growth_rate_to_perc(row[f'{param_name_abbr}_p95'].values[0]),  # Top whisker position
                         'fliers': []  # Outliers
                     }
                 tmp_list.append(new_box)
@@ -169,6 +173,8 @@ def render_whisker_plot_simplified(state_report,
 
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))
+
     # fill with colors
     colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'navy', 'teal', 'orchid', 'tan']
     for approx_type, color in zip(sorted(map_approx_type_to_ax), colors):
@@ -197,6 +203,12 @@ def render_whisker_plot_simplified(state_report,
     plt.subplots_adjust(left=0.2)
     if opt_log:
         plt.xscale('log')
+    
+    if 'slope' in plot_param_name and ApproxType.SM_acc not in approx_types:
+        plt.xlabel('Daily Relative Growth Rate')
+    elif 'slope' in plot_param_name and ApproxType.SM_acc in approx_types:
+        plt.xlabel('Absolute Week-over-Week Change in Daily Relative Growth Rate')
+        
     plt.savefig(output_filename, dpi=300)
     # plt.boxplot(small_state_report['state'], small_state_report[['BS_p5', 'BS_p95']])
 
@@ -214,15 +226,16 @@ def generate_state_prediction(map_state_name_to_model,
         else:
             print(f'Skipping {state}!')
             continue
-
+        
+        print(f'Running predictions on {state} ({state_ind} of {len(map_state_name_to_model)})')
         if state_model is not None:
 
             for approx_type in state_model.model_approx_types:
 
                 if approx_type == ApproxType.SM or approx_type == ApproxType.SM_acc or approx_type == ApproxType.SM_TS:
-                    params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels()
+                    params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels(n_samples=200)
                 elif approx_type == ApproxType.PyMC3:
-                    params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3()
+                    params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3(n_samples=200)
                 print(approx_type)
                 param_inds_to_plot = list(range(len(params)))
                 param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
@@ -323,7 +336,8 @@ def generate_state_prediction(map_state_name_to_model,
 
 def generate_state_report(map_state_name_to_model,
                           state_report_filename=None,
-                          report_names=None):
+                          report_names=None,
+                          opt_save_to_csv=True):
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -343,10 +357,15 @@ def generate_state_report(map_state_name_to_model,
             except:
                 LS_params = [0]
 
-            try:
-                SM_params, _, _, _ = state_model.get_weighted_samples_via_statsmodels()
-            except:
-                SM_params = [0]
+            # try:
+            #     SM_params, _, _, _ = state_model.get_weighted_samples_via_statsmodels()
+            # except:
+            #     SM_params = [0]
+
+            positive_names = [name for name in state_model.sorted_names if 'positive' in name and 'sigma' not in name]
+            map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
+            deceased_names = [name for name in state_model.sorted_names if 'deceased' in name and 'sigma' not in name]
+            map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
 
             try:
                 SM_acc_params = state_model.map_param_to_acc
@@ -389,11 +408,11 @@ def generate_state_report(map_state_name_to_model,
                         except:
                             pass
 
-                    try:
-                        SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
-                                   range(len(SM_params))]
-                    except:
-                        pass
+                    # try:
+                    #     SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
+                    #                range(len(SM_params))]
+                    # except:
+                    #     pass
 
                     try:
                         PyMC3_vals = [PyMC3_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
@@ -422,11 +441,11 @@ def generate_state_report(map_state_name_to_model,
                     except:
                         pass
 
-                    try:
-                        SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
-                                   in range(len(SM_params))]
-                    except:
-                        pass
+                    # try:
+                    #     SM_vals = [state_model.extra_params[param_name](SM_params[i]) for i
+                    #                in range(len(SM_params))]
+                    # except:
+                    #     pass
 
                     approx_type_vals = dict()
                     for approx_type in state_model.map_approx_type_to_model:
@@ -461,21 +480,17 @@ def generate_state_report(map_state_name_to_model,
                     SM_acc_mean = SM_acc_params[param_name]['slope2'] - SM_acc_params[param_name]['slope1']
                     SM_acc_std_err = np.sqrt(
                         SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
-                    SM_acc_vals = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err).rvs(1000)
+                    SM_acc_model = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err)
 
                     dict_to_add.update({
-                        'statsmodels_acc_mean': np.average(SM_acc_vals),
-                        'statsmodels_acc_std_err': np.std(SM_acc_vals),
-                        'statsmodels_acc_fwhm': np.std(SM_acc_vals) * 2.355,
-                        'statsmodels_acc_p50': np.percentile(SM_acc_vals, 50),
-                        'statsmodels_acc_p5':
-                            np.percentile(SM_acc_vals, 5),
-                        'statsmodels_acc_p95':
-                            np.percentile(SM_acc_vals, 95),
-                        'statsmodels_acc_p25':
-                            np.percentile(SM_acc_vals, 25),
-                        'statsmodels_acc_p75':
-                            np.percentile(SM_acc_vals, 75)
+                        'statsmodels_acc_mean': SM_acc_mean,
+                        'statsmodels_acc_std_err': SM_acc_std_err,
+                        'statsmodels_acc_fwhm': SM_acc_std_err * 2.355,
+                        'statsmodels_acc_p50': SM_acc_model.ppf(0.5),
+                        'statsmodels_acc_p5': SM_acc_model.ppf(0.05),
+                        'statsmodels_acc_p95': SM_acc_model.ppf(0.95),
+                        'statsmodels_acc_p25': SM_acc_model.ppf(0.25),
+                        'statsmodels_acc_p75': SM_acc_model.ppf(0.75),
                     })
 
                     dict_to_add.update({
@@ -530,23 +545,44 @@ def generate_state_report(map_state_name_to_model,
                     })
                 except:
                     pass
-                try:
-                    dict_to_add.update({
-                        'statsmodels_mean': np.average(SM_vals),
-                        'statsmodels_std_err': np.std(SM_vals),
-                        'statsmodels_fwhm': np.std(SM_vals) * 2.355,
-                        'statsmodels_p50': np.percentile(SM_vals, 50),
-                        'statsmodels_p5':
-                            np.percentile(SM_vals, 5),
-                        'statsmodels_p95':
-                            np.percentile(SM_vals, 95),
-                        'statsmodels_p25':
-                            np.percentile(SM_vals, 25),
-                        'statsmodels_p75':
-                            np.percentile(SM_vals, 75)
-                    })
-                except:
+
+                if hasattr(state_model, 'map_param_name_to_statsmodels_norm_model'):
+                    if param_name in state_model.map_param_name_to_statsmodels_norm_model:
+                        use_model = state_model.map_param_name_to_statsmodels_norm_model[param_name]
+                        dict_to_add.update({
+                            'statsmodels_mean': use_model.mean(),
+                            'statsmodels_std_err': use_model.std(),
+                            'statsmodels_fwhm': use_model.std() * 2.355,
+                            'statsmodels_p50': use_model.ppf(0.5),
+                            'statsmodels_p5': use_model.ppf(0.05),
+                            'statsmodels_p95': use_model.ppf(0.95),
+                            'statsmodels_p25': use_model.ppf(0.25),
+                            'statsmodels_p75': use_model.ppf(0.75)
+                        })
+                    else:
+                        pass
+                    
+                else:
                     pass
+
+                # 
+                # try:
+                #     dict_to_add.update({
+                #         'statsmodels_mean': np.average(SM_vals),
+                #         'statsmodels_std_err': np.std(SM_vals),
+                #         'statsmodels_fwhm': np.std(SM_vals) * 2.355,
+                #         'statsmodels_p50': np.percentile(SM_vals, 50),
+                #         'statsmodels_p5':
+                #             np.percentile(SM_vals, 5),
+                #         'statsmodels_p95':
+                #             np.percentile(SM_vals, 95),
+                #         'statsmodels_p25':
+                #             np.percentile(SM_vals, 25),
+                #         'statsmodels_p75':
+                #             np.percentile(SM_vals, 75)
+                #     })
+                # except:
+                #     pass
 
                 for approx_type in approx_type_vals:
                     try:
@@ -586,12 +622,15 @@ def generate_state_report(map_state_name_to_model,
                 state_report_as_list_of_dicts.append(dict_to_add)
 
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
-    print('Saving state report to {}...'.format(state_report_filename))
-    joblib.dump(state_report, state_report_filename)
-    print('...done!')
-    print('Saving state report to {}...'.format(state_report_filename.replace('joblib', 'csv')))
-    joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
-    print('...done!')
+    
+    if opt_save_to_csv:
+        print('Saving state report to {}...'.format(state_report_filename))
+        joblib.dump(state_report, state_report_filename)
+        print('...done!')
+        print('Saving state report to {}...'.format(state_report_filename.replace('joblib', 'csv')))
+        joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
+        print('...done!')
+    
     n_states = len(set(state_report['state']))
     print(n_states)
 
@@ -619,6 +658,7 @@ def run_everything(run_states,
                    logarithmic_params=list(),
                    plot_param_names=None,
                    opt_simplified=False,
+                   opt_report=True,
                    **kwargs):
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
     global map_state_name_to_model, state_report
@@ -626,53 +666,56 @@ def run_everything(run_states,
     map_state_name_to_model = dict()
 
     for state_ind, state in enumerate(run_states):
-        
+
         if state not in load_data.map_state_to_current_case_cnt:
             print(f'{state} not in load_data.map_state_to_current_case_cnt')
-            print('\n'.join(sorted(load_data.map_state_to_current_case_cnt.keys())))
+            # print('\n'.join(sorted(load_data.map_state_to_current_case_cnt.keys())))
+        else:
+            print(
+                f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, current cases {load_data.map_state_to_current_case_cnt[state]:,})...\n----\n----\n')
+            try:
+                print('Building model with the following args...')
+                for key in sorted(kwargs.keys()):
+                    print(f'{key}: {kwargs[key]}')
+                state_model = model_class(state,
+                                          sorted_init_condit_names=sorted_init_condit_names,
+                                          sorted_param_names=sorted_param_names,
+                                          extra_params=extra_params,
+                                          logarithmic_params=logarithmic_params,
+                                          plot_param_names=plot_param_names,
+                                          opt_simplified=opt_simplified,
+                                          override_max_date_str=override_max_date_str,
+                                          **kwargs
+                                          )
+                if opt_simplified:
+                    state_model.run_fits_simplified()
+                else:
+                    state_model.run_fits()
+                map_state_name_to_model[state] = state_model
+    
+            except:
+                print("Error getting model for state", state)
+    
+            plot_subfolder = state_model.plot_subfolder
+
+        if not opt_report:
             continue
-        print(
-            f'\n----\n----\nProcessing {state} ({state_ind} of {len(run_states)}, current cases {load_data.map_state_to_current_case_cnt[state]:,})...\n----\n----\n')
-
-        try:
-            print('Building model with the following args...')
-            for key in sorted(kwargs.keys()):
-                print(f'{key}: {kwargs[key]}')
-            state_model = model_class(state,
-                                      sorted_init_condit_names=sorted_init_condit_names,
-                                      sorted_param_names=sorted_param_names,
-                                      extra_params=extra_params,
-                                      logarithmic_params=logarithmic_params,
-                                      plot_param_names=plot_param_names,
-                                      opt_simplified=opt_simplified,
-                                      override_max_date_str=override_max_date_str,
-                                      **kwargs
-                                      )
-            if opt_simplified:
-                state_model.run_fits_simplified()
-            else:
-                state_model.run_fits()
-            map_state_name_to_model[state] = state_model
-
-        except:
-            print("Error getting model for state", state)
-
-        plot_subfolder = state_model.plot_subfolder
-
+            
         if opt_simplified:
             state_report_filename = path.join(plot_subfolder, f'simplified_state_report.joblib')
             state_prediction_filename = path.join(plot_subfolder, f'simplified_state_prediction.joblib')
             filename_format_str = path.join(plot_subfolder, f'simplified_boxplot_for_{{}}_{{}}.png')
-            if state_ind in [0, 1, 4, 9, 19, 49, 99, 199, 299, 399, 499, 599, 699, 799, 899, 999] or state_ind == len(run_states) - 1:
-                print('Reporting now and at the end')
+            if state_ind in [0, 4, 49, 499, 999, 1999, 2999] or state_ind > len(run_states) - 2:
+                print(f'Reporting at index {state_ind} and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names)
-                _ = generate_state_prediction(map_state_name_to_model,
-                                              override_max_date_str,
-                                              prediction_filename=state_prediction_filename)
+                if state_model.opt_plot:
+                    _ = generate_state_prediction(map_state_name_to_model,
+                                                  override_max_date_str,
+                                                  prediction_filename=state_prediction_filename)
                 for param_name in state_model.plot_param_names:
-                    if len(set(state_report['state'])) <= 65:
+                    if len(set(state_report['state'])) <= 65 and state_model.opt_plot:
                         render_whisker_plot_simplified(state_report,
                                                        plot_param_name=param_name,
                                                        output_filename_format_str=filename_format_str,
@@ -687,7 +730,7 @@ def run_everything(run_states,
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')
-            if state_ind in [0, 1, 4, 9, 100] or state_ind == len(run_states) - 1:
+            if state_ind in [0, 1, 4, 9, 19, 49] or state_ind == len(run_states) - 1:
                 print('Reporting now and at the end')
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename)
@@ -718,7 +761,7 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
         else:
             print_state = state
         print_state = print_state.title().replace('_', ' ').replace(' Of', ' of')
-        
+
         state_lc = state.lower().replace(' ', '_')
         doc, tag, text = Doc(defaults={'title': f'Plots for {state}'}).tagtext()
 

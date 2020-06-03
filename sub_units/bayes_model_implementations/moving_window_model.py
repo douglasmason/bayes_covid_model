@@ -35,7 +35,7 @@ class MovingWindowModel(BayesModel):
             model_approx_types = [ApproxType.SM]  # SM_acc comes along for the ride with SM
             print('Doing simplified models...')
         else:
-            model_approx_types = [ApproxType.SM] 
+            model_approx_types = [ApproxType.SM]
             # [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS,
             #                       ApproxType.LS,
             #                       ApproxType.MCMC, ApproxType.SM, ApproxType.SM_TS, ApproxType.PyMC3]
@@ -80,32 +80,6 @@ class MovingWindowModel(BayesModel):
             (params['positive_intercept'] - self.log_offset) / xzero_positive_count), 0)
         deceased = np.maximum(np.array(np.exp(self.t_vals * params['deceased_slope'])) * np.array(
             (params['deceased_intercept'] - self.log_offset) / xzero_deceased_count), 0)
-
-        # positive = np.array(np.exp(self.t_vals * params['positive_slope'])) * params['positive_intercept']
-        # deceased = np.array(np.exp(self.t_vals * params['deceased_slope'])) * params['deceased_intercept']
-
-        # for i in range(len(positive)):
-        #     if i % 7 == 0:
-        #         positive[i] *= params['day0_multiplier']
-        #         deceased[i] *= params['day0_multiplier']
-        #     if i % 7 == 1:
-        #         positive[i] *= params['day1_multiplier']
-        #         deceased[i] *= params['day1_multiplier']
-        #     if i % 7 == 2:
-        #         positive[i] *= params['day2_multiplier']
-        #         deceased[i] *= params['day2_multiplier']
-        #     if i % 7 == 3:
-        #         positive[i] *= params['day3_multiplier']
-        #         deceased[i] *= params['day3_multiplier']
-        #     if i % 7 == 4:
-        #         positive[i] *= params['day4_multiplier']
-        #         deceased[i] *= params['day4_multiplier']
-        #     if i % 7 == 5:
-        #         positive[i] *= params['day5_multiplier']
-        #         deceased[i] *= params['day5_multiplier']
-        #     if i % 7 == 6:
-        #         positive[i] *= params['day6_multiplier']
-        #         deceased[i] *= params['day6_multiplier']
 
         for i in range(len(positive)):
             if i % 7 == 0:
@@ -249,8 +223,11 @@ class MovingWindowModel(BayesModel):
         :return: 
         '''
 
+
         # this only needs to be imported if it's being used...
         import statsmodels.formula.api as smf
+
+        self.map_param_name_to_statsmodels_norm_model = dict()
 
         name_mapping_positive = {'DOW[T.1]': 'day1_positive_multiplier',
                                  'DOW[T.2]': 'day2_positive_multiplier',
@@ -280,18 +257,14 @@ class MovingWindowModel(BayesModel):
         data_new_tested = self.data_new_tested
         data_new_deceased = self.data_new_dead
         moving_window_size = self.moving_window_size
-        cases_bootstrap_indices = self.cases_indices[-moving_window_size:]
-        deaths_bootstrap_indices = self.deaths_indices[-moving_window_size:]
 
-        # print('len(data_new_tested):', len(data_new_tested))
-        # print('len(data_new_deceased):', len(data_new_deceased))
-
-        # print('series_data:',  self.series_data)
         data = pd.DataFrame([{'x': ind,
                               # add burn_in to orig_ind since simulations start earlier than the data
                               'orig_ind': i + self.burn_in,
-                              'new_positive': (max(data_new_tested[i], 0) if i < len(data_new_tested) and i >= 0 else 0) + self.log_offset,
-                              'new_deceased': (max(data_new_deceased[i], 0) if i < len(data_new_deceased) and i >= 0 else 0) + self.log_offset,
+                              'new_positive': (max(data_new_tested[i], 0) if i < len(
+                                  data_new_tested) and i >= 0 else 0) + self.log_offset,
+                              'new_deceased': (max(data_new_deceased[i], 0) if i < len(
+                                  data_new_deceased) and i >= 0 else 0) + self.log_offset,
                               } for ind, i in
                              enumerate(range(len(data_new_tested) - moving_window_size - offset,
                                              len(data_new_tested) - offset))])
@@ -306,33 +279,24 @@ class MovingWindowModel(BayesModel):
         #####
 
         model_positive = smf.ols(formula='np.log(new_positive) ~ x + DOW',
-                                 data=data)  # add 0.1 to avoid log(0)
+                                 data=data)
+        
         results_positive = model_positive.fit()
-        # print('offset:', offset)
-        # print(data)
-        # print(results_positive.summary())
         if opt_print:
             print(results_positive.summary())
+
         params_positive = dict(results_positive.params)
         for name1, name2 in name_mapping_positive.items():
             params_positive[name2] = params_positive.pop(name1)
-        # params_positive['positive_intercept'] = np.exp(params_positive['positive_intercept'])
+
         bse_positive = dict(results_positive.bse)
         for name1, name2 in name_mapping_positive.items():
             bse_positive[name2] = bse_positive.pop(name1)
-        # bse_positive['positive_intercept'] = bse_positive['positive_intercept'] * \
-        #    params_positive['positive_intercept']  # due to A = 1000; B = 0.01; B * np.exp(A) = np.exp(A + B) - np.exp(A)
-        # also, note that we have already applied hte exponential transofrm on A
+
         means_as_list = [params_positive[name] for name in positive_names]
         sigma_as_list = [bse_positive[name] for name in positive_names]
 
-        # print('Statsmodels results for positive:')
-        # print('sigma_as_list:', sigma_as_list)
-        # print('means_as_list:', means_as_list)
-
-        # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
         cov = results_positive.cov_params()
-        # print('Cov columns:', cov.columns)
 
         # get ordering of rows and cols correct
         mapping_list = [map_positive_names_to_sorted_ind[name_mapping_positive[col]] for col in cov.columns]
@@ -341,17 +305,16 @@ class MovingWindowModel(BayesModel):
         cov = cov[inv_mapping_list, :]
         cov = cov[:, inv_mapping_list]
 
-        # render corr
-        # corr = self.cov2corr(cov)
-        # print('diag(cov:)')
-        # print(np.diagonal(cov))
-        # print('corr:')
-        # print(corr)
-        
         if not np.all(np.isfinite(cov)):
-            cov = np.diag([1e-8]*len(means_as_list))
+            cov = np.diag([1e-8] * len(means_as_list))
 
         statsmodels_model_positive = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+
+        for param_ind, _ in enumerate(means_as_list):
+            param_name = positive_names[param_ind]
+            self.map_param_name_to_statsmodels_norm_model[param_name] = sp.stats.norm(loc=means_as_list[param_ind],
+                                                                                      scale=np.sqrt(
+                                                                                          cov[param_ind, param_ind]))
 
         #####
         # Do fit on deceased curve
@@ -359,44 +322,31 @@ class MovingWindowModel(BayesModel):
 
         # add 0.1 so you don't bonk on log(0)
         model_deceased = smf.ols(formula='np.log(new_deceased) ~ x + DOW',
-                                 data=data)  # add 0.1 to avoid log(0)
+                                 data=data)
+
         results_deceased = model_deceased.fit()
         if opt_print:
             print(results_deceased.summary())
+
         params_deceased = dict(results_deceased.params)
         for name1, name2 in name_mapping_deceased.items():
             params_deceased[name2] = params_deceased.pop(name1)
-        # params_deceased['deceased_intercept'] = np.exp(params_deceased['deceased_intercept'])
+
         means_as_list = [params_deceased[name] for name in deceased_names]
         bse_deceased = dict(results_deceased.bse)
         for name1, name2 in name_mapping_deceased.items():
             bse_deceased[name2] = bse_deceased.pop(name1)
-        # bse_deceased['deceased_intercept'] = bse_deceased['deceased_intercept'] * \
-        #     params_deceased['deceased_intercept']  # due to A = 1000; B = 0.01; B * np.exp(A) = np.exp(A + B) - np.exp(A)
-        # also, note that we have already applied hte exponential transofrm on A
-        # print(bse_deceased)
+
         sigma_as_list = [bse_deceased[name] for name in deceased_names]
 
-        # print('Statsmodels results for deceased:')
-        # print('sigma_as_list:', sigma_as_list)
-        # print('means_as_list:', means_as_list)
-
-        # cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
         cov = results_deceased.cov_params()
-            
+
         # get ordering of rows and cols correct
         mapping_list = [map_deceased_names_to_sorted_ind[name_mapping_deceased[col]] for col in cov.columns]
         inv_mapping_list = [mapping_list.index(i) for i in range(len(mapping_list))]
         cov = cov.values
         cov = cov[inv_mapping_list, :]
         cov = cov[:, inv_mapping_list]
-
-        # render corr
-        # corr = self.cov2corr(cov)
-        # print('cov:')
-        # print(cov)
-        # print('corr:')
-        # print(corr)
 
         tmp_params = params_positive.copy()
         tmp_params.update(params_deceased)
@@ -414,11 +364,17 @@ class MovingWindowModel(BayesModel):
             tmp_bse[param_name] = np.exp(tmp_bse.pop(param_name))
         statsmodels_bse = tmp_bse
 
-
         if not np.all(np.isfinite(cov)):
-            cov = np.diag([1e-8]*len(means_as_list))
-            
+            cov = np.diag([1e-8] * len(means_as_list))
+
         statsmodels_model_deceased = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+
+        for param_ind, _ in enumerate(means_as_list):
+            param_name = deceased_names[param_ind]
+            self.map_param_name_to_statsmodels_norm_model[param_name] = sp.stats.norm(loc=means_as_list[param_ind],
+                                                                                      scale=np.sqrt(
+                                                                                          cov[param_ind, param_ind]))
+
         self.statsmodels_model_deceased = statsmodels_model_deceased
         self.statsmodels_model_positive = statsmodels_model_positive
         self.statsmodels_params = statsmodels_params
@@ -433,52 +389,20 @@ class MovingWindowModel(BayesModel):
             'statsmodels_bse': statsmodels_bse,
         }
 
-        if opt_plot:
+        if self.opt_plot and opt_plot:
             if not opt_simplified:
                 self.render_and_plot_cred_int(approx_type=ApproxType.SM)
             self.plot_all_solutions(approx_type=ApproxType.SM, offset=offset)
 
-    def get_weighted_samples_via_statsmodels(self, n_samples=1000):
+    def get_weighted_samples_via_statsmodels(self, n_samples=None):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
-        weight_sampled_params_positive = self.statsmodels_model_positive.rvs(n_samples)
-        weight_sampled_params_deceased = self.statsmodels_model_deceased.rvs(n_samples)
-
-        positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
-        map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
-        deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
-        map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
-
-        weight_sampled_params = list()
-        for i in range(n_samples):
-            positive_dict = self.convert_params_as_list_to_dict(weight_sampled_params_positive[i],
-                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_positive)
-            deceased_dict = self.convert_params_as_list_to_dict(weight_sampled_params_deceased[i],
-                                                                map_name_to_sorted_ind=map_name_to_sorted_ind_deceased)
-            all_dict = positive_dict.copy()
-            all_dict.update(deceased_dict)
-            all_dict['sigma_positive'] = 1
-            all_dict['sigma_deceased'] = 1
-            for name in self.logarithmic_params:
-                all_dict[name] = np.exp(all_dict[name])
-            weight_sampled_params.append(self.convert_params_as_dict_to_list(all_dict.copy()))
-
-        log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
-
-        return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
-
-
-    def get_weighted_samples_via_statsmodels(self, n_samples=1000):
-        '''
-        Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
-        :param n_samples: how many samples to re-sample from the list of likelihood samples
-        :return: tuple of weight_sampled_params, params, weights, log_probs
-        '''
-
+        if n_samples is None:
+            n_samples = self.n_samples
         weight_sampled_params_positive = self.statsmodels_model_positive.rvs(n_samples)
         weight_sampled_params_deceased = self.statsmodels_model_deceased.rvs(n_samples)
 
@@ -513,10 +437,13 @@ class MovingWindowModel(BayesModel):
         '''
 
         if ApproxType.SM in self.model_approx_types:
-            self.render_statsmodels_fit_timeseries(opt_simplified=True)
-            self.plot_growth_rate_timeseries(plot_filename_filename='statsmodels_growth_rate_time_series.png')
+            time_series_output_filename = path.join(self.plot_filename_base, 'statsmodels_growth_rate_time_series.png')
+            if self.opt_plot and not path.exists(time_series_output_filename):
+                self.render_statsmodels_fit_timeseries(opt_simplified=True)
+                self.plot_growth_rate_timeseries(plot_filename_filename=time_series_output_filename)
             self.render_statsmodels_fit_current_and_one_week_before(opt_simplified=True)
-            self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
+            if self.opt_plot:
+                self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
 
         if ApproxType.PyMC3 in self.model_approx_types:
             self.render_PyMC3_fit(opt_simplified=True)
@@ -672,8 +599,9 @@ class MovingWindowModel(BayesModel):
         self.all_PyMC3_log_probs_as_list = all_PyMC3_log_probs_as_list
 
         # Plot all solutions...
-        self.plot_all_solutions(approx_type=ApproxType.PyMC3)
+        if self.opt_plot:
+            self.plot_all_solutions(approx_type=ApproxType.PyMC3)
 
-        if not opt_simplified:
+        if self.opt_plot and not opt_simplified:
             # Get and plot parameter distributions from bootstraps
             self.render_and_plot_cred_int(approx_type=ApproxType.PyMC3)

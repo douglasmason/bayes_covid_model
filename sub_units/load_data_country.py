@@ -37,14 +37,15 @@ try:
     map_state_to_series = tmp_dict['map_state_to_series']
     current_cases_ranked_us_states = tmp_dict['current_cases_ranked_us_states']
     current_cases_ranked_non_us_states = tmp_dict['current_cases_ranked_non_us_states']
-    current_cases_ranked_non_us_provinces = tmp_dict['current_cases_ranked_non_us_provinces'],
-    current_cases_ranked_us_counties = tmp_dict['current_cases_ranked_us_counties'],
+    current_cases_ranked_non_us_provinces = tmp_dict['current_cases_ranked_non_us_provinces']
+    current_cases_ranked_us_counties = tmp_dict['current_cases_ranked_us_counties']
     map_state_to_current_case_cnt = tmp_dict['map_state_to_current_case_cnt']
+    map_state_to_fips = tmp_dict['map_state_to_fips']
     print('...done!')
     success = True
 except:
     print('...loading failed!')
-    
+
 if not success:
 
     #####
@@ -57,9 +58,15 @@ if not success:
     # from https://github.com/nytimes/covid-19-data
     # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
     us_full_count_data['date'] = us_full_count_data['date'].astype('datetime64[ns]')
+    us_full_count_data['state_orig'] = us_full_count_data['state']
     us_full_count_data['state'] = [f'US: {us_full_count_data.iloc[i]["state"]}' for i in range(len(us_full_count_data))]
     us_full_count_data.rename(columns={'cases': 'positive', 'deaths': 'deceased'},
                               inplace=True)
+
+    quick_grab_tuples = list(
+        set(zip(*[us_full_count_data[col] for col in ['state', 'state_orig', 'fips']])))
+    map_state_to_fips = {tmp_tuple[0]: tmp_tuple[2] for tmp_tuple in quick_grab_tuples}
+    
     us_full_count_data = us_full_count_data[['date', 'state', 'positive', 'deceased']]
 
     # get totals across U.S.
@@ -78,17 +85,25 @@ if not success:
     #####
     # Step 1b: Get US Data Counties
     #####
-    
+
     print('Processing U.S. Counties...')
     data_dir = 'source_data'
     us_county_full_data = pd.read_csv(os.path.join(data_dir, 'counties.csv'))
     # from https://github.com/nytimes/covid-19-data
     # curl https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv
     us_county_full_data['date'] = us_county_full_data['date'].astype('datetime64[ns]')
+    us_county_full_data['state_orig'] = us_county_full_data['state']
     us_county_full_data['state'] = [
         f'US: {state}: {county}' for state, county in zip(us_county_full_data['state'], us_county_full_data['county'])]
+
+    quick_grab_tuples = list(
+        set(zip(*[us_county_full_data[col] for col in ['state', 'state_orig', 'county', 'fips']])))
+    tmp_map_state_to_fips = {tmp_tuple[0]: tmp_tuple[3] for tmp_tuple in quick_grab_tuples}
+    map_state_to_fips.update(tmp_map_state_to_fips)
+
     us_county_full_data.rename(columns={'cases': 'positive', 'deaths': 'deceased'},
                                inplace=True)
+
     us_county_full_data = us_county_full_data[['date', 'state', 'positive', 'deceased']]
 
     us_counties = sorted(set(us_county_full_data['state']))
@@ -185,17 +200,17 @@ if not success:
     current_cases_ranked_non_us_states = sorted(non_us_countries,
                                                 key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
     current_cases_ranked_non_us_provinces = sorted(non_us_provinces,
-                                                key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
+                                                   key=lambda x: -map_state_to_current_case_cnt.get(x, 0))
 
     # germany_inds = [i for i, x in enumerate(full_count_data['country']) if x == 'France']
     # date_sorted_inds = sorted(germany_inds, key=lambda x: full_count_data.iloc[x]['date'])
     # full_count_data.iloc[date_sorted_inds[-10:]]
-    
+
     # build reverse index for states, since this computaiton is expensive
     map_state_to_iloc = dict()
     for iloc, state in enumerate(full_count_data['state']):
         map_state_to_iloc.setdefault(state, list()).append(iloc)
-    
+
     print('Processing states, counties, and provinces...')
     # data munging gets daily-differences differences by state
     for state in tqdm(sorted(set(full_count_data['state']))):
@@ -203,9 +218,11 @@ if not success:
         state_iloc = sorted(state_iloc, key=lambda x: full_count_data.iloc[x]['date'])
 
         cases_series = pd.Series(
-            {date: x for date, x in zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['positive'])})
+            {date: x for date, x in
+             zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['positive'])})
         deaths_series = pd.Series(
-            {date: x for date, x in zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['deceased'])})
+            {date: x for date, x in
+             zip(full_count_data.iloc[state_iloc]['date'], full_count_data.iloc[state_iloc]['deceased'])})
 
         cases_series.index = pd.DatetimeIndex(cases_series.index)
         deaths_series.index = pd.DatetimeIndex(deaths_series.index)
@@ -233,10 +250,12 @@ if not success:
         'current_cases_ranked_non_us_provinces': current_cases_ranked_non_us_provinces,
         'current_cases_ranked_us_counties': current_cases_ranked_us_counties,
         'map_state_to_current_case_cnt': map_state_to_current_case_cnt,
+        'map_state_to_fips': map_state_to_fips
     }
     print(f'Saving to {loaded_data_filename}...')
     joblib.dump(tmp_dict, loaded_data_filename)
     print('...done!')
+
 
 def get_state_data(state,
                    opt_smoothing=True):

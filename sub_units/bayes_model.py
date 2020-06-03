@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
 import matplotlib.dates as mdates
+import matplotlib.ticker as mtick
 import scipy as sp
 import joblib
 from os import path
@@ -140,6 +141,7 @@ class BayesModel(ABC):
                  opt_force_plot=True,
                  opt_calc=True,
                  opt_force_calc=False,
+                 opt_plot=True,
                  model_type_name=None,
                  plot_param_names=None,
                  opt_simplified=False,
@@ -155,6 +157,7 @@ class BayesModel(ABC):
                  override_max_date_str=None,
                  cases_cnt_threshold=20,
                  deaths_cnt_threshold=20,
+                 n_samples=500,
                  **kwargs
                  ):
 
@@ -179,7 +182,8 @@ class BayesModel(ABC):
         self.prediction_window = prediction_window
         self.map_approx_type_to_MVN = dict()
         self.model_approx_types = model_approx_types
-        self.opt_smoothing = opt_smoothing  # determines whether to smooth results from load_data_obj.get_state_data
+        self.opt_smoothing = opt_smoothing  # determines whether to smooth results from load_data_obj.get_state_data\
+        self.opt_plot = opt_plot
         self.log_offset = log_offset
         self.model_type_name = model_type_name
         self.state_name = state_name
@@ -189,6 +193,7 @@ class BayesModel(ABC):
         self.max_date = datetime.datetime.strptime(max_date_str, '%Y-%m-%d')
         self.static_params = static_params
         self.opt_simplified = opt_simplified
+        self.n_samples = n_samples
 
         if self.opt_smoothing:
             smoothing_str = 'smoothed_'
@@ -669,7 +674,7 @@ class BayesModel(ABC):
                                range(len(sol[0]))][min_plot_pt:max_plot_pt]
 
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             plt.clf()
             fig, ax = plt.subplots()
             ax.plot(sol_plot_date_range, [sol[0][i] for i in range(min_plot_pt, max_plot_pt)], 'blue',
@@ -708,7 +713,7 @@ class BayesModel(ABC):
             # for i in range(len(sol)):
             #     print(f'index: {i}, odeint_value: {sol[i]}, real_value: {[None, series_data[i]]}')
 
-    def plot_all_solutions(self, n_samples=1000, approx_type=ApproxType.BS, mvn_fit=False, n_sols_to_plot=1000,
+    def plot_all_solutions(self, n_samples=None, approx_type=ApproxType.BS, mvn_fit=False, n_sols_to_plot=1000,
                            offset=0):
         '''
         Plot all the bootstrap simulation solutions
@@ -716,6 +721,8 @@ class BayesModel(ABC):
         :return: None
         '''
 
+        if n_samples is None:
+            n_samples = self.n_samples
         if offset == 0:
             offset_str = ''
         else:
@@ -729,8 +736,8 @@ class BayesModel(ABC):
         output_filename2 = f'{key}{offset_str}_solutions_filled_quantiles.png'
         output_filename3 = f'{key}{offset_str}_solutions_cumulative_discrete.png'
         output_filename4 = f'{key}{offset_str}_solutions_cumulative_filled_quantiles.png'
-        if all(path.exists(path.join(self.plot_filename_base, x)) for x in \
-               [output_filename, output_filename2, output_filename3, output_filename4]) and not self.opt_force_plot:
+        if not self.opt_plot or (all(path.exists(path.join(self.plot_filename_base, x)) for x in \
+               [output_filename, output_filename2, output_filename3, output_filename4]) and not self.opt_force_plot):
             return
 
         params, _, _, log_probs = self.get_weighted_samples(approx_type=approx_type, mvn_fit=mvn_fit)
@@ -780,7 +787,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
             return
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
@@ -907,7 +914,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
             return
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
@@ -1052,7 +1059,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
             return
 
         if n_sols_to_plot > len(sols_to_plot):
@@ -1126,7 +1133,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
             return
 
         if n_sols_to_plot > len(sols_to_plot):
@@ -1514,6 +1521,8 @@ class BayesModel(ABC):
         :return: None, saves results to object attributes
         '''
 
+        if n_samples is None:
+            n_samples = self.n_samples
         success = False
 
         try:
@@ -1920,13 +1929,15 @@ class BayesModel(ABC):
             corr = self.recover_sigma_entries_from_matrix(corr)
         return corr
 
-    def get_weighted_samples_via_model(self, n_samples=1000, approx_type=ApproxType.SP_CF):
+    def get_weighted_samples_via_model(self, n_samples=None, approx_type=ApproxType.SP_CF):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
+        if n_samples is None:
+            n_samples = self.n_samples
         weight_sampled_params = self.map_approx_type_to_model[approx_type].rvs(n_samples)
 
         log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
@@ -1981,7 +1992,7 @@ class BayesModel(ABC):
                                 filename_str='test'):
 
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_correlation_matrix.png')
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             try:
                 plt.clf()
                 ax = sns.heatmap(corr, xticklabels=self.sorted_names, yticklabels=self.sorted_names, cmap='coolwarm',
@@ -2064,7 +2075,7 @@ class BayesModel(ABC):
 
         # Pairplot!
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_pairplot.png')
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             weighted_params_as_df = pd.DataFrame(weighted_params)
             weighted_params_as_df.columns = self.sorted_names
             weighted_params_as_df = weighted_params_as_df[
@@ -2083,7 +2094,7 @@ class BayesModel(ABC):
         print(
             f'len(log_probs): {len(log_probs)}; len(params): {len(params)}; len(predicted_vals): {len(predicted_vals)}')
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_correlation_matrix.png')
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             plt.clf()
             ax = sns.heatmap(corr, xticklabels=self.sorted_names, yticklabels=self.sorted_names, cmap='coolwarm',
                              center=0.0)
@@ -2096,7 +2107,7 @@ class BayesModel(ABC):
             plt.close()
 
         full_output_filename = path.join(self.plot_filename_base, f'{filename_str}_actual_vs_predicted_vals.png')
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             plt.clf()
             plt.plot(np.exp(log_probs), predicted_vals, '.',
                      alpha=max(100 / len(predicted_vals), 0.01))
@@ -2114,7 +2125,7 @@ class BayesModel(ABC):
                     range(len(weighted_params))]
             full_output_filename = path.join(self.plot_filename_base,
                                              f'{filename_str}_{self.plot_two_vals[1]}_vs_{self.plot_two_vals[0]}.png')
-            if not path.exists(full_output_filename) or self.opt_force_plot:
+            if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
                 plt.clf()
                 plt.plot(val0, val1, '.',
                          alpha=max(100 / len(val0), 0.01))
@@ -2150,13 +2161,15 @@ class BayesModel(ABC):
         # plt.savefig(path.join(self.plot_filename_base, 'MVN_actual_vs_predicted_vals_zoom.png'))
         # plt.close()
 
-    def get_weighted_samples_via_MVN(self, approx_type=ApproxType.LS, n_samples=10000):
+    def get_weighted_samples_via_MVN(self, approx_type=ApproxType.LS, n_samples=None):
         '''
         Retrieves likelihood samples in parameter space, weighted by their likelihood (raw, not log) 
         :param n_samples: how many samples to re-sample from the list of likelihood samples
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
+        if n_samples is None:
+            n_samples = self.n_samples
         if approx_type not in self.map_approx_type_to_MVN:
             raise ValueError('Need to fit MVN to likelihood samples')
 
@@ -2165,7 +2178,7 @@ class BayesModel(ABC):
 
         return weight_sampled_params, weight_sampled_params, [1] * len(weight_sampled_params), log_probs
 
-    def get_weighted_samples_via_direct_sampling(self, n_samples=10000):
+    def get_weighted_samples_via_direct_sampling(self, n_samples=None):
         '''
         I DON'T USE THIS NOW
         Retrieves likelihood samples in parameter space, weighted by their likelihood (raw, not log) 
@@ -2173,6 +2186,8 @@ class BayesModel(ABC):
         :return: tuple of weight_sampled_params, params, weights, log_probs
         '''
 
+        if n_samples is None:
+            n_samples = self.n_samples
         valid_ind = [i for i, x in enumerate(self.all_log_probs_as_list) if np.isfinite(np.exp(x)) and \
                      np.isfinite(self.all_propensities_as_list[i]) and \
                      self.all_propensities_as_list[i] > 0]
@@ -2273,7 +2288,7 @@ class BayesModel(ABC):
 
         full_output_filename = path.join(self.plot_filename_base,
                                          '{}_param_distro_without_priors.png'.format(param_type))
-        if not path.exists(full_output_filename) or self.opt_force_plot:
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
             try:
                 print('Printing...', full_output_filename)
                 az.plot_posterior(data,
@@ -2466,7 +2481,7 @@ class BayesModel(ABC):
 
     @property
     def opt_plot_bootstraps(self):
-        return (not self.loaded_bootstraps) or self.opt_force_plot
+        return self.opt_plot and ((not self.loaded_bootstraps) or self.opt_force_plot)
 
     @property
     def opt_plot_likelihood_samples(self):
@@ -2474,7 +2489,7 @@ class BayesModel(ABC):
         for x in self.loaded_MCMC:
             if not x['opt_walk']:
                 opt_plot_likelihood_samples = False
-        return opt_plot_likelihood_samples or self.opt_force_plot
+        return self.opt_plot and (opt_plot_likelihood_samples or self.opt_force_plot)
 
     @property
     def opt_plot_random_walk(self):
@@ -2482,7 +2497,7 @@ class BayesModel(ABC):
         for x in self.loaded_MCMC:
             if x['opt_walk']:
                 opt_plot_random_walk = False
-        return opt_plot_random_walk or self.opt_force_plot
+        return self.opt_plot and (opt_plot_random_walk or self.opt_force_plot)
 
     def pretty_print_params(self, in_obj):
         '''
@@ -2514,9 +2529,8 @@ class BayesModel(ABC):
         :return: None
         '''
 
-        full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot:
-            print(f'{full_output_filename} already exists, skipping plot.')
+        if not self.opt_plot and (path.exists(plot_filename_filename) and not self.opt_force_plot):
+            print(f'{plot_filename_filename} already exists, skipping plot.')
             return
 
         plt.close()
@@ -2541,9 +2555,12 @@ class BayesModel(ABC):
             params['sigma_deceased'] = 0.1
             means_as_list = self.convert_params_as_dict_to_list(params)
             cov = np.diag([max(1e-8, x ** 2) for x in sigmas_as_list])
-            model = sp.stats.multivariate_normal(mean=means_as_list, cov=cov)
+            model = sp.stats.multivariate_normal(mean=means_as_list, cov=cov, allow_singular=True)
             map_t_val_ind_to_tested_distro[t_val] = model.rvs(1000)[:, self.map_name_to_sorted_ind['positive_slope']]
             map_t_val_ind_to_deceased_distro[t_val] = model.rvs(1000)[:, self.map_name_to_sorted_ind['deceased_slope']]
+
+        def convert_growth_rate_to_perc(x):
+            return np.exp(x) - 1
 
         sol_plot_date_range = sorted(map_t_val_ind_to_tested_distro.keys())
         p5_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 5) for val_ind in sol_plot_date_range]
@@ -2557,18 +2574,18 @@ class BayesModel(ABC):
                      sol_plot_date_range]
 
         ax.fill_between(sol_plot_date_range,
-                        p5_curve,
-                        p95_curve,
+                        [convert_growth_rate_to_perc(x) for x in p5_curve],
+                        [convert_growth_rate_to_perc(x) for x in p95_curve],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
                         )
         ax.fill_between(sol_plot_date_range,
-                        p25_curve,
-                        p75_curve,
+                        [convert_growth_rate_to_perc(x) for x in p25_curve],
+                        [convert_growth_rate_to_perc(x) for x in p75_curve],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
                         edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
                         )
-        ax.plot(sol_plot_date_range, p50_curve,
+        ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
                 color="darkred", label='Deaths')
 
         p5_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 5) for val_ind in sol_plot_date_range]
@@ -2582,39 +2599,43 @@ class BayesModel(ABC):
                      sol_plot_date_range]
 
         ax.fill_between(sol_plot_date_range,
-                        p5_curve,
-                        p95_curve,
+                        [convert_growth_rate_to_perc(x) for x in p5_curve],
+                        [convert_growth_rate_to_perc(x) for x in p95_curve],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.3),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
                         )
         ax.fill_between(sol_plot_date_range,
-                        p25_curve,
-                        p75_curve,
+                        [convert_growth_rate_to_perc(x) for x in p25_curve],
+                        [convert_growth_rate_to_perc(x) for x in p75_curve],
                         facecolor=matplotlib.colors.colorConverter.to_rgba('green', alpha=0.6),
                         edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
                         )
-        ax.plot(sol_plot_date_range, p50_curve,
+        ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
                 color="darkgreen", label='Infections')
 
         fig.autofmt_xdate()
 
         # this removes the year from the x-axis ticks
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))
 
         # ax.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-        plt.ylabel('Daily Growth Rate')
+        plt.ylabel('Daily Relative Growth Rate')
         # plt.ylim((1, sum(self.data_new_tested) * 100))
         plt.xlim(min(map_t_val_ind_to_tested_distro.keys()),
                  max(map_t_val_ind_to_tested_distro.keys()) + datetime.timedelta(days=5))
         plt.legend()
+        
         # plt.title(f'{state} Data (points) and Model Predictions (lines)')
-        print(f'Printing {full_output_filename}...')
-        plt.savefig(full_output_filename, dpi=self.plot_dpi)
+        print(f'Printing {plot_filename_filename}...')
+        plt.savefig(plot_filename_filename, dpi=self.plot_dpi)
         plt.close()
         print('...done!')
 
-    def get_weighted_samples_via_PyMC3(self, n_samples=1000, ):
+    def get_weighted_samples_via_PyMC3(self, n_samples=None, ):
 
+        if n_samples is None:
+            n_samples = self.n_samples
         samples = self.all_PyMC3_samples_as_list
         log_probs = self.all_PyMC3_log_probs_as_list
         samples = [self.convert_params_as_dict_to_list(sample) for sample in samples]
