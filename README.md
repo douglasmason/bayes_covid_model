@@ -1,8 +1,8 @@
 # bayes_covid_model
 
-**[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Positive Exponential Growth in Infections](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
+**[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Positive Exponential Growth in Infections](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
 
-**[Leading Countries, U.S. States, and U.S. State Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
+**[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
 
 **Latest results and three-month projections provided in** 
 * [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html)
