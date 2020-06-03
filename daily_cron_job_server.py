@@ -131,12 +131,6 @@ import os
 from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
-region_plot_subfolders = {
- # Region.provinces: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
- Region.countries: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels',
- Region.US_states: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
- Region.US_counties: 'state_plots/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
-}
 
 for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))

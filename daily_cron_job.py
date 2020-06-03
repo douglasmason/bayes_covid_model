@@ -123,6 +123,8 @@ with open(post_analysis.scratchpad_filename, 'r') as f:
 
 region_plot_subfolders = covid.run_everything()
 
+# TODO: Make update to README automatic
+
 #####
 # Step 3: Upload Figures to AWS
 #####
@@ -176,9 +178,9 @@ for region, plot_subfolder in region_plot_subfolders.items():
 ######
 
 # Make sure all the folders are in the github repo
-git add plot_browser_moving_window_statsmodels_only_countries/*
-git add plot_browser_moving_window_statsmodels_only_US_counties/*
-git add plot_browser_moving_window_statsmodels_only_US_states/* 
+# git add plot_browser_moving_window_statsmodels_only_countries/*
+# git add plot_browser_moving_window_statsmodels_only_US_counties/*
+# git add plot_browser_moving_window_statsmodels_only_US_states/* 
  
 
 # TODO: (Optional) Update static_figures with most recent version

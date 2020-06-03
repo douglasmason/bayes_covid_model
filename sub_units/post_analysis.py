@@ -59,15 +59,10 @@ def post_process_state_reports(opt_acc=True):
         ilocs_ranked_by_p_val = sorted(param_ind,
                                        key=lambda x: params.iloc[x][col_name] * np.sign(params.iloc[x][col_name_mean]))
         
-        if 'counties' in hyperparameter_str:
-            ilocs_ranked_by_p_val = [i for i in ilocs_ranked_by_p_val if
-                                     params.iloc[i][col_name_mean] > 0 and \
-                                     params.iloc[i][col_name] < 0.1 and \
-                                     params.iloc[i]['new_positive_cnt_7_day_avg'] > 5]
-        else:
-            ilocs_ranked_by_p_val = [i for i in ilocs_ranked_by_p_val if
-                                     params.iloc[i][col_name_mean] > 0 and \
-                                     params.iloc[i][col_name] < 0.1]
+        ilocs_ranked_by_p_val = [i for i in ilocs_ranked_by_p_val if
+                                 params.iloc[i][col_name_mean] > 0 and \
+                                 params.iloc[i][col_name] < 0.1 and \
+                                 params.iloc[i]['new_positive_cnt_7_day_avg'] > 5]
         
         if opt_acc:
             cols_to_show = ['state', 'statsmodels_mean_converted', 'statsmodels_acc_mean_converted',
@@ -86,14 +81,16 @@ def post_process_state_reports(opt_acc=True):
             url = 'https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/'
         elif 'countries' in hyperparameter_str:
             url = 'https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/'
-        
-        print_params['state_github'] = [f'[{x}](' + url + x.lower().replace(" ", "_").replace(":", "") + '/index.html)'
-                                        for x in print_params['state']]
+
+        print_params['state_without_US'] = [x if not x.startswith('US:') else x[4:] for x in print_params['state']]
+        print_params['state_github'] = [f'[{y}](' + url + x.lower().replace(" ", "_").replace(":", "") + '/index.html)'
+                                        for x, y in zip(print_params['state'], print_params['state_without_US'])]
         cols_to_show.remove('state')
         print_params['pretty_print_new_positive_cnt_7_day_avg'] = [f'{x:.1f}' for x in print_params['new_positive_cnt_7_day_avg']]
         print_params['pretty_print_new_deceased_cnt_7_day_avg'] = [f'{x:.1f}' for x in print_params['new_deceased_cnt_7_day_avg']]
         cols_to_show = ['state_github', 'pretty_print_new_positive_cnt_7_day_avg'] + cols_to_show
         print(print_params[cols_to_show].to_csv(sep='|', float_format='%.4g'))
+        
         
         if 'counties' in hyperparameter_str:
             with open(scratchpad_filename, 'w') as f:
