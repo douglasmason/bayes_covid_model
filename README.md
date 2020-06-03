@@ -55,7 +55,7 @@ More figures can be found in the Figure Browser links at the top of this page.
 
 ## Countries with Highest Daily Relative Growth Rates
 Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
--|-|-|-|-|-
+-|-|-|-|-
 1|[Bolivia](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/bolivia/index.html)|550.7|6.925%|5.776e-75
 2|[Egypt](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/egypt/index.html)|1254.3|7.319%|1.147e-56
 3|[India](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/india/index.html)|8056.9|4.29%|2.405e-52
@@ -421,8 +421,8 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
--|-|-|-|-|-
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
 1|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|15.94%|2.598e-09
 2|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|12.58%|4.517e-06
 3|[Philippines](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/philippines/index.html)|618.3|6.704%|6.614%|1.028e-05
@@ -486,7 +486,7 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 
 
 ## U.S. States with Highest Likelihood of Case Acceleration
-Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
 -|-|-|-|-|-1|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|13.42%|1.592e-05
 2|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
 3|[US: Oregon](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_oregon/index.html)|52.6|-0.759%|4.453%|0.0003193
