@@ -181,4 +181,4 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 79|[US: New Jersey: Ocean](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_new_jersey_ocean/index.html)|53.7|-2.852%|1.486%|0.08686
 80|[US: New Jersey: Somerset](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_new_jersey_somerset/index.html)|19.0|-3.852%|1.935%|0.09089
 
-This work is provided by [Koyote Science, LLC](http://www.koyotescience.com) and [Nexus iR&D Laboratory, LLC](http://www.nexusilab.com), and has not been peer reviewed.
+This work is provided by [Koyote Science, LLC](http://www.koyotescience.com) and in collaboration with [Nexus iR&D Laboratory, LLC](http://www.nexusilab.com), and has not been peer reviewed.
