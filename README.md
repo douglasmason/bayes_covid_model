@@ -11,14 +11,14 @@
 
 
 **Tabulated projections can be found at**
-* [International Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv)
-* [US States Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_prediction.csv)
-* [US Counties Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_prediction.csv)  
+* [International Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_prediction.csv)
+* [US States Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_prediction.csv)
+* [US Counties Projection CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_prediction.csv)  
 
 **Parameter estimates can be found at**
-* [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv)
-* [US States Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_report.csv)
-* [US Counties Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_report.csv)
+* [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv)
+* [US States Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels/simplified_state_report.csv)
+* [US Counties Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels/simplified_state_report.csv)
 
 *We gratefully acknowledge Digital Ocean and Black Sails Consulting for access to compute resources for this project.*
 
