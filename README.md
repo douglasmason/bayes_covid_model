@@ -418,7 +418,7 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|15.94%|2.598e-09
 2|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|12.58%|4.517e-06
@@ -483,7 +483,7 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 
 
 ## U.S. States with Highest Likelihood of Case Acceleration
-Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[US: Virgin Islands](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_virgin_islands/index.html)|0.1|3.038%|13.42%|1.592e-05
 2|[US: California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
