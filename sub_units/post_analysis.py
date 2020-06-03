@@ -7,8 +7,8 @@ import sub_units.load_data_country as load_data  # only want to load this once, 
 scratchpad_filename = 'states_to_draw_figures_for.list'
 
 hyperparameter_strings = [
-    # '2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    # '2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
     '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 ]
 
@@ -69,8 +69,11 @@ def post_process_state_reports(opt_acc=True):
                                      params.iloc[i][col_name_mean] > 0 and \
                                      params.iloc[i][col_name] < 0.1]
         
-        cols_to_show = ['state', 'statsmodels_mean_converted', 'statsmodels_acc_mean_converted',
-                        'statsmodels_acc_p_value']
+        if opt_acc:
+            cols_to_show = ['state', 'statsmodels_mean_converted', 'statsmodels_acc_mean_converted',
+                            'statsmodels_acc_p_value']
+        else:
+            cols_to_show = ['state', 'statsmodels_mean_converted', 'statsmodels_p_value']
         params['statsmodels_mean_converted'] = [f'{(np.exp(x) - 1) * 100:.4g}%' for x in params['statsmodels_mean']]
         params['statsmodels_acc_mean_converted'] = [f'{(np.exp(x) - 1) * 100:.4g}%' for x in params['statsmodels_acc_mean']]
         print_params = params.iloc[ilocs_ranked_by_p_val]

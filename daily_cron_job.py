@@ -89,6 +89,7 @@ print(region_plot_subfolders)
 # Step 2c: post-process parameters to identify which regions to deep-dive into
 ####
 
+post_analysis.hyperparameter_strings = list(region_plot_subfolders.values())
 post_analysis.post_process_state_reports(opt_acc=True)
 
 # re-run and produce all the plots for the top outbreak-y counties
@@ -130,10 +131,10 @@ region_plot_subfolders = covid.run_everything()
 
 # run in bash...
 # TODO: get these bash scripts to run from Python
-HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 
 
 ######
