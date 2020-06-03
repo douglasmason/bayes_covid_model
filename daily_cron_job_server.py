@@ -34,34 +34,6 @@ def upload_file(file_name, bucket, object_name=None):
 
 
 #####
-# Step 1a: Update counts data
-#####
-
-url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-r = requests.get(url, allow_redirects=True)
-with open('source_data/states.csv', 'w') as f:
-    f.write(r.content.decode("utf-8") )
-
-url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
-r = requests.get(url, allow_redirects=True)
-with open('source_data/counties.csv', 'w') as f:
-    f.write(r.content.decode("utf-8") )
-
-# # from https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports
-
-
-print('Downloading last week of data')
-for days_back in tqdm(range(0, 7)):
-    date = datetime.date.today() - datetime.timedelta(days=days_back)
-    date_str = date.strftime('%m-%d-%Y')
-    url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
-    r = requests.get(url, allow_redirects=True)
-    filename = f'source_data/csse_covid_19_daily_reports/{date_str}.csv'
-    print(filename, len(r.content.decode("utf-8")))
-    with open(filename, 'w') as f:
-        f.write(r.content.decode("utf-8"))
-
-#####
 # Step 1b: Update load_data (this happens as soon as you import modules that use load_data)
 #####
 
@@ -86,7 +58,7 @@ covid.opt_plot = True
 covid.opt_truncate = False
 covid.opt_report = True
 covid.opt_simplified = True  # set to True to just do statsmodels as a simplified daily service
-covid.override_run_states = None # ['Spain', 'Iceland']#covid.load_data.current_cases_ranked_non_us_states[:50] # if you want to do countries instead
+covid.override_run_states = None
 
 region_plot_subfolders = covid.run_everything()
 

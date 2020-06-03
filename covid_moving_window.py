@@ -78,6 +78,8 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
         elif region == Region.US_counties:
             if opt_truncate:
                 override_run_states = load_data.current_cases_ranked_us_counties[:100]
+                california_counties = [x for x in load_data.current_cases_ranked_us_counties if 'california' in x.lower() and x not in override_run_states]
+                override_run_states.extend(california_counties)
             else:
                 override_run_states = load_data.current_cases_ranked_us_counties
         elif region == Region.countries:
