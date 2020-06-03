@@ -175,6 +175,12 @@ for region, plot_subfolder in region_plot_subfolders.items():
 # Step 4: Push to Github
 ######
 
+# Make sure all the folders are in the github repo
+git add plot_browser_moving_window_statsmodels_only_countries/*
+git add plot_browser_moving_window_statsmodels_only_US_counties/*
+git add plot_browser_moving_window_statsmodels_only_US_states/* 
+ 
+
 # TODO: (Optional) Update static_figures with most recent version
 # TODO: (Optional) Update README.md to link to new CSV files
 
