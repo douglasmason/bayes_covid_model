@@ -639,8 +639,8 @@ Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily 
 ![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels.png?)
 **Figure 3b:** Model parameter estimates for the current growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
 
-![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels_acc.png?)
-**Figure 3c:** Model parameter estimates for the week-over-week change in growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. States  higher in the list are candidates for new waves or outbreaks.
+![boxplot](/static_figures/simplified_boxplot_for_positive_slope_statsmodels.png?)
+**Figure 3c:** Model parameter estimates for the current growth rate of COVID- 19 for the United States, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
 
 More figures can be found in the Figure Browser links at the top of this page.
 
