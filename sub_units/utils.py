@@ -857,3 +857,14 @@ def generate_plot_browser(plot_browser_dir, base_url_dir, github_url, full_repor
                             with tag("a", href=tmp_url):
                                 text(print_state)
         f.write(doc.getvalue())
+
+
+def print_and_write(x, filename='scratch.txt', mode='a', reset=None):
+    if reset is not None:
+        if reset:
+            mode = 'w'
+        else:
+            mode = 'a'
+    with open(filename, mode) as f:
+        f.write(x)
+    print(x)

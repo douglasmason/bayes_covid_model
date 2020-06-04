@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import sub_units.load_data_country as load_data  # only want to load this once, so import as singleton pattern
+from sub_units.utils import print_and_write
 
 scratchpad_filename = 'states_to_draw_figures_for.list'
 
@@ -13,10 +14,15 @@ hyperparameter_strings = [
 ]
 
 map_hp_str_to_params_df = dict()
+github_table_filename = 'github_tables.txt'
+github_readme_filename = 'github_README.txt'
 
 
-def post_process_state_reports(opt_acc=True):
+def post_process_state_reports(opt_acc=True, opt_reset_tables_file=False):
     global map_hp_str_to_params_df  # this allows us to retrieve the processed DFs in other methods in this module
+
+    if opt_reset_tables_file:
+        print_and_write('', filename=github_table_filename, reset=True)
 
     for hyperparameter_str in hyperparameter_strings:
         # hyperparameter_str = hyperparameter_strings[0]
@@ -104,13 +110,53 @@ def post_process_state_reports(opt_acc=True):
         print_params['pretty_print_new_deceased_cnt_7_day_avg'] = [f'{x:.1f}' for x in
                                                                    print_params['new_deceased_cnt_7_day_avg']]
         cols_to_show = ['state_github', 'pretty_print_new_positive_cnt_7_day_avg'] + cols_to_show
-        print(print_params[cols_to_show].to_csv(sep='|', float_format='%.4g'))
 
-        if 'counties' in hyperparameter_str:
+        # print the table header
+        if 'countries' in hyperparameter_str.lower() and not opt_acc:
+            print_and_write('''
+## Countries with Highest Likelihood of Exponential Growth in Infections
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
+''', filename=github_table_filename)
+        elif 'counties' in hyperparameter_str.lower() and not opt_acc:
+            print_and_write('''
+## U.S. Counties with Highest Likelihood of Exponential Growth in Infections
+Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
+''', filename=github_table_filename)
+        elif 'states' in hyperparameter_str.lower() and not opt_acc:
+            print_and_write('''
+## U.S. States with Highest Likelihood of Exponential Growth in Infections
+Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|p-value
+-|-|-|-|-
+''', filename=github_table_filename)
+        elif 'countries' in hyperparameter_str.lower() and opt_acc:
+            print_and_write('''
+## Countries with Highest Likelihood of Case Acceleration
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+-|-|-|-|-|-
+''', filename=github_table_filename)
+        elif 'counties' in hyperparameter_str.lower() and opt_acc:
+            print_and_write('''
+## U.S. States with Highest Likelihood of Case Acceleration
+Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+-|-|-|-|-|-
+''', filename=github_table_filename)
+        elif 'states' in hyperparameter_str.lower() and opt_acc:
+            print_and_write('''
+## U.S. Counties with Highest Likelihood of Case Acceleration
+Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+-|-|-|-|-|-
+''', filename=github_table_filename)
+
+        # print the table contents
+        print_and_write(print_params[cols_to_show].to_csv(sep='|', float_format='%.4g', header=False),
+                        filename=github_table_filename)
+
+        if 'counties' in hyperparameter_str.lower():
             with open(scratchpad_filename, 'w') as f:
                 for row_ind, row_dict in print_params.iterrows():
                     f.write(row_dict['state'] + '\n')
-
 
 ######
 # Counties Map
@@ -120,9 +166,9 @@ def choropleth_test():
     global map_hp_str_to_params_df
 
     for hyperparameter_str in map_hp_str_to_params_df:
-        
+
         params = map_hp_str_to_params_df[hyperparameter_str]
-        
+
         print('Choropleth test!')
         import plotly.io as pio
 
