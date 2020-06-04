@@ -100,7 +100,6 @@ for region, plot_subfolder in region_plot_subfolders.items():
 ######
 
 import os
-from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
 

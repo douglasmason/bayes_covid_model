@@ -9,30 +9,35 @@ import datetime
 from sub_units.utils import Region
 from sub_units import post_analysis
 
+# TODO: re-implement sucking data from the internet by checking for all days
+#   and sucking only what it needs and put that in the load_data module
+#   so it automatically happens whenever you load the data, rather
+#   than having to manually do it here.
+
 #####
 # Step 1a: Update counts data
 #####
-# 
-# url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-# r = requests.get(url, allow_redirects=True)
-# with open('source_data/states.csv', 'w') as f:
-#     f.write(r.content.decode("utf-8") )
-# 
-# url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
-# r = requests.get(url, allow_redirects=True)
-# with open('source_data/counties.csv', 'w') as f:
-#     f.write(r.content.decode("utf-8") )
-# 
-# print('Downloading last week of data')
-# for days_back in tqdm(range(0, 7)):
-#     date = datetime.date.today() - datetime.timedelta(days=days_back)
-#     date_str = date.strftime('%m-%d-%Y')
-#     url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
-#     r = requests.get(url, allow_redirects=True)
-#     filename = f'source_data/csse_covid_19_daily_reports/{date_str}.csv'
-#     print(filename, len(r.content.decode("utf-8")))
-#     with open(filename, 'w') as f:
-#         f.write(r.content.decode("utf-8"))
+
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+r = requests.get(url, allow_redirects=True)
+with open('source_data/states.csv', 'w') as f:
+    f.write(r.content.decode("utf-8") )
+
+url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
+r = requests.get(url, allow_redirects=True)
+with open('source_data/counties.csv', 'w') as f:
+    f.write(r.content.decode("utf-8") )
+
+print('Downloading last week of data')
+for days_back in tqdm(range(0, 7)):
+    date = datetime.date.today() - datetime.timedelta(days=days_back)
+    date_str = date.strftime('%m-%d-%Y')
+    url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
+    r = requests.get(url, allow_redirects=True)
+    filename = f'source_data/csse_covid_19_daily_reports/{date_str}.csv'
+    print(filename, len(r.content.decode("utf-8")))
+    with open(filename, 'w') as f:
+        f.write(r.content.decode("utf-8"))
 
 #####
 # Step 1b: Update load_data (this happens as soon as you import modules that use load_data)
@@ -147,6 +152,8 @@ import os
 from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
+opt_file_check = False  # change to False after run on server
+
 region_plot_subfolders = {
  # Region.provinces: 'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
  Region.countries: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels',
@@ -161,10 +168,14 @@ for region, plot_subfolder in region_plot_subfolders.items():
     data_dir = plot_subfolder
     
     # only add regions with a valid directory and a figure to present inside
-    regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f)) and \
-                          os.path.exists(os.path.join(data_dir, f, 'statsmodels_growth_rate_time_series.png')) and \
-                          os.path.exists(os.path.join(data_dir, f, 'statsmodels_solutions_filled_quantiles.png')) and \
-                          os.path.exists(os.path.join(data_dir, f, 'statsmodels_solutions_cumulative_filled_quantiles.png'))]
+    if opt_file_check:
+        regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f)) and \
+                              os.path.exists(os.path.join(data_dir, f, 'statsmodels_growth_rate_time_series.png')) and \
+                              os.path.exists(os.path.join(data_dir, f, 'statsmodels_solutions_filled_quantiles.png')) and \
+                              os.path.exists(os.path.join(data_dir, f, 'statsmodels_solutions_cumulative_filled_quantiles.png'))]
+    else:
+        regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f))]
+        
     print(sorted(regions_to_present))
 
     # Regenerate Figures
