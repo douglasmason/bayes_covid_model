@@ -181,6 +181,7 @@ params['state_without_us'] = [x[4:] if type(x) == str else None for x in params[
 hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels'
 params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
 params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
 params['state_abbr'] = [us_state_abbrev[x[4:]] if type(x)==str and x[4:] in us_state_abbrev else None for x in params['state']]
 
 def choropleth_test():
@@ -324,7 +325,7 @@ def choropleth_test():
         plot_df.iloc[filter_ind],
         locations='state_abbr',
         locationmode = "USA-states",
-        color=,
+        color=tmp_str,
         range_color=(-10, 10),
         color_continuous_scale=px.colors.diverging.RdYlGn[::-1],
         # color_continuous_scale=px.colors.sequential.OrRd,
