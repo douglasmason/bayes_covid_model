@@ -449,7 +449,7 @@ Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relati
 45|[Uruguay](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/uruguay/index.html)|5.3|3.313%|4.456%|0.07878
 46|[United Kingdom](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/united_kingdom/index.html)|1827.6|-3.502%|1.748%|0.08423
 
-## U.S. Counties with Highest Likelihood of Case Acceleration
+## U.S. States with Highest Likelihood of Case Acceleration
 Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[California](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_california/index.html)|2546.9|2.654%|1.613%|0.0001499
@@ -468,7 +468,7 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 14|[Alabama](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_alabama/index.html)|445.1|4.306%|1.533%|0.05571
 15|[Pennsylvania](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_states/us_pennsylvania/index.html)|635.3|-1.915%|0.7352%|0.09979
 
-## U.S. States with Highest Likelihood of Case Acceleration
+## U.S. Counties with Highest Likelihood of Case Acceleration
 Rank|State: County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[Alabama: Cullman](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_alabama_cullman/index.html)|10.1|21.62%|20.03%|1.031e-09
