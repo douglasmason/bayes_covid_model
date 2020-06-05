@@ -1,6 +1,10 @@
 
 # bayes_covid_model
 
+**[Map: U.S. States by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/US_states.html)**
+
+**[Map: U.S. Counties by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/US_counties.html)**
+
 **[Example Figures](#example-figures)**
 
 **[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Positive Exponential Growth in Infections](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
