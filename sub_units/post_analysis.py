@@ -10,6 +10,7 @@ import plotly.io as pio
 import plotly.figure_factory as ff
 from sub_units.utils import us_state_abbrev, state_codes
 counties = json.load(open(os.path.join('source_data', 'geojson-counties-fips.json'), 'r'))
+countries = json.load(open(os.path.join('source_data', 'geojson-countries.json'), 'r'))
 
 scratchpad_filename = 'states_to_draw_figures_for.list'
 
@@ -173,6 +174,11 @@ pio.renderers
 pio.renderers.default = "browser"
 
 
+hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
+params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
+params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+
+
 hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
 params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
@@ -331,6 +337,54 @@ def choropleth_test():
         # color_continuous_scale=px.colors.sequential.OrRd,
         scope="usa",
         hover_name='state_without_us',
+        hover_data=['p_value', tmp_str],
+    )
+    fig.show()
+
+    ######    
+    # Value Country
+    ######
+
+    hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
+    params = map_hp_str_to_params_df[hyperparameter_str]
+
+    param_name = 'positive_slope'
+    param_ind = [i for i, x in enumerate(params['param']) if x == param_name]
+    col_name = 'statsmodels_mean'
+    col_name_p_value = 'statsmodels_p_value'
+
+    # values = np.array(params[col_name] * np.sign(params[sign_name]))
+    good_ind = np.array([i for i, x in enumerate(params['state']) if x is not None])
+
+    filter_ind = param_ind.copy()
+    new_filter_ind = good_ind.copy()
+    filter_ind = [i for i in filter_ind if i in new_filter_ind]
+
+    new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
+    filter_ind = [i for i in filter_ind if i in new_filter_ind]
+
+    new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_p_value']) if x < 0.1])
+    filter_ind = [i for i in filter_ind if i in new_filter_ind]
+
+    tmp_str = 'Daily Relative Growth Rate Percent'
+    plot_df = params.copy()
+    plot_df['value'] = [x if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
+    plot_df['value_as_perc'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in
+                                enumerate(plot_df['value'])]
+    plot_df['p_value'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
+    plot_df[tmp_str] = [x * 100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
+
+    fig = px.choropleth(
+        plot_df.iloc[filter_ind],
+        #geojson=countries,
+        locations='state',
+        locationmode="country names",
+        color=tmp_str,
+        range_color=(-10, 10),
+        color_continuous_scale=px.colors.diverging.RdYlGn[::-1],
+        # color_continuous_scale=px.colors.sequential.OrRd,
+        scope="world",
+        hover_name='state',
         hover_data=['p_value', tmp_str],
     )
     fig.show()
