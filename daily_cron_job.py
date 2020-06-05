@@ -149,6 +149,8 @@ post_analysis.post_process_state_reports(opt_acc=False, opt_reset_tables_file=Tr
 post_analysis.post_process_state_reports(opt_acc=True)
 print_and_write(github_readme_components.get_all(github_table_filename=post_analysis.github_table_filename),
                 filename='github_README.txt', reset=True)
+
+
 shutil.copyfile('github_README.txt', 'README.md')
 
 
@@ -259,6 +261,7 @@ for in_file, out_file in map_filename_to_github.items():
 ######
 
 # Make sure all the folders are in the github repo
+# git add source_data/csse_covid_19_daily_reports/*
 # git add plot_browser_moving_window_statsmodels_only_countries/*
 # git add plot_browser_moving_window_statsmodels_only_US_counties/*
 # git add plot_browser_moving_window_statsmodels_only_US_states/* 

@@ -2563,31 +2563,6 @@ class BayesModel(ABC):
             return np.exp(x) - 1
 
         sol_plot_date_range = sorted(map_t_val_ind_to_tested_distro.keys())
-        p5_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 5) for val_ind in sol_plot_date_range]
-        p25_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 25) for val_ind in
-                     sol_plot_date_range]
-        p50_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 50) for val_ind in
-                     sol_plot_date_range]
-        p75_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 75) for val_ind in
-                     sol_plot_date_range]
-        p95_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 95) for val_ind in
-                     sol_plot_date_range]
-
-        ax.fill_between(sol_plot_date_range,
-                        [convert_growth_rate_to_perc(x) for x in p5_curve],
-                        [convert_growth_rate_to_perc(x) for x in p95_curve],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
-                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
-                        )
-        ax.fill_between(sol_plot_date_range,
-                        [convert_growth_rate_to_perc(x) for x in p25_curve],
-                        [convert_growth_rate_to_perc(x) for x in p75_curve],
-                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
-                        edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
-                        )
-        ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
-                color="darkred", label='Deaths')
-
         p5_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 5) for val_ind in sol_plot_date_range]
         p25_curve = [np.percentile(map_t_val_ind_to_tested_distro[val_ind], 25) for val_ind in
                      sol_plot_date_range]
@@ -2613,8 +2588,34 @@ class BayesModel(ABC):
         ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
                 color="darkgreen", label='Infections')
 
-        fig.autofmt_xdate()
+        p5_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 5) for val_ind in sol_plot_date_range]
+        p25_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 25) for val_ind in
+                     sol_plot_date_range]
+        p50_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 50) for val_ind in
+                     sol_plot_date_range]
+        p75_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 75) for val_ind in
+                     sol_plot_date_range]
+        p95_curve = [np.percentile(map_t_val_ind_to_deceased_distro[val_ind], 95) for val_ind in
+                     sol_plot_date_range]
 
+        ax.fill_between(sol_plot_date_range,
+                        [convert_growth_rate_to_perc(x) for x in p5_curve],
+                        [convert_growth_rate_to_perc(x) for x in p95_curve],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.3),
+                        edgecolor=(0, 0, 0, 0)  # get rid of the darker edge
+                        )
+        ax.fill_between(sol_plot_date_range,
+                        [convert_growth_rate_to_perc(x) for x in p25_curve],
+                        [convert_growth_rate_to_perc(x) for x in p75_curve],
+                        facecolor=matplotlib.colors.colorConverter.to_rgba('red', alpha=0.6),
+                        edgecolor=(0, 0, 0, 0)  # r=get rid of the darker edge
+                        )
+        ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
+                color="darkred", label='Deaths')
+
+
+        fig.autofmt_xdate()
+        
         # this removes the year from the x-axis ticks
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))

@@ -7,7 +7,7 @@ header_fmt_str = f'''
 
 **[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
 
-**[Example Figures (not kept up to date)](#example-figures)**
+**[Example Figures](#example-figures)**
 
 **Latest results and three-month projections provided in** 
 * [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html)
@@ -37,8 +37,8 @@ We model universal curves of reported COVID-19 daily infections and related deat
 example_figures = '''
 ## Example Figures
 
-![boxplot](/static_figures/country_name_field.png?)
-**Figure 1:** Week-to-week change in daily growth rate vs. daily growth rate among nations, filtered to nations where the likelihood to have this magnitude of change in daily growth rate or greater (the p-value) is less than 10%. Nations in the top-right are likely to be accelerating an already high growth rate, in the top-left are likely to be reversing negative growth rate, in the bottom-left are likely to be accelerating an already strongly negative growth rate, and in the bottom-right are likely to be reversing a positive growth rate. This plot is generated from the [International Parameters CSV](https://covid-figures.s3-us-west-2.amazonaws.com/2020_05_21_date_smoothed_moving_window_21_days_countries_region_statsmodels/simplified_state_report.csv).
+![boxplot](/static_figures/acceleration_diagram.png?)
+**Figure 1:** Schematic diagram demonstrating how the Week-over-Week Change in 3-Week Avg. Daily Relative Growth Rate is computed.
 
 ![boxplot](/static_figures/statsmodels_solutions_filled_quantiles.png?)
 **Figure 2a:** Three-week moving-window model prediction curves for three months and COVID-19 Daily Reported Cases and Related Deaths in the U.S. This is what we predict would happen if the trend from the last three weeks continued for the next three months. 5th-95th percentile and 25th-75th percentile regions are displayed in light and dark colors, respectively.
@@ -48,9 +48,6 @@ example_figures = '''
 
 ![boxplot](/static_figures/statsmodels_growth_rate_time_series.png?)
 **Figure 2c:** Three-week moving-window model growth rate curves for three months and COVID-19 Cumulative Reported Cases and Related Deaths in the U.S.
-
-![boxplot](/static_figures/acceleration_diagram.png?)
-**Figure 3a:** Schematic diagram demonstrating how the Week-over-Week Change in 3-Week Avg. Daily Relative Growth Rate is computed.
 
 ![boxplot](/static_figures/intl_simplified_boxplot_for_positive_slope_statsmodels.png?)
 **Figure 3b:** Model parameter estimates for the current growth rate of COVID- 19 for each of the top 50 nations by current number of cases, with 5%, 25%, 50%, 75%, and 95% percentiles, ranked from highest to lowest median. 
