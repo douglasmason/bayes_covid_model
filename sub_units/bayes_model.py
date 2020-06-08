@@ -737,7 +737,8 @@ class BayesModel(ABC):
         output_filename3 = f'{key}{offset_str}_solutions_cumulative_discrete.png'
         output_filename4 = f'{key}{offset_str}_solutions_cumulative_filled_quantiles.png'
         if not self.opt_plot or (all(path.exists(path.join(self.plot_filename_base, x)) for x in \
-               [output_filename, output_filename2, output_filename3, output_filename4]) and not self.opt_force_plot):
+                                     [output_filename, output_filename2, output_filename3,
+                                      output_filename4]) and not self.opt_force_plot):
             return
 
         params, _, _, log_probs = self.get_weighted_samples(approx_type=approx_type, mvn_fit=mvn_fit)
@@ -1929,7 +1930,7 @@ class BayesModel(ABC):
             corr = self.recover_sigma_entries_from_matrix(corr)
         return corr
 
-    def get_weighted_samples_via_model(self, n_samples=None, approx_type=ApproxType.SP_CF):
+    def get_weighted_samples_via_model(self, n_samples=None, approx_type=ApproxType.SP_CF, offset=0):
         '''
         Retrieves likelihood samples in parameter space, weighted by their standard errors from statsmodels
         :param n_samples: how many samples to re-sample from the list of likelihood samples
@@ -1938,7 +1939,31 @@ class BayesModel(ABC):
 
         if n_samples is None:
             n_samples = self.n_samples
-        weight_sampled_params = self.map_approx_type_to_model[approx_type].rvs(n_samples)
+
+        if offset == 0:
+            weight_sampled_params = self.map_approx_type_to_model[approx_type].rvs(n_samples)
+        elif offset > 0 and approx_type == ApproxType.SM and \
+                hasattr(self, 'map_offset_to_statsmodels_dict') and \
+                offset in self.map_offset_to_statsmodels_dict:
+            weight_sampled_params_positive = self.map_offset_to_statsmodels_dict[offset][
+                'statsmodels_model_positive'].rvs(n_samples)
+            weight_sampled_params_deceased = self.map_offset_to_statsmodels_dict[offset][
+                'statsmodels_model_deceased'].rvs(n_samples)
+            positive_names = [name for name in self.sorted_names if 'positive' in name and 'sigma' not in name]
+            map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
+            deceased_names = [name for name in self.sorted_names if 'deceased' in name and 'sigma' not in name]
+            map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
+            weighted_sampled_params = [None] * n_samples
+            for name in self.sorted_names:
+                for sample_ind in n_samples:
+                    if weighted_sampled_params[sample_ind] is None:
+                        weighted_sampled_params[sample_ind] = dict()
+                    if name in map_name_to_sorted_ind_positive:
+                        weighted_sampled_params[sample_ind][name] = weight_sampled_params_positive[
+                            sample_ind, map_name_to_sorted_ind_positive[name]]
+                    if name in map_name_to_sorted_ind_deceased:
+                        weighted_sampled_params[sample_ind][name] = weight_sampled_params_deceased[
+                            sample_ind, map_name_to_sorted_ind_deceased[name]]
 
         log_probs = [self.get_log_likelihood(x) for x in weight_sampled_params]
 
@@ -2323,12 +2348,12 @@ class BayesModel(ABC):
 
         if ApproxType.SP_CF in self.model_approx_types:
             self.render_all_data_fit()
-    
+
             # Plot all-data solution 
             self.solve_and_plot_solution(in_params=self.all_data_params,
                                          title='All-Data Solution',
                                          plot_filename_filename='all_data_solution.png')
-    
+
             self.render_additional_covariance_approximations(self.all_data_params)
 
         if ApproxType.SM in self.model_approx_types:
@@ -2340,7 +2365,6 @@ class BayesModel(ABC):
                 self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
             else:
                 print('Error calculating and rendering statsmodels fit')
-
 
         for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
                             ApproxType.SP_min]:
@@ -2613,9 +2637,8 @@ class BayesModel(ABC):
         ax.plot(sol_plot_date_range, [convert_growth_rate_to_perc(x) for x in p50_curve],
                 color="darkred", label='Deaths')
 
-
         fig.autofmt_xdate()
-        
+
         # this removes the year from the x-axis ticks
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))
@@ -2626,7 +2649,7 @@ class BayesModel(ABC):
         plt.xlim(min(map_t_val_ind_to_tested_distro.keys()),
                  max(map_t_val_ind_to_tested_distro.keys()) + datetime.timedelta(days=5))
         plt.legend()
-        
+
         # plt.title(f'{state} Data (points) and Model Predictions (lines)')
         print(f'Printing {plot_filename_filename}...')
         plt.savefig(plot_filename_filename, dpi=self.plot_dpi)

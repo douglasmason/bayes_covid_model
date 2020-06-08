@@ -7,6 +7,7 @@ import pymc3 as pm
 import joblib
 import os
 from os import path
+from tqdm import tqdm
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -170,7 +171,8 @@ class MovingWindowModel(BayesModel):
         use_min_date = self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case)
         use_max_date = self.max_date
         timeseries_length_in_days = (use_max_date - use_min_date).days
-        for offset in reversed(range(timeseries_length_in_days)):
+        print('Rednering time-series fits')
+        for offset in tqdm(list(reversed(range(timeseries_length_in_days)))):
             self.render_statsmodels_fit(opt_simplified=opt_simplified, offset=offset, opt_plot=False, opt_print=False)
 
     def render_statsmodels_fit_current_and_one_week_before(self, opt_simplified=False, offset=7):
@@ -382,6 +384,7 @@ class MovingWindowModel(BayesModel):
 
         if not hasattr(self, 'map_offset_to_statsmodels_dict'):
             self.map_offset_to_statsmodels_dict = dict()
+            
         self.map_offset_to_statsmodels_dict[offset] = {
             'statsmodels_model_deceased': statsmodels_model_deceased,
             'statsmodels_model_positive': statsmodels_model_positive,
@@ -438,8 +441,8 @@ class MovingWindowModel(BayesModel):
 
         if ApproxType.SM in self.model_approx_types:
             time_series_output_filename = path.join(self.plot_filename_base, 'statsmodels_growth_rate_time_series.png')
+            self.render_statsmodels_fit_timeseries(opt_simplified=True)
             if self.opt_plot and not path.exists(time_series_output_filename):
-                self.render_statsmodels_fit_timeseries(opt_simplified=True)
                 self.plot_growth_rate_timeseries(plot_filename_filename=time_series_output_filename)
             self.render_statsmodels_fit_current_and_one_week_before(opt_simplified=True)
             if self.opt_plot:

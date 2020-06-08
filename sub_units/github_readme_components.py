@@ -3,11 +3,19 @@ hp_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsm
 header_fmt_str = f'''
 # bayes_covid_model
 
+*Updated weekly.*
+
+**[Map: Countries of the World by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/global.html)**
+
+**[Map: U.S. States by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/US_states.html)**
+
+**[Map: U.S. Counties by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/US_counties.html)**
+
+**[Example Figures](#example-figures)**
+
 **[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Positive Exponential Growth in Infections](#countries-with-highest-likelihood-of-exponential-growth-in-infections)**
 
 **[Leading Countries, U.S. States, and U.S. Counties by Likelihood of Case Acceleration](#countries-with-highest-likelihood-of-case-acceleration)**
-
-**[Example Figures](#example-figures)**
 
 **Latest results and three-month projections provided in** 
 * [International Figure Browser](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/plot_browser_moving_window_statsmodels_only_countries/index.html)

@@ -9,8 +9,8 @@ from sub_units.utils import print_and_write
 import plotly.io as pio
 import plotly.figure_factory as ff
 from sub_units.utils import us_state_abbrev, state_codes
+
 counties = json.load(open(os.path.join('source_data', 'geojson-counties-fips.json'), 'r'))
-countries = json.load(open(os.path.join('source_data', 'geojson-countries.json'), 'r'))
 
 scratchpad_filename = 'states_to_draw_figures_for.list'
 
@@ -172,23 +172,23 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 
 pio.renderers
 pio.renderers.default = "browser"
-
-
-hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
-params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
-params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
-
-
-hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
-params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
-params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
-params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
-
-hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels'
-params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
-params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
-params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
-params['state_abbr'] = [us_state_abbrev[x[4:]] if type(x)==str and x[4:] in us_state_abbrev else None for x in params['state']]
+# 
+# 
+# hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
+# params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
+# params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+# 
+# 
+# hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+# params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
+# params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+# params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
+# 
+# hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels'
+# params = post_analysis.map_hp_str_to_params_df[hyperparameter_str]
+# params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+# params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
+# params['state_abbr'] = [us_state_abbrev[x[4:]] if type(x)==str and x[4:] in us_state_abbrev else None for x in params['state']]
 
 def choropleth_test():
     global map_hp_str_to_params_df
@@ -202,48 +202,56 @@ def choropleth_test():
     print('Choropleth test!')
 
     ######    
-    # Acc Value County
+    # Value County
     ######
 
     param_name = 'positive_slope'
     param_ind = [i for i, x in enumerate(params['param']) if x == param_name]
     col_name = 'statsmodels_acc_mean'
-    sign_name = 'statsmodels_acc_mean'
+    col_name_p_value = 'statsmodels_acc_p_value'
 
-    values = np.array(params[col_name] * np.sign(params[sign_name]))
-    good_ind = np.array([i for i, x in enumerate(params['fips']) if x is not None])
+    good_ind = param_ind.copy()
+    new_filter_ind = np.array([i for i, x in enumerate(params['fips']) if x is not None])
+    good_ind = [i for i in good_ind if i in new_filter_ind]
+
+    new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
+    good_ind = [i for i in good_ind if i in new_filter_ind]
 
     filter_ind = param_ind.copy()
     new_filter_ind = good_ind.copy()
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
 
-    new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
+    # new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_mean']) if x > 0])
+    # filter_ind = [i for i in filter_ind if i in new_filter_ind]
+
+    new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_p_value']) if x < 0.1])
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
 
-    new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_acc_mean']) if x > 0])
-    filter_ind = [i for i in filter_ind if i in new_filter_ind]
-
-    new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_acc_p_value']) if x < 0.1])
-    filter_ind = [i for i in filter_ind if i in new_filter_ind]
-
+    tmp_str = 'Absolute Week-over-week Change in Daily Relative Growth Rate'
+    tmp_str2 = 'Daily Relative Growth Rate'
     plot_df = params.copy()
     plot_df['fips'] = [str(int(x)) if np.isfinite(x) else '0' for x in plot_df['fips']]
     plot_df['fips'] = [x if len(x) > 4 else '0' + x for x in plot_df['fips']]
-    plot_df['value'] = [x if i in filter_ind else 0 for i, x in enumerate(values[good_ind])]
+    plot_df['value'] = [x if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
+    plot_df['p_value'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
+    plot_df[tmp_str] = [x * 100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
     plot_df['value_as_perc'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in
-                                enumerate(values[good_ind])]
+                                enumerate(plot_df['value'])]
+    plot_df[tmp_str2] = [f'{x * 100:.4g}%' for x in plot_df['statsmodels_mean']]
 
     fig = px.choropleth(
-        plot_df.iloc[filter_ind],
+        plot_df.iloc[good_ind],
         geojson=counties,
         locations='fips',
-        color='value',
-        range_color=(0, 0.1),
-        color_continuous_scale=list(reversed(px.colors.sequential.OrRd[::-1])),
+        color=tmp_str,
+        range_color=(-10, 10),
+        color_continuous_scale=px.colors.diverging.RdYlGn[::-1],
+        # color_continuous_scale=list(reversed(px.colors.sequential.OrRd[::-1])),
         scope="usa",
         hover_name='state_without_us',
-        hover_data=['state_without_us', 'value_as_perc'],
+        hover_data=['p_value', tmp_str, tmp_str2]
     )
+    fig.to_html(os.path.join('choropleths', 'US_counties_acc.html'))
     fig.show()
 
     ######    
@@ -255,13 +263,15 @@ def choropleth_test():
     col_name = 'statsmodels_mean'
     col_name_p_value = 'statsmodels_p_value'
 
-    good_ind = np.array([i for i, x in enumerate(params['fips']) if x is not None])
-
+    good_ind = param_ind.copy()
+    new_filter_ind = np.array([i for i, x in enumerate(params['fips']) if x is not None])
+    good_ind = [i for i in good_ind if i in new_filter_ind]
+    
+    new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
+    good_ind = [i for i in good_ind if i in new_filter_ind]
+    
     filter_ind = param_ind.copy()
     new_filter_ind = good_ind.copy()
-    filter_ind = [i for i in filter_ind if i in new_filter_ind]
-
-    new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
 
     # new_filter_ind = np.array([i for i, x in enumerate(params['statsmodels_mean']) if x > 0])
@@ -281,7 +291,7 @@ def choropleth_test():
                                 enumerate(plot_df['value'])]
 
     fig = px.choropleth(
-        plot_df.iloc[filter_ind],
+        plot_df.iloc[good_ind],
         geojson=counties,
         locations='fips',
         color=tmp_str,
@@ -292,6 +302,7 @@ def choropleth_test():
         hover_name='state_without_us',
         hover_data=['p_value', tmp_str]
     )
+    fig.to_html(os.path.join('choropleths', 'US_counties.html'))
     fig.show()
     
     ######    
@@ -339,6 +350,7 @@ def choropleth_test():
         hover_name='state_without_us',
         hover_data=['p_value', tmp_str],
     )
+    fig.to_html(os.path.join('choropleths', 'US_states.html'))
     fig.show()
 
     ######    
@@ -387,7 +399,10 @@ def choropleth_test():
         hover_name='state',
         hover_data=['p_value', tmp_str],
     )
+    fig.to_html(os.path.join('choropleths', 'global.html'))
     fig.show()
+    
+    
 
 
 

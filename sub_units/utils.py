@@ -217,6 +217,7 @@ def generate_state_prediction(map_state_name_to_model,
                               override_max_date_str,
                               prediction_filename=None,
                               n_samples=1000):
+    
     max_date = datetime.datetime.strptime(override_max_date_str, '%Y-%m-%d')
     all_predictions = list()
     for state_ind, state in enumerate(map_state_name_to_model):
@@ -236,6 +237,7 @@ def generate_state_prediction(map_state_name_to_model,
                     params, _, _, log_probs = state_model.get_weighted_samples_via_statsmodels(n_samples=200)
                 elif approx_type == ApproxType.PyMC3:
                     params, _, _, log_probs = state_model.get_weighted_samples_via_PyMC3(n_samples=200)
+                    
                 print(approx_type)
                 param_inds_to_plot = list(range(len(params)))
                 param_inds_to_plot = np.random.choice(param_inds_to_plot, min(n_samples, len(param_inds_to_plot)),
@@ -337,7 +339,9 @@ def generate_state_prediction(map_state_name_to_model,
 def generate_state_report(map_state_name_to_model,
                           state_report_filename=None,
                           report_names=None,
-                          opt_save_to_csv=True):
+                          opt_save_to_csv=True,
+                          offset=0):
+    
     state_report_as_list_of_dicts = list()
     for state_ind, state in enumerate(map_state_name_to_model):
 
@@ -362,11 +366,14 @@ def generate_state_report(map_state_name_to_model,
             # except:
             #     SM_params = [0]
 
-            positive_names = [name for name in state_model.sorted_names if 'positive' in name and 'sigma' not in name]
-            map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
-            deceased_names = [name for name in state_model.sorted_names if 'deceased' in name and 'sigma' not in name]
-            map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
-
+            try:
+                positive_names = [name for name in state_model.sorted_names if 'positive' in name and 'sigma' not in name]
+                map_name_to_sorted_ind_positive = {val: i for i, val in enumerate(positive_names)}
+                deceased_names = [name for name in state_model.sorted_names if 'deceased' in name and 'sigma' not in name]
+                map_name_to_sorted_ind_deceased = {val: i for i, val in enumerate(deceased_names)}
+            except:
+                pass 
+            
             try:
                 SM_acc_params = state_model.map_param_to_acc
             except:
@@ -376,7 +383,7 @@ def generate_state_report(map_state_name_to_model,
             for approx_type in state_model.map_approx_type_to_model:
                 if True:
                     approx_type_params[approx_type], _, _, _ = state_model.get_weighted_samples_via_model(
-                        approx_type=approx_type)
+                        approx_type=approx_type, offset=offset)
                 else:
                     approx_type_params[approx_type] = [0]
 
@@ -398,6 +405,7 @@ def generate_state_report(map_state_name_to_model,
                     except:
                         pass
 
+                    
                     approx_type_vals = dict()
                     for approx_type in state_model.map_approx_type_to_model:
                         try:
@@ -407,6 +415,7 @@ def generate_state_report(map_state_name_to_model,
                                 range(len(approx_type_params[approx_type]))]
                         except:
                             pass
+                        
 
                     # try:
                     #     SM_vals = [SM_params[i][state_model.map_name_to_sorted_ind[param_name]] for i in
@@ -623,16 +632,17 @@ def generate_state_report(map_state_name_to_model,
 
     state_report = pd.DataFrame(state_report_as_list_of_dicts)
     
-    if opt_save_to_csv:
+    if opt_save_to_csv and offset==0:
         print('Saving state report to {}...'.format(state_report_filename))
         joblib.dump(state_report, state_report_filename)
         print('...done!')
         print('Saving state report to {}...'.format(state_report_filename.replace('joblib', 'csv')))
         joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
         print('...done!')
+    elif opt_save_to_csv:
+        joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
     
     n_states = len(set(state_report['state']))
-    print(n_states)
 
     new_cols = list()
     for col in state_report.columns:
@@ -710,6 +720,14 @@ def run_everything(run_states,
                 state_report = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names)
+                print(f'Rendering reports for 3 months...')
+                max_offset = 3*28
+                for offset in tqdm(range(max_offset)):
+                    state_report_filename = path.join(plot_subfolder, f'simplified_state_report_offset_{offset:03d}_of_{max_offset:03d}.joblib')
+                    _ = generate_state_report(map_state_name_to_model,
+                                                     state_report_filename=state_report_filename,
+                                                     report_names=plot_param_names,
+                                                     offset=offset)
                 if state_model.opt_plot:
                     _ = generate_state_prediction(map_state_name_to_model,
                                                   override_max_date_str,
