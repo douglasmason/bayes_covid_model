@@ -1,6 +1,8 @@
 
 # bayes_covid_model
 
+*Updated weekly.*
+
 **[Map: Countries of the World by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/global.html)**
 
 **[Map: U.S. States by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/US_states.html)**
