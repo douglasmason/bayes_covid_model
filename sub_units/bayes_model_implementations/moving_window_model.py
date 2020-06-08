@@ -171,7 +171,7 @@ class MovingWindowModel(BayesModel):
         use_min_date = self.min_date + datetime.timedelta(days=self.day_of_threshold_met_case)
         use_max_date = self.max_date
         timeseries_length_in_days = (use_max_date - use_min_date).days
-        print('Rednering time-series fits')
+        print('Rendering time-series fits')
         for offset in tqdm(list(reversed(range(timeseries_length_in_days)))):
             self.render_statsmodels_fit(opt_simplified=opt_simplified, offset=offset, opt_plot=False, opt_print=False)
 
