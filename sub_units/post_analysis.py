@@ -15,9 +15,9 @@ counties = json.load(open(os.path.join('source_data', 'geojson-counties-fips.jso
 scratchpad_filename = 'states_to_draw_figures_for.list'
 
 hyperparameter_strings = [
-    '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
-    '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+    '2020_06_07_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    '2020_06_07_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    '2020_06_07_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 ]
 
 map_hp_str_to_params_df = dict()

@@ -12,38 +12,10 @@ from sub_units import post_analysis
 from sub_units import github_readme_components
 from sub_units.utils import print_and_write
 
-# TODO: re-implement sucking data from the internet by checking for all days
-#   and sucking only what it needs and put that in the load_data module
-#   so it automatically happens whenever you load the data, rather
-#   than having to manually do it here.
+
 
 #####
-# Step 1a: Update counts data
-#####
-
-url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-r = requests.get(url, allow_redirects=True)
-with open('source_data/states.csv', 'w') as f:
-    f.write(r.content.decode("utf-8"))
-
-url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
-r = requests.get(url, allow_redirects=True)
-with open('source_data/counties.csv', 'w') as f:
-    f.write(r.content.decode("utf-8"))
-
-print('Downloading last week of data')
-for days_back in tqdm(range(0, 7)):
-    date = datetime.date.today() - datetime.timedelta(days=days_back)
-    date_str = date.strftime('%m-%d-%Y')
-    url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
-    r = requests.get(url, allow_redirects=True)
-    filename = f'source_data/csse_covid_19_daily_reports/{date_str}.csv'
-    print(filename, len(r.content.decode("utf-8")))
-    with open(filename, 'w') as f:
-        f.write(r.content.decode("utf-8"))
-
-#####
-# Step 1b: Update load_data (this happens as soon as you import modules that use load_data)
+# Step 1: Update load_data (this happens as soon as you import modules that use load_data and they can't find the relevant file in loaded_data
 #####
 
 import datetime
@@ -134,11 +106,10 @@ with open(post_analysis.scratchpad_filename, 'r') as f:
 
 region_plot_subfolders = covid.run_everything()
 
-# TODO: Make update to README automatic
-
 #####
 # Step 2e: Re-do post-analysis and write to github table file
 #####
+
 
 from sub_units import post_analysis
 from sub_units import github_readme_components
@@ -153,8 +124,6 @@ print_and_write(github_readme_components.get_all(github_table_filename=post_anal
 
 shutil.copyfile('github_README.txt', 'README.md')
 
-
-# TODO: Copy 'github_README.txt' to 'README.md'
 
 #####
 # Step 3: Upload Figures to AWS

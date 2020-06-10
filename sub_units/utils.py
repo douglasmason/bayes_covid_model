@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import datetime
+from scipy import stats
 
 pd.plotting.register_matplotlib_converters()  # addresses complaints about Timestamp instead of float for plotting x-values
 import matplotlib
@@ -408,12 +409,12 @@ def generate_state_report(map_state_name_to_model,
                     
                     approx_type_vals = dict()
                     for approx_type in state_model.map_approx_type_to_model:
-                        try:
+                        if True:
                             approx_type_vals[approx_type] = [
                                 approx_type_params[approx_type][i][state_model.map_name_to_sorted_ind[param_name]] for i
                                 in
                                 range(len(approx_type_params[approx_type]))]
-                        except:
+                        else:
                             pass
                         
 
@@ -485,31 +486,32 @@ def generate_state_report(map_state_name_to_model,
                                }
 
                 try:
-                    offset = SM_acc_params[param_name]['offset']
-                    SM_acc_mean = SM_acc_params[param_name]['slope2'] - SM_acc_params[param_name]['slope1']
-                    SM_acc_std_err = np.sqrt(
-                        SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
-                    SM_acc_model = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err)
-
-                    dict_to_add.update({
-                        'statsmodels_acc_mean': SM_acc_mean,
-                        'statsmodels_acc_std_err': SM_acc_std_err,
-                        'statsmodels_acc_fwhm': SM_acc_std_err * 2.355,
-                        'statsmodels_acc_p50': SM_acc_model.ppf(0.5),
-                        'statsmodels_acc_p5': SM_acc_model.ppf(0.05),
-                        'statsmodels_acc_p95': SM_acc_model.ppf(0.95),
-                        'statsmodels_acc_p25': SM_acc_model.ppf(0.25),
-                        'statsmodels_acc_p75': SM_acc_model.ppf(0.75),
-                    })
-
-                    dict_to_add.update({
-                        f'statsmodels_mean_offset_{offset}_days': SM_acc_params[param_name]['slope1'],
-                        f'statsmodels_mean_std_err_offset_{offset}_days': SM_acc_params[param_name]['bse1'],
-                        # 'statsmodels_mean': SM_acc_params[param_name]['slope2'],
-                        # 'statsmodels_mean_std_err': SM_acc_params[param_name]['bse2'],
-                        'statsmodels_acc_z_score': SM_acc_params[param_name]['z_score'],
-                        'statsmodels_acc_p_value': SM_acc_params[param_name]['p_value']
-                    })
+                    if offset == 0:
+                        SM_acc_offset = SM_acc_params[param_name]['offset']
+                        SM_acc_mean = SM_acc_params[param_name]['slope2'] - SM_acc_params[param_name]['slope1']
+                        SM_acc_std_err = np.sqrt(
+                            SM_acc_params[param_name]['bse1'] ** 2 + SM_acc_params[param_name]['bse2'] ** 2)
+                        SM_acc_model = sp_norm(loc=SM_acc_mean, scale=SM_acc_std_err)
+    
+                        dict_to_add.update({
+                            'statsmodels_acc_mean': SM_acc_mean,
+                            'statsmodels_acc_std_err': SM_acc_std_err,
+                            'statsmodels_acc_fwhm': SM_acc_std_err * 2.355,
+                            'statsmodels_acc_p50': SM_acc_model.ppf(0.5),
+                            'statsmodels_acc_p5': SM_acc_model.ppf(0.05),
+                            'statsmodels_acc_p95': SM_acc_model.ppf(0.95),
+                            'statsmodels_acc_p25': SM_acc_model.ppf(0.25),
+                            'statsmodels_acc_p75': SM_acc_model.ppf(0.75),
+                        })
+    
+                        dict_to_add.update({
+                            f'statsmodels_acc_calc_statsmodels_mean_offset_{SM_acc_offset}_days': SM_acc_params[param_name]['slope1'],
+                            f'statsmodels_acc_calc_statsmodels_mean_std_err_offset_{SM_acc_offset}_days': SM_acc_params[param_name]['bse1'],
+                            'statsmodels_acc_calc_statsmodels_mean': SM_acc_params[param_name]['slope2'],
+                            'statsmodels_acc_calc_statsmodels_mean_std_err': SM_acc_params[param_name]['bse2'],
+                            'statsmodels_acc_z_score': SM_acc_params[param_name]['z_score'],
+                            'statsmodels_acc_p_value': SM_acc_params[param_name]['p_value']
+                        })
                 except:
                     pass
 
@@ -555,7 +557,7 @@ def generate_state_report(map_state_name_to_model,
                 except:
                     pass
 
-                if hasattr(state_model, 'map_param_name_to_statsmodels_norm_model'):
+                if hasattr(state_model, 'map_param_name_to_statsmodels_norm_model') and offset==0:
                     if param_name in state_model.map_param_name_to_statsmodels_norm_model:
                         use_model = state_model.map_param_name_to_statsmodels_norm_model[param_name]
                         dict_to_add.update({
@@ -570,9 +572,26 @@ def generate_state_report(map_state_name_to_model,
                         })
                     else:
                         pass
-                    
+
+                if hasattr(state_model, 'map_offset_to_statsmodels_dict') and offset in state_model.map_offset_to_statsmodels_dict:
+                    if param_name in state_model.map_offset_to_statsmodels_dict[offset]['statsmodels_params']:
+                        mean = state_model.map_offset_to_statsmodels_dict[offset]['statsmodels_params'][param_name]
+                        std = state_model.map_offset_to_statsmodels_dict[offset]['statsmodels_bse'][param_name]
+                        use_model = stats.norm(loc=mean, scale=std)
+                        dict_to_add.update({
+                            'statsmodels_mean': use_model.mean(),
+                            'statsmodels_std_err': use_model.std(),
+                            'statsmodels_fwhm': use_model.std() * 2.355,
+                            'statsmodels_p50': use_model.ppf(0.5),
+                            'statsmodels_p5': use_model.ppf(0.05),
+                            'statsmodels_p95': use_model.ppf(0.95),
+                            'statsmodels_p25': use_model.ppf(0.25),
+                            'statsmodels_p75': use_model.ppf(0.75)
+                        })
+                    else:
+                        print(f'Error with param_name {param_name}')
                 else:
-                    pass
+                    print(f'Error with state {state} and offset {offset}')
 
                 # 
                 # try:
@@ -723,7 +742,7 @@ def run_everything(run_states,
                 print(f'Rendering reports for 3 months...')
                 max_offset = 3*28
                 for offset in tqdm(range(max_offset)):
-                    state_report_filename = path.join(plot_subfolder, f'simplified_state_report_offset_{offset:03d}_of_{max_offset:03d}.joblib')
+                    state_report_filename = path.join(plot_subfolder, f'simplified_state_report_offset_{offset:03d}_of_{max_offset:03d}.joblib')#_date_{day-datetime.timedelta(days=offset).strftime("%Y-%m-%d")}.joblib')
                     _ = generate_state_report(map_state_name_to_model,
                                                      state_report_filename=state_report_filename,
                                                      report_names=plot_param_names,
