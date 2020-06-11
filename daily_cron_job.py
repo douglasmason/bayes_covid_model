@@ -13,7 +13,6 @@ from sub_units import github_readme_components
 from sub_units.utils import print_and_write
 
 
-
 #####
 # Step 1: Update load_data (this happens as soon as you import modules that use load_data and they can't find the relevant file in loaded_data
 #####
@@ -67,6 +66,9 @@ print(region_plot_subfolders)
 ####
 # Step 2c: post-process parameters to identify which regions to deep-dive into
 ####
+
+# {<Region.US_counties: 'US_counties'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_US_counties_region_statsmodels', <Region.countries: 'countries'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_countries_region_statsmodels', <Region.US_states: 'US_states'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
+
 
 post_analysis.hyperparameter_strings = list(region_plot_subfolders.values())
 
@@ -148,12 +150,13 @@ from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
 opt_file_check = False  # change to False after run on server
+date_str = '2020_06_09'
 
 region_plot_subfolders = {
-    # Region.provinces: 'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
-    Region.countries: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    Region.US_states: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
-    Region.US_counties: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+    # Region.provinces: f'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
+    Region.countries: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    Region.US_counties: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 }
 
 for region, plot_subfolder in region_plot_subfolders.items():
@@ -187,7 +190,7 @@ for region, plot_subfolder in region_plot_subfolders.items():
 
 import os
 import shutil 
-date_str = yesterdays_date_str
+date_str = yesterdays_date_str.replace('-','_')
 
 map_filename_to_github = {
     os.path.join('state_plots',

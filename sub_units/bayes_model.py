@@ -407,6 +407,10 @@ class BayesModel(ABC):
 
         log_likelihood_positive = np.sum(my_logpdf_sum(dist, 0, params['sigma_positive']) for dist in dists_positive)
         log_likelihood_deceased = np.sum(my_logpdf_sum(dist, 0, params['sigma_deceased']) for dist in dists_deceased)
+        
+        # from https://emcee.readthedocs.io/en/stable/tutorials/line/ you can use
+        #    -0.5 * np.sum((y - model) ** 2 / sigma2 + np.log(sigma2))
+        
 
         log_likelihood_other = sum(x ** 2 for x in other_errs)
 
@@ -450,8 +454,6 @@ class BayesModel(ABC):
                 if tested_indices is None or tested_indices is not None and int(x) in [inv_cases_indices[tmp_ind] for
                                                                                        tmp_ind in tested_indices]:
                     ind_use.append(int(x))
-
-        # print('ind_use:', ind_use)
 
         data_use = actual_tested + actual_dead
         data_use = [data_use[i] for i in ind_use]

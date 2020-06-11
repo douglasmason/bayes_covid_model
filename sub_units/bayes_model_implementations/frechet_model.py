@@ -102,13 +102,6 @@ class FrechetModel(BayesModel):
         sol = self.run_simulation(params)
         new_tested_from_sol = sol[1]
         new_deceased_from_sol = sol[2]
-        # print(f'Simulation took {timer.elapsed_time() * 100} ms')
-        # timer = Stopwatch()
-
-        # print('new_tested_from_sol')
-        # print(new_tested_from_sol)
-        # print('new_deceased_from_sol')
-        # print(new_deceased_from_sol)
 
         actual_tested = [np.log(data_new_tested[i] + self.log_offset) for i in cases_bootstrap_indices]
         predicted_tested = [np.log(new_tested_from_sol[i + self.burn_in] + self.log_offset) for i in
