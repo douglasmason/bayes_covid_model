@@ -408,7 +408,7 @@ Rank|State:County|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily R
 250|[Maryland: Baltimore city](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_US_counties/us_maryland_baltimore_city/index.html)|98.6|2.228%|0.09767
 
 ## Countries with Highest Likelihood of Case Acceleration
-Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-over-Week Change in Daily Relative Growth Rate|p-value
+Rank|Country|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative Growth Rate|Absolute Week-to-Week Change in Daily Relative Growth Rate|p-value
 -|-|-|-|-|-
 1|[Israel](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/israel/index.html)|75.4|8.359%|15.94%|2.598e-09
 2|[Thailand](https://htmlpreview.github.io/?https://raw.githubusercontent.com/douglasmason/covid_model/master/plot_browser_moving_window_statsmodels_only_countries/thailand/index.html)|5.4|5.279%|12.58%|4.517e-06
