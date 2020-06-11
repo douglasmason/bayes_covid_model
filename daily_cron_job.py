@@ -150,7 +150,7 @@ from sub_units.utils import Region
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
 opt_file_check = False  # change to False after run on server
-date_str = '2020_06_09'
+date_str = '2020_06_07'
 
 region_plot_subfolders = {
     # Region.provinces: f'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
