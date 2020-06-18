@@ -11,7 +11,11 @@ plt.style.use('seaborn-darkgrid')
 matplotlib.use('Agg')
 import matplotlib.dates as mdates
 import matplotlib.ticker as mtick
+
+from matplotlib import collections  as mplc
+
 import scipy as sp
+
 import joblib
 from os import path
 from tqdm import tqdm
@@ -24,8 +28,11 @@ import datetime
 import arviz as az
 import seaborn as sns
 import numdifftools
+import emcee
 
-import statsmodels.formula.api as smf
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 class WhichDistro(Enum):
@@ -209,6 +216,7 @@ class BayesModel(ABC):
 
         self.all_data_fit_filename = path.join('state_all_data_fits',
                                                f"{state_lc}_{smoothing_str}{model_type_name}_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
+
         self.bootstrap_filename = path.join('state_bootstraps',
                                             f"{state_lc}_{smoothing_str}{model_type_name}_{n_bootstraps}_bootstraps_max_date_{hyperparameter_max_date_str.replace('-', '_')}.joblib")
         self.likelihood_samples_filename_format_str = path.join('state_likelihood_samples',
@@ -398,21 +406,26 @@ class BayesModel(ABC):
         # deceased_norm = sp.stats.norm(loc=0, scale=params['sigma_deceased']).logpdf
 
         # from https://codereview.stackexchange.com/questions/69718/fastest-computation-of-n-likelihoods-on-normal-distributions
-        def my_logpdf_sum(x, loc, scale):
-            root2 = np.sqrt(2)
-            root2pi = np.sqrt(2 * np.pi)
-            prefactor = - x.size * np.log(scale * root2pi)
-            summand = -np.square((x - loc) / (root2 * scale))
-            return prefactor + summand.sum()
+        # def my_logpdf_sum(x, loc, scale):
+        #     root2 = np.sqrt(2)
+        #     root2pi = np.sqrt(2 * np.pi)
+        #     prefactor = - x.size * np.log(scale * root2pi)
+        #     summand = -np.square((x - loc) / (root2 * scale))
+        #     return prefactor + summand.sum()
+        # 
+        # log_likelihood_positive = np.sum(my_logpdf_sum(dist, 0, params['sigma_positive']) for dist in dists_positive)
+        # log_likelihood_deceased = np.sum(my_logpdf_sum(dist, 0, params['sigma_deceased']) for dist in dists_deceased)
 
-        log_likelihood_positive = np.sum(my_logpdf_sum(dist, 0, params['sigma_positive']) for dist in dists_positive)
-        log_likelihood_deceased = np.sum(my_logpdf_sum(dist, 0, params['sigma_deceased']) for dist in dists_deceased)
-        
         # from https://emcee.readthedocs.io/en/stable/tutorials/line/ you can use
         #    -0.5 * np.sum((y - model) ** 2 / sigma2 + np.log(sigma2))
-        
 
-        log_likelihood_other = sum(x ** 2 for x in other_errs)
+        log_likelihood_positive = -0.5 * np.sum(
+            np.power(dists_positive, 2) / np.power(params['sigma_positive'], 2) + np.log(
+                2 * np.pi * params['sigma_positive'] ** 2))
+        log_likelihood_deceased = -0.5 * np.sum(
+            np.power(dists_deceased, 2) / np.power(params['sigma_deceased'], 2) + np.log(
+                2 * np.pi * params['sigma_deceased'] ** 2))
+        log_likelihood_other = -sum(x ** 2 for x in other_errs)
 
         log_likelihood = log_likelihood_positive + log_likelihood_deceased + log_likelihood_other
 
@@ -481,7 +494,18 @@ class BayesModel(ABC):
                                                         [self.curve_fit_bounds[name][0] for name in self.sorted_names],
                                                         [self.curve_fit_bounds[name][1] for name in self.sorted_names]))
 
-        return self.convert_params_as_list_to_dict(params_as_list), cov
+        # Calculate the observation error:
+        positive_dists, deceased_dists, other_errs, sol, positive_vals, deceased_vals, \
+        predicted_tested, actual_tested, predicted_dead, actual_dead = self._get_log_likelihood_precursor(
+            self.convert_params_as_list_to_dict(params_as_list))
+        obs_err = np.sqrt(np.mean(np.array(positive_dists + deceased_dists)[ind_use][good_ind] ** 2))
+
+        # Add empirical obs. err. to dict.
+        params_as_dict = self.convert_params_as_list_to_dict(params_as_list)
+        params_as_dict['sigma_positive'] = np.mean(obs_err)
+        params_as_dict['sigma_deceased'] = np.mean(obs_err)
+
+        return params_as_dict, cov
 
     def fit_curve_via_least_squares(self,
                                     p0,
@@ -551,7 +575,7 @@ class BayesModel(ABC):
         # print('hess:')
         # print(hess)
 
-        hess = self.remove_sigma_entries_from_matrix(hess)
+        # hess = self.remove_sigma_entries_from_matrix(hess)
 
         cov = np.linalg.inv(-hess)
 
@@ -575,7 +599,7 @@ class BayesModel(ABC):
                 tmp_contrib = np.outer(vec, vec)
                 cov += tmp_contrib * val
 
-        cov = self.recover_sigma_entries_from_matrix(cov)
+        # cov = self.recover_sigma_entries_from_matrix(cov)
 
         eigenw, eigenv = np.linalg.eig(cov)
         # print('new_cov:')
@@ -634,11 +658,18 @@ class BayesModel(ABC):
             else:
                 try:
                     cov = self.get_covariance_matrix(p0)
+                    print('Re-calculating hessian approx using numdifftools for the covariance!')
                 except:
                     print('Error calculating covariance matrix, substituting with blah')
                     cov = np.diag([1e-12] * len(p0))
         else:
             cov = None  # results.hess_inv # this fella only works for certain methods so avoid for now
+            
+        # sometimes we will fit to a negative value for observation error due to the symmetry 
+        # (it's only used within a square operation). This is an easy fix:
+        for param_name in params_as_dict:
+            if 'sigma' in param_name and params_as_dict[param_name] < 0:
+                params_as_dict[param_name] *= -1
 
         return params_as_dict, cov
 
@@ -790,7 +821,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot or len(sols_to_plot) == 0:
             return
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
@@ -917,7 +948,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot or len(sols_to_plot) == 0:
             return
 
         print('Printing...', path.join(self.plot_filename_base, plot_filename_filename))
@@ -1061,6 +1092,10 @@ class BayesModel(ABC):
         :param plot_filename_filename: string to add to the plot filename
         :return: None
         '''
+
+        if len(sols_to_plot) == 0:
+            return
+
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
         if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
             return
@@ -1136,7 +1171,7 @@ class BayesModel(ABC):
         :return: None
         '''
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot:
+        if path.exists(full_output_filename) and not self.opt_force_plot or not self.opt_plot or len(sols_to_plot) == 0:
             return
 
         if n_sols_to_plot > len(sols_to_plot):
@@ -1223,6 +1258,87 @@ class BayesModel(ABC):
         vals = np.exp(arg)
         return vals
 
+    def Emcee(self):
+        # from https://emcee.readthedocs.io/en/stable/tutorials/line/
+
+        n_walkers = 50
+        n_steps = 5000
+        scale_param = 1000
+        filename_str = f'Emcee_{n_walkers}_walkers_{n_steps}_steps_{scale_param}_scale_param'
+
+        success = False
+
+        try:
+            print(f'loading from {self.likelihood_samples_filename_format_str.format(filename_str)}...')
+            tmp_dict = joblib.load(self.likelihood_samples_filename_format_str.format(filename_str))
+            model = tmp_dict['model']
+            means_as_list = tmp_dict['means_as_list']
+            cov = tmp_dict['cov']
+            success = True
+            print('...done!')
+        except:
+            print('...load failed!... doing calculations...')
+
+        if not success:
+            def emcee_ll(*args):
+                return self.get_log_likelihood(args[0])
+
+            # starting point is a ball around MLE
+            starting_point = np.array([self.convert_params_as_dict_to_list(self.all_data_params)] * n_walkers)
+            n_params = len(self.all_data_params)
+
+            print('starting with:')
+            self.pretty_print_params(self.all_data_params)
+            print('starting_point.shape', starting_point.shape)
+
+            for param_ind, param_name in enumerate(self.sorted_names):
+                if param_name in self.logarithmic_params:
+                    std_err = self.all_data_params[param_name] / scale_param
+                else:
+                    std_err = 1 / scale_param
+                starting_point[:, param_ind] = sp.stats.norm(loc=self.all_data_params[param_name], scale=std_err).rvs(
+                    n_walkers)
+
+            C = starting_point - np.mean(starting_point, axis=0)[None, :]
+            # print(C.T)
+            print(f'Condition number: {np.linalg.cond(C.astype(float))}')
+
+            sampler = emcee.EnsembleSampler(n_walkers, n_params, emcee_ll)
+            print(self.convert_params_as_dict_to_list(self.all_data_params))
+            sampler.run_mcmc(starting_point, n_steps, progress=True)
+
+            print('Autocorrelation:')
+            try:
+                print(sampler.get_autocorr_time())
+            except:
+                print("...Whoops on the autocorrelation time!")
+
+            samples = sampler.get_chain(flat=True)
+
+            burn_in = int(len(samples) * 0.5)
+            samples = samples[burn_in:]
+
+            means_as_list = np.average(samples, axis=0)
+            std_errs_as_list = np.std(samples, axis=0)
+            cov = np.diag(std_errs_as_list)
+
+            model = sp.stats.multivariate_normal(
+                mean=means_as_list,
+                cov=cov, allow_singular=True)
+
+            tmp_dict = dict()
+            tmp_dict['model'] = model
+            tmp_dict['means_as_list'] = means_as_list
+            tmp_dict['cov'] = cov
+
+            print(f'saving bootstraps to {self.likelihood_samples_filename_format_str.format(filename_str)}...')
+            joblib.dump(tmp_dict, self.likelihood_samples_filename_format_str.format(filename_str))
+            print('...done!')
+
+        self.map_approx_type_to_model[ApproxType.Emcee] = model
+        self.map_approx_type_to_means[ApproxType.Emcee] = means_as_list
+        self.map_approx_type_to_cov[ApproxType.Emcee] = cov
+
     def render_all_data_fit(self,
                             passed_params=None,
                             method='curve_fit',  # orig, curve_fit
@@ -1251,7 +1367,6 @@ class BayesModel(ABC):
             all_data_sol = self.run_simulation(passed_params)
             all_data_cov = self.get_covariance_matrix(passed_params)
 
-        # TODO: Break out all-data fit to its own method, not embedded in render_bootstraps
         if (not success and self.opt_calc and passed_params is None) or self.opt_force_calc:
 
             print('\n----\nRendering all-data model fits... \n----')
@@ -1265,7 +1380,12 @@ class BayesModel(ABC):
             print('Employing Scipy\'s curve_fit method...')
 
             test_params_as_list = [self.test_params[key] for key in self.sorted_names]
-            all_data_params, all_data_cov = self.fit_curve_via_curve_fit(test_params_as_list)
+            try:
+                all_data_params, all_data_cov = self.fit_curve_via_curve_fit(test_params_as_list)
+            except:
+                all_data_params, all_data_cov = self.fit_curve_via_likelihood(test_params_as_list,
+                                                                              print_success=True,
+                                                                              opt_cov=True)
 
             print('refitting all-data params to get sigma values')
             all_data_params_for_sigma, all_data_cov_for_sigma = self.fit_curve_via_likelihood(all_data_params,
@@ -1281,6 +1401,8 @@ class BayesModel(ABC):
                 if 'sigma' in name:
                     all_data_cov[ind, :] = all_data_cov_for_sigma[ind, :]
                     all_data_cov[:, ind] = all_data_cov_for_sigma[:, ind]
+
+            all_data_cov = self.make_PSD(all_data_cov)
 
             print('\nOrig std-errs:')
             self.pretty_print_params(np.sqrt(np.diagonal(all_data_cov)))
@@ -1405,7 +1527,7 @@ class BayesModel(ABC):
                 self.map_approx_type_to_cov[approx_type] = cov
                 self.map_approx_type_to_model[approx_type] = sp.stats.multivariate_normal(mean=means,
                                                                                           cov=cov, allow_singular=True)
-            except:  # except Exception as ee:
+            except Exception as ee:  # except Exception as ee:
                 print('Error with', approx_type)
                 print('  error:', ee)
 
@@ -1473,12 +1595,12 @@ class BayesModel(ABC):
                 tmp_params = self.all_data_params
                 starting_point_as_list = [tmp_params[key] for key in self.sorted_names]
 
-                params_as_dict, cov = self.fit_curve_via_curve_fit(starting_point_as_list,
-                                                                   # data_tested=tested_jitter,
-                                                                   # data_dead=dead_jitter,
-                                                                   tested_indices=cases_bootstrap_indices,
-                                                                   deaths_indices=deaths_bootstrap_indices
-                                                                   )
+                params_as_dict, cov = self.fit_curve_via_likelihood(starting_point_as_list,
+                                                                    # data_tested=tested_jitter,
+                                                                    # data_dead=dead_jitter,
+                                                                    tested_indices=cases_bootstrap_indices,
+                                                                    deaths_indices=deaths_bootstrap_indices
+                                                                    )
 
                 sol = self.run_simulation(params_as_dict)
                 bootstrap_sols.append(sol.copy())
@@ -1623,26 +1745,43 @@ class BayesModel(ABC):
             self.all_PyMC3_log_probs_as_list = [self.all_PYMC3_log_probs_as_list[i] for i in shuffled_ind]
             print('...done!')
 
+    def get_cov_for_MCMC(self, opt_walk=True):
+        try:
+            if self.n_bootstraps > 5:
+                cov = self.map_approx_type_to_MVN[ApproxType.BS]['cov']
+                print('Using the bootstrap covariance matrix to set step size')
+            else:
+                cov = self.all_data_cov
+                print('Using self.all_data_cov covariance matrix to set step size')
+        except:
+            cov = self.all_data_cov
+            print('Using self.all_data_cov covariance matrix to set step size')
+
+        for ind, name in enumerate(self.sorted_names):
+            if name in self.logarithmic_params and not opt_walk:
+                cov[ind, :] = cov[ind, :] / self.all_data_params[name]
+                cov[:, ind] = cov[:, ind] / self.all_data_params[name]
+                min_val = 1e-3
+                if np.sqrt(cov[ind, ind]) < min_val:
+                    print(f'\nSub-threshold std. err. for params {name} (val: {np.sqrt(cov[ind, ind]):0.4g})')
+                    multiplier = min_val / np.sqrt(cov[ind, ind])
+                    cov[ind, :] = cov[ind, :] * multiplier
+                    cov[:, ind] = cov[:, ind] * multiplier
+                    print(f'New val: {np.sqrt(cov[ind, ind]):0.4g}\n')
+
+        if opt_walk:
+            cov = cov / 100 ** 2  # contract the sampling gaussian since I'll be wandering around 
+        else:
+            cov = cov * 1 ** 2  # expand the sampling guassian to make sure I'm not missing anything (decided against this)
+
+        return cov
+
     @lru_cache(maxsize=10)
     def get_propensity_model(self, sample_scale_param, which_distro=WhichDistro.norm, opt_walk=False):
 
         if sample_scale_param == 'empirical':
-            try:
-                cov = self.map_approx_type_to_MVN[ApproxType.BS]['cov']
-                print('Using the bootstrap covariance matrix to set step size')
-            except:
-                cov = self.all_data_cov
-                print('Using self.all_data_cov covariance matrix to set step size')
 
-            for ind, name in enumerate(self.sorted_names):
-                if name in self.logarithmic_params:
-                    cov[ind, :] = cov[ind, :] / self.all_data_params[name]
-                    cov[:, ind] = cov[:, ind] / self.all_data_params[name]
-
-            if opt_walk:
-                cov = cov / 100  # contract the sampling gaussian since I'll be wandering around 
-            else:
-                cov = cov * 2  # expand the sampling guassian to make sure I'm not missing anything
+            cov = self.get_cov_for_MCMC(opt_walk=opt_walk)
 
             propensity_model = sp.stats.multivariate_normal(cov=cov, allow_singular=True)
         else:
@@ -1663,6 +1802,23 @@ class BayesModel(ABC):
 
         return propensity_model
 
+    # Generate "num_points" random points in "dimension" that have uniform
+    # probability over the unit ball scaled by "radius" (length of points
+    # are in range [0, "radius"]).
+    # From https://stackoverflow.com/questions/54544971/how-to-generate-uniform-random-points-inside-d-dimension-ball-sphere
+    @staticmethod
+    def random_ball(num_points, dimension, radius=1):
+        from numpy import random, linalg
+        # First generate random directions by normalizing the length of a
+        # vector of random-normal values (these distribute evenly on ball).
+        random_directions = random.normal(size=(dimension, num_points))
+        random_directions /= linalg.norm(random_directions, axis=0)
+        # Second generate a random radius with probability proportional to
+        # the surface area of a ball with a given radius.
+        random_radii = random.random(num_points) ** (1 / dimension)
+        # Return the list of random (direction & length) points.
+        return radius * (random_directions * random_radii).T
+
     def MCMC(self, p0=None, opt_walk=True,
              sample_shape_param='empirical',  # or an integer like 10 or 100
              which_distro=WhichDistro.norm
@@ -1676,16 +1832,35 @@ class BayesModel(ABC):
         else:
             MCMC_burn_in_frac = 0
 
-        bounds_to_use = self.curve_fit_bounds
-
         if p0 is None:
             try:
-                p0 = self.convert_params_as_list_to_dict(map_approx_type_to_MVN[ApproxType.BS]['means'])
+                p0 = self.convert_params_as_list_to_dict(self.map_approx_type_to_MVN[ApproxType.BS]['means'])
             except:
                 p0 = self.all_data_params
 
-        print('sigmas...')
-        self.pretty_print_params(np.sqrt(np.diagonal(use_cov)))
+        if type(sample_shape_param) == str and 'empirical' in sample_shape_param:
+            cov = self.get_cov_for_MCMC(opt_walk=opt_walk)
+            print('Using the following sigmas:')
+            self.pretty_print_params(np.sqrt(np.diag(cov)))
+            print()
+
+            if sample_shape_param == 'empirical10':
+                print('Dividing covariance matrix by an additional factor of 10')
+                cov = cov / 10 ** 2
+
+            # if not opt_walk and which_distro == WhichDistro.sphere:
+            #     print('Dividing covariance matrix by an additional factor of 5')
+            #     cov = cov / 5 ** 2
+        elif type(sample_shape_param) in [int, float]:
+            sigma = {key: (val[1] - val[0]) / sample_shape_param for key, val in self.curve_fit_bounds.items()}
+
+            # overwrite sigma for values that are strictly positive multipliers of unknown scale
+            # Note that I boost the width by a factor of 10 since it often gets too narrow
+            for param_name in self.logarithmic_params:
+                sigma[param_name] = 10 / sample_shape_param
+                sigma_as_list = [sigma[name] for name in self.sorted_names]
+
+            cov = np.diag([max(1e-8, x ** 2) for x in sigma_as_list])
 
         def get_bunched_up_on_bounds(input_params, new_val=None):
             if new_val is None:
@@ -1715,14 +1890,16 @@ class BayesModel(ABC):
             self.pretty_print_params(p0)
             return
 
+        if which_distro in [WhichDistro.norm, WhichDistro.norm_trunc]:
+            propensity_model = sp.stats.multivariate_normal(cov=cov, allow_singular=True)
+        elif which_distro in [WhichDistro.laplace, WhichDistro.laplace_trunc]:
+            propensity_model = sp.stats.laplace(scale=sigma_as_list)
+
         def acquisition_function(input_params, sample_shape_param):
             output_params = input_params
             jitter_propensity = 1
             accepted = False
             n_attempts = 0
-
-            propensity_model = self.get_propensity_model(sample_shape_param, which_distro=which_distro,
-                                                         opt_walk=opt_walk)
 
             while n_attempts < 100 and not accepted:  # this limits endless searches with wide sigmas
                 n_attempts += 1
@@ -1737,7 +1914,16 @@ class BayesModel(ABC):
                     # pdf_time = acq_timer.elapsed_time()
                     # print(f'PDF time: {pdf_time * 1000:.4g} ms')
                     # print(f'n_attempts: {n_attempts}')
-                elif which_distro in [WhichDistro.sphere, WhichDistro.norm_trunc, WhichDistro.laplace_trunc]:
+                elif which_distro == WhichDistro.sphere:
+                    # scale uniformly sampled points in ball by diagonal of covariance matrix
+                    jitter = list(self.random_ball(1, len(input_params)))[0]
+                    jitter = [np.sqrt(cov[i, i]) * jitter[i] for i in range(len(cov))]
+                    n = len(cov)
+                    vol = np.pi ** (n / 2) / sp.special.gamma(n / 2 + 1) * np.prod(
+                        np.sqrt(np.diag(cov)))  # from https://en.wikipedia.org/wiki/Volume_of_an_n-ball
+                    jitter_propensity = 1 / vol  # only true up to a constant
+
+                elif which_distro in [WhichDistro.norm_trunc, WhichDistro.laplace_trunc]:
                     accepted = False
                     n_tries = 0
                     while not accepted:
@@ -1780,8 +1966,13 @@ class BayesModel(ABC):
 
         # update user on the starting pt
         prev_p = p0.copy()
+        print()
         print('Starting from...')
         self.pretty_print_params(p0)
+
+        print()
+        print('With step size...')
+        self.pretty_print_params(np.sqrt(np.diag(cov)))
 
         ll = self.get_log_likelihood(p0)
         samples = list()
@@ -1810,10 +2001,12 @@ class BayesModel(ABC):
             print('...load failed!... doing calculations...')
 
         timer = Stopwatch()
+        exceed_MLE_timer = Stopwatch(set_to_neg_inf=True)
         prev_test_ind = -1
         n_accepted = 0
         n_accepted_turn = 0
         use_sample_shape_param = sample_shape_param
+        ll_at_MLE = self.get_log_likelihood(p0.copy())
 
         if (not success and self.opt_calc) or self.opt_force_calc:
 
@@ -1840,7 +2033,9 @@ class BayesModel(ABC):
                               f'\n       log likelihood: {proposed_ll:.4g}' + \
                               f'\n sample_shape_param: {sample_shape_param}' + \
                               f'\n acceptance ratio: {acceptance_ratio:.4g}' + \
-                              ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
+                              ''.join(
+                                  f'\n  {key}: {proposed_p[key]:.4g} ({proposed_p[key] - p0[key]:.4g} from MLE)' for key
+                                  in self.sorted_names))
                         timer.reset()
                         if opt_walk:
                             use_sample_shape_param = sample_shape_param * 100
@@ -1860,24 +2055,44 @@ class BayesModel(ABC):
                                 f'\n how many samples accepted since last update? {n_accepted_turn} of {n_test_ind_turn} ({n_accepted_turn / n_test_ind_turn * 100:.4g}%)' + \
                                 f'\n prev. log likelihood: {ll:.4g}' + \
                                 f'\n       log likelihood: {proposed_ll:.4g}' + \
+                                f'\n       log likelihood at MLE: {ll_at_MLE:.4g}' + \
                                 f'\n sample_shape_param {sample_shape_param}' + \
                                 f'\n acceptance ratio: {acceptance_ratio:.4g}' + \
-                                ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
+                                ''.join(
+                                    f'\n  {key}: {proposed_p[key]:.4g} ({proposed_p[key] - p0[key]:.4g} from MLE)' for
+                                    key in self.sorted_names))
                             timer.reset()
                             prev_test_ind = test_ind
                             n_accepted_turn = 0
 
                         prev_p = proposed_p.copy()
                         ll = proposed_ll
-                        samples.append(proposed_p)
-                        log_probs.append(proposed_ll)
-                        propensities.append(1)
 
                 else:
 
-                    samples.append(proposed_p)
-                    log_probs.append(proposed_ll)
-                    propensities.append(proposed_propensity)
+                    if proposed_ll > ll_at_MLE and exceed_MLE_timer.elapsed_time() > 1:
+                        print(
+                            f'\n\n  NEW POINT FOUND WITH HIGHER LOG-LIKELIHOOD THAN THE MLE!'
+                            f'\n --> log likelihood: {proposed_ll:.4g}' + \
+                            f'\n     log likelihood at MLE: {ll_at_MLE:.4g}' + \
+                            f'\n sample_shape_param {sample_shape_param}' + \
+                            f''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names) +\
+                            f'\n')
+                    
+                    if timer.elapsed_time() > 1:
+                        n_test_ind_turn = test_ind - prev_test_ind
+                        print(
+                            f'\n --> log likelihood: {proposed_ll:.4g}' + \
+                            f'\n     log likelihood at MLE: {ll_at_MLE:.4g}' + \
+                            f'\n sample_shape_param {sample_shape_param}' + \
+                            ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
+                        timer.reset()
+                        prev_test_ind = test_ind
+                        n_accepted_turn = 0
+
+                samples.append(proposed_p)
+                log_probs.append(proposed_ll)
+                propensities.append(proposed_propensity)
 
             propensities = [x * len(samples) for x in propensities]
             print(f'Dumping to {self.likelihood_samples_filename_format_str.format(filename_str)}...')
@@ -1944,6 +2159,7 @@ class BayesModel(ABC):
 
         if offset == 0:
             weight_sampled_params = self.map_approx_type_to_model[approx_type].rvs(n_samples)
+
         elif offset > 0 and approx_type == ApproxType.SM and \
                 hasattr(self, 'map_offset_to_statsmodels_dict') and \
                 offset in self.map_offset_to_statsmodels_dict:
@@ -2252,25 +2468,23 @@ class BayesModel(ABC):
         weight_sampled_params = [params[i] for i in param_inds]
 
         # TODO: add a plot to show distribution of weights and log-probs for likelihood samples
-        # max_weight_ind = np.argmax(weights)
-        # max_log_prob_ind = np.argmax(log_probs)
+        max_weight_ind = np.argmax(weights)
+        max_log_prob_ind = np.argmax(log_probs)
 
-        # print(f'took {timer.elapsed_time():.2g} seconds to process resampling')
-        # 
-        # print(f'max weight: {max(weights)}')
-        # print(f'max log-prob: {max(log_probs)}')
-        # print(f'propensity at max weight: {propensities[max_weight_ind]:.4g}')
-        # print(f'log_prob at max weight: {log_probs[max_weight_ind]:.4g}')
-        # 
-        # print(f'propensity at max log-prob: {propensities[max_log_prob_ind]:.4g}')
-        # print(f'params at max log-prob: {params[max_log_prob_ind]}')
-        # print(f'log_prob at all-data fit: {self.get_log_likelihood(self.all_data_params):.4g}')
-        # print(f'params at max weight: {params[max_weight_ind]}')
-        # print(f'params at max weight: {self.get_log_likelihood(params[max_weight_ind])}')
-        # desc_weights_inds = np.argsort(-weights)[:10]
-        # print(f'descending list of weights: {[weights[i] for i in desc_weights_inds]}')
-        # print(f'log-probs at descending list of weights {[log_probs[i] for i in desc_weights_inds]}')
-        # print(f'propensities at descending list of weights {[propensities[i] for i in desc_weights_inds]}')
+        print(f'max weight: {max(weights)}')
+        print(f'max log-prob: {max(log_probs)}')
+        print(f'propensity at max weight: {propensities[max_weight_ind]:.4g}')
+        print(f'log_prob at max weight: {log_probs[max_weight_ind]:.4g}')
+
+        print(f'propensity at max log-prob: {propensities[max_log_prob_ind]:.4g}')
+        print(f'params at max log-prob: {params[max_log_prob_ind]}')
+        print(f'log_prob at all-data fit: {self.get_log_likelihood(self.all_data_params):.4g}')
+        print(f'params at max weight: {params[max_weight_ind]}')
+        print(f'params at max weight: {self.get_log_likelihood(params[max_weight_ind])}')
+        desc_weights_inds = np.argsort(-weights)[:10]
+        print(f'descending list of weights: {[weights[i] for i in desc_weights_inds]}')
+        print(f'log-probs at descending list of weights {[log_probs[i] for i in desc_weights_inds]}')
+        print(f'propensities at descending list of weights {[propensities[i] for i in desc_weights_inds]}')
 
         return weight_sampled_params, params, weights, log_probs
 
@@ -2358,16 +2572,6 @@ class BayesModel(ABC):
 
             self.render_additional_covariance_approximations(self.all_data_params)
 
-        if ApproxType.SM in self.model_approx_types:
-            if True:
-                # Do statsmodels
-                self.render_statsmodels_fit_timeseries()
-                self.plot_growth_rate_timeseries(plot_filename_filename='statsmodels_growth_rate_time_series.png')
-                self.render_statsmodels_fit()
-                self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
-            else:
-                print('Error calculating and rendering statsmodels fit')
-
         for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
                             ApproxType.SP_min]:
 
@@ -2395,7 +2599,7 @@ class BayesModel(ABC):
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.BS)
             except:
-                print('Error calculating and rendering bootstraps')
+                logging.info('Error calculating and rendering bootstraps', exc_info=True)
 
             try:
                 # Next define MVN model on likelihood and fit   
@@ -2405,7 +2609,40 @@ class BayesModel(ABC):
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.BS, mvn_fit=True)
             except:
-                print('Error calculating and rendering MVN fit to bootstraps')
+                logging.info('Error calculating and rendering MVN fit to bootstraps', exc_info=True)
+
+        if ApproxType.Emcee in self.model_approx_types:
+            try:
+                print('Sampling via random walk Emcee, starting with MLE')
+                self.Emcee()
+
+                # Plot all solutions...
+                self.plot_all_solutions(approx_type=ApproxType.Emcee)
+
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(approx_type=ApproxType.Emcee)
+            except:
+                logging.info('Error calculating and rendering random walk with Emcee', exc_info=True)
+
+            try:
+                # Next define MVN model on likelihood and fit   
+                self.fit_MVN_to_likelihood(approx_type=ApproxType.Emcee)
+                # Plot all solutions...
+                self.plot_all_solutions(approx_type=ApproxType.Emcee, mvn_fit=True)
+                # Get and plot parameter distributions from bootstraps
+                self.render_and_plot_cred_int(approx_type=ApproxType.Emcee, mvn_fit=True)
+            except:
+                logging.info('Error calculating and rendering MVN fit to random walk with Emcee', exc_info=True)
+
+        if ApproxType.SM in self.model_approx_types:
+            try:
+                # Do statsmodels
+                self.render_statsmodels_fit_timeseries()
+                self.plot_growth_rate_timeseries(plot_filename_filename='statsmodels_growth_rate_time_series.png')
+                self.render_statsmodels_fit()
+                self.fit_MVN_to_likelihood(cov_type='full', approx_type=ApproxType.SM)
+            except:
+                logging.info('Error calculating and rendering statsmodels fit', exc_info=True)
 
         # self.all_data_params = self.statsmodels_params
         # for param_name in self.sorted_names:
@@ -2414,17 +2651,20 @@ class BayesModel(ABC):
         # self.render_all_data_fit(passed_params=self.all_data_params)
 
         if ApproxType.PyMC3 in self.model_approx_types:
-            if True:
+            try:
                 # Do statsmodels
                 self.render_PyMC3_fit()
-            else:
-                print('Error calculating and rendering PyMC3 fit')
+            except:
+                logging.info('Error calculating and rendering PyMC3 fit', exc_info=True)
 
         if ApproxType.LS in self.model_approx_types:
             try:
                 print('Sampling around MLE with empirical sigma')
                 self.MCMC(opt_walk=False,
-                          sample_shape_param='empirical', which_distro=WhichDistro.norm)
+                          sample_shape_param='empirical', which_distro=WhichDistro.sphere)
+                self.MCMC(opt_walk=False,
+                          sample_shape_param='empirical10', which_distro=WhichDistro.sphere)
+
                 # Do random walks around the overall fit
                 # print('\nSampling around MLE with wide sigma')
                 # self.MCMC(self.all_data_params, opt_walk=False,
@@ -2458,7 +2698,7 @@ class BayesModel(ABC):
                 # Plot all solutions...
                 self.plot_all_solutions(approx_type=ApproxType.LS)
             except:
-                print('Error calculating and rendering direct likelihood samples')
+                logging.info('Error calculating and rendering direct likelihood samples', exc_info=True)
 
             try:
                 # Next define MVN model on likelihood and fit   
@@ -2468,7 +2708,7 @@ class BayesModel(ABC):
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.LS, mvn_fit=True)
             except:
-                print('Error calculating and rendering MVN fit to likelihood')
+                logging.info('Error calculating and rendering MVN fit to likelihood', exc_info=True)
 
         if ApproxType.MCMC in self.model_approx_types:
             try:
@@ -2486,7 +2726,7 @@ class BayesModel(ABC):
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.MCMC)
             except:
-                print('Error calculating and rendering random walk')
+                logging.info('Error calculating and rendering random walk', exc_info=True)
 
             try:
                 # Next define MVN model on likelihood and fit   
@@ -2496,14 +2736,14 @@ class BayesModel(ABC):
                 # Get and plot parameter distributions from bootstraps
                 self.render_and_plot_cred_int(approx_type=ApproxType.MCMC, mvn_fit=True)
             except:
-                print('Error calculating and rendering MVN fit to random walk')
+                logging.info('Error calculating and rendering MVN fit to random walk', exc_info=True)
 
-        # Get extra likelihood samples
-        # print('Just doing random sampling')
-        # self.render_likelihood_samples()
+    # Get extra likelihood samples
+    # print('Just doing random sampling')
+    # self.render_likelihood_samples()
 
-        # Next define GMM model on likelihood and fit
-        # self.fit_GMM_to_likelihood()
+    # Next define GMM model on likelihood and fit
+    # self.fit_GMM_to_likelihood()
 
     @property
     def opt_plot_bootstraps(self):
@@ -2659,7 +2899,6 @@ class BayesModel(ABC):
         print('...done!')
 
     def get_weighted_samples_via_PyMC3(self, n_samples=None, ):
-
         if n_samples is None:
             n_samples = self.n_samples
         samples = self.all_PyMC3_samples_as_list

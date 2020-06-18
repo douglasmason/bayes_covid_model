@@ -97,8 +97,10 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
                            #'mult_deceased': 3400})
     logarithmic_params = ['alpha_positive',
                           's_positive',
+                          'mult_positive',
                           'alpha_deceased',
                           's_deceased',
+                          'mult_deceased',
                           'sigma_positive',
                           'sigma_deceased',
                           ]
@@ -131,11 +133,11 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
     extra_params = dict()
 
     curve_fit_bounds = {'alpha_positive': (1e-8, 1000),
-                        's_positive': (1e-3, 1000),
+                        's_positive': (1e-3, 1e8),
                         'm_positive': (-1000, 1000),
                         'mult_positive': (1e-8, 1e12),
                         'alpha_deceased': (1e-8, 1000),
-                        's_deceased': (1e-3, 1000),
+                        's_deceased': (1e-3, 1e8),
                         'm_deceased': (-1000, 1000),
                         'mult_deceased': (1e-8, 1e12),
                         'sigma_positive': (0, 100),
@@ -146,9 +148,9 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
                    's_positive': 200,
                    'm_positive': -50,
                    'mult_positive': 2e6,
-                   'alpha_deceased': 8,
+                   'alpha_deceased': 7,
                    's_deceased': 140,
-                   'm_deceased': -50,
+                   'm_deceased': -30,
                    'mult_deceased': 1e5,
                    'sigma_positive': 0.5,
                    'sigma_deceased': 0.3,
@@ -179,6 +181,7 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
                                              plot_param_names=plot_param_names,
                                              opt_statsmodels=True,
                                              override_max_date_str=override_max_date_str,
+                                             opt_convert_growth_rate_to_percent=False
                                              )
 
     return plot_subfolder

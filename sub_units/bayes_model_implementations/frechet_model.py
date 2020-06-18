@@ -20,13 +20,13 @@ class FrechetModel(BayesModel):
                        'optimizer_method': optimizer_method,
                        'burn_in': burn_in,
                        'cases_cnt_threshold': 100,
-                       'deaths_cnt_threshold': 100
+                       'deaths_cnt_threshold': 100,
+                       'n_params_for_emcee': 8
                        })
 
-        #model_approx_types = [ApproxType.PyMC3]
-        #model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.PyMC3]
-        model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC]
-        # model_approx_types = [ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.BS, ApproxType.LS, ApproxType.MCMC, ApproxType.SM]
+        model_approx_types = [ApproxType.PyMC3]
+        # model_approx_types = [ApproxType.BS, ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.LS,
+        #                       ApproxType.MCMC, ApproxType.PyMC3]
         kwargs.update({'model_approx_types': model_approx_types})
         super(FrechetModel, self).__init__(*args, **kwargs)
         self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
@@ -118,7 +118,11 @@ class FrechetModel(BayesModel):
 
         tested_vals = [data_new_tested[i] for i in cases_bootstrap_indices]
         deceased_vals = [data_new_dead[i] for i in deaths_bootstrap_indices]
-        other_errs = []
+
+        other_errs = list()
+        # for param_name in self.logarithmic_params:
+        #     pos_only_val = params[param_name]
+        #     other_errs += [abs(pos_only_val) if pos_only_val < 0 else 0] # NB: get_log_likelihood applies square operation
 
         return new_tested_dists, new_dead_dists, other_errs, sol, tested_vals, deceased_vals, \
                predicted_tested, actual_tested, predicted_dead, actual_dead

@@ -6,7 +6,7 @@ from sub_units.utils import Region
 # Setup
 #####
 base_url_dir = 'https://covid-figures.s3-us-west-2.amazonaws.com/'
-hyperparameter_str = '2020_05_13_date_smoothed_moving_window_21_days_statsmodels_only/'
+hyperparameter_str = 'current/'
 github_url = 'https://github.com/douglasmason/covid_model'
 plot_browser_dir = 'plot_browser_moving_window_statsmodels_only'
 full_report_filename = 'full_report.html'

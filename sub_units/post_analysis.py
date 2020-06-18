@@ -172,6 +172,8 @@ Rank|State|7-Day Avg. New Daily Infections|3-Week Avg. Infections Daily Relative
 
 pio.renderers
 pio.renderers.default = "browser"
+
+
 # 
 # 
 # hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
@@ -190,14 +192,18 @@ pio.renderers.default = "browser"
 # params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
 # params['state_abbr'] = [us_state_abbrev[x[4:]] if type(x)==str and x[4:] in us_state_abbrev else None for x in params['state']]
 
+counties_hp_str = '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+countries_hp_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
+states_hp_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels'
+
 def choropleth_test():
     global map_hp_str_to_params_df
 
-    hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+    hyperparameter_str = counties_hp_str
     params = map_hp_str_to_params_df[hyperparameter_str]
 
     params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
-    params['state_without_us'] = [x[4:] if type(x)==str else None for x in params['state']]
+    params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
 
     print('Choropleth test!')
 
@@ -266,10 +272,10 @@ def choropleth_test():
     good_ind = param_ind.copy()
     new_filter_ind = np.array([i for i, x in enumerate(params['fips']) if x is not None])
     good_ind = [i for i in good_ind if i in new_filter_ind]
-    
+
     new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
     good_ind = [i for i in good_ind if i in new_filter_ind]
-    
+
     filter_ind = param_ind.copy()
     new_filter_ind = good_ind.copy()
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
@@ -285,8 +291,8 @@ def choropleth_test():
     plot_df['fips'] = [str(int(x)) if np.isfinite(x) else '0' for x in plot_df['fips']]
     plot_df['fips'] = [x if len(x) > 4 else '0' + x for x in plot_df['fips']]
     plot_df['value'] = [x if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
-    plot_df['p_value'] = [f'{x*100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
-    plot_df[tmp_str] = [x*100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
+    plot_df['p_value'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
+    plot_df[tmp_str] = [x * 100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
     plot_df['value_as_perc'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in
                                 enumerate(plot_df['value'])]
 
@@ -304,12 +310,12 @@ def choropleth_test():
     )
     fig.to_html(os.path.join('choropleths', 'US_counties.html'))
     fig.show()
-    
+
     ######    
     # Value State
     ######
 
-    hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels'
+    hyperparameter_str = states_hp_str
     params = map_hp_str_to_params_df[hyperparameter_str]
 
     param_name = 'positive_slope'
@@ -323,7 +329,7 @@ def choropleth_test():
     filter_ind = param_ind.copy()
     new_filter_ind = good_ind.copy()
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
-    
+
     new_filter_ind = np.array([i for i, x in enumerate(params['new_positive_cnt_7_day_avg']) if x > 5])
     filter_ind = [i for i in filter_ind if i in new_filter_ind]
 
@@ -335,13 +341,13 @@ def choropleth_test():
     plot_df['value'] = [x if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
     plot_df['value_as_perc'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in
                                 enumerate(plot_df['value'])]
-    plot_df['p_value'] = [f'{x*100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
-    plot_df[tmp_str] = [x*100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
+    plot_df['p_value'] = [f'{x * 100:.4g}%' if i in filter_ind else 0 for i, x in enumerate(params[col_name_p_value])]
+    plot_df[tmp_str] = [x * 100 if i in filter_ind else 0 for i, x in enumerate(params[col_name])]
 
     fig = px.choropleth(
         plot_df.iloc[filter_ind],
         locations='state_abbr',
-        locationmode = "USA-states",
+        locationmode="USA-states",
         color=tmp_str,
         range_color=(-10, 10),
         color_continuous_scale=px.colors.diverging.RdYlGn[::-1],
@@ -357,7 +363,7 @@ def choropleth_test():
     # Value Country
     ######
 
-    hyperparameter_str = '2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels'
+    hyperparameter_str = countries_hp_str
     params = map_hp_str_to_params_df[hyperparameter_str]
 
     param_name = 'positive_slope'
@@ -388,7 +394,7 @@ def choropleth_test():
 
     fig = px.choropleth(
         plot_df.iloc[filter_ind],
-        #geojson=countries,
+        # geojson=countries,
         locations='state',
         locationmode="country names",
         color=tmp_str,
@@ -401,16 +407,4 @@ def choropleth_test():
     )
     fig.to_html(os.path.join('choropleths', 'global.html'))
     fig.show()
-    
-    
-
-
-
-state_list = list()
-for county in counties['features']:
-    state_list.append(county['properties']['STATE'])
-
-sorted(set(state_list))
-inv_state_codes = {val:key for key,val in state_codes.items()}
-sorted([inv_state_codes.get(x, None) for x in set(state_list)])
-state_codes['CA']
+   

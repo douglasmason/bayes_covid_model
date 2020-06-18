@@ -140,6 +140,11 @@ shutil.copyfile('github_README.txt', 'README.md')
 # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 # # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 
+# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
+# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
+# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
+# # HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
+
 
 ######
 # Step 3: Generate Figure Browser
@@ -153,13 +158,14 @@ opt_file_check = False  # change to False after run on server
 date_str = '2020_06_07'
 
 region_plot_subfolders = {
-    # Region.provinces: f'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
-    Region.countries: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    Region.US_states: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
-    Region.US_counties: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
+    # Region.provinces: 'state_plots/2020_05_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels',
+    Region.countries: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    Region.US_counties: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels'
 }
 
 for region, plot_subfolder in region_plot_subfolders.items():
+    
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
     print(hyperparamater_str)
 
@@ -177,9 +183,9 @@ for region, plot_subfolder in region_plot_subfolders.items():
         regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f))]
 
     print(sorted(regions_to_present))
-
+    
     # Regenerate Figures
-    generate_figure_browser.hyperparameter_str = hyperparamater_str + '/'
+    generate_figure_browser.hyperparameter_str = hyperparamater_str.replace(date_str, 'current') + '/'
     generate_figure_browser.plot_browser_dir = f'plot_browser_moving_window_statsmodels_only_{region}'
     generate_figure_browser.regions_to_present = regions_to_present
     generate_figure_browser.generate_plot_browser(regions_to_present)
@@ -229,7 +235,25 @@ for in_file, out_file in map_filename_to_github.items():
     dest_filename = shutil.copyfile(in_file, out_file)
 
 ######
-# Step 5: Push to Github
+# Step 5: Update Choropleths
+######
+
+from sub_units import post_analysis
+
+date_str = '2020_06_09'
+
+post_analysis.hyperparameter_strings = [os.path.basename(os.path.normpath(x)).format(date_str=date_str) for x in region_plot_subfolders.values()]
+post_analysis.post_process_state_reports(opt_acc=False, opt_reset_tables_file=True)
+post_analysis.post_process_state_reports(opt_acc=True)
+
+post_analysis.countries_hp_str = [x for x in post_analysis.hyperparameter_strings if 'countries' in x][0]
+post_analysis.counties_hp_str = [x for x in post_analysis.hyperparameter_strings if 'US_counties' in x][0]
+post_analysis.states_hp_str = [x for x in post_analysis.hyperparameter_strings if 'US_states' in x][0]
+
+post_analysis.choropleth_test()
+
+######
+# Step 6: Push to Github
 ######
 
 # Make sure all the folders are in the github repo

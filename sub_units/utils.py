@@ -9,6 +9,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.ticker as mtick
+
+from matplotlib import collections as mplc
 import joblib
 from scipy.stats import norm as sp_norm
 
@@ -19,6 +21,9 @@ from os import path
 import os
 from enum import Enum
 from yattag import Doc
+
+import logging
+logging.basicConfig(level=logging.INFO)
 
 
 class Region(Enum):
@@ -32,7 +37,7 @@ class Region(Enum):
 
 
 class ApproxType(Enum):
-    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS SP_CF NDT_Hess NDT_Jac SP_min SP_LS NUTS'
+    __order__ = 'BS LS MCMC SM PyMC3 Hess SM_acc SM_TS SP_CF NDT_Hess NDT_Jac SP_min SP_LS NUTS Emcee'
     BS = ('BS', 'bootstrap')
     LS = ('LS', 'likelihood_samples')
     MCMC = ('MCMC', 'random_walk')
@@ -47,6 +52,7 @@ class ApproxType(Enum):
     SP_min = ('SP_min', 'scipy_minimize')
     SP_LS = ('SP_LS', 'scipy_least_squares')
     NUTS = ('NUTS', 'no_u_turn_random_walk')
+    Emcee = ('Emcee', 'emcee')
 
     def __str__(self):
         return str(self.value)
@@ -54,14 +60,20 @@ class ApproxType(Enum):
 
 class Stopwatch:
 
-    def __init__(self):
-        self.time0 = get_time()
+    def __init__(self, set_to_neg_inf=False):
+        if not set_to_neg_inf:
+            self.time0 = get_time()
+        else:
+            self.time0 = -1e12
 
     def elapsed_time(self):
         return get_time() - self.time0
 
     def reset(self):
         self.time0 = get_time()
+
+    def set_to_neg_inf(self):
+        self.time0 = -1e12
 
 
 # def render_whisker_plot_split(state_report,
@@ -86,7 +98,8 @@ def render_whisker_plot_simplified(state_report,
                                    output_filename_format_str='test_boxplot_for_{}_{}.png',
                                    opt_log=False,
                                    boxwidth=0.7,
-                                   approx_types=[('SM', 'statsmodels')]):
+                                   approx_types=[('SM', 'statsmodels')],
+                                   opt_convert_growth_rate_to_percent=False):
     '''
     Plot all-state box/whiskers for given apram_name
     :param state_report: full state report as pandas dataframe
@@ -119,7 +132,10 @@ def render_whisker_plot_simplified(state_report,
             pass
 
     def convert_growth_rate_to_perc(x):
-        return np.exp(x) - 1
+        if opt_convert_growth_rate_to_percent:
+            return np.exp(x) - 1
+        else:
+            return x
 
     map_approx_type_to_boxes = dict()
     for approx_type in approx_types:
@@ -174,7 +190,8 @@ def render_whisker_plot_simplified(state_report,
 
     plt.yticks(range(1, len(setup_boxes) * (n_groups + 1), (n_groups + 1)), small_state_report['state'])
 
-    ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))
+    if opt_convert_growth_rate_to_percent and not opt_log:
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=2))
 
     # fill with colors
     colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'navy', 'teal', 'orchid', 'tan']
@@ -191,6 +208,10 @@ def render_whisker_plot_simplified(state_report,
         except:
             pass
 
+    # lines = [[(0, 1), (1, 1)], [(2, 3), (3, 3)], [(1, 2), (1, 3)]]
+    # line_collxn = mc.LineCollection(lines, '.-', color='black')
+    # ax.add_collection(line_collxn)
+    
     # add legend
     if n_groups > 1:
         custom_lines = [
@@ -661,8 +682,6 @@ def generate_state_report(map_state_name_to_model,
     elif opt_save_to_csv:
         joblib.dump(state_report.to_csv(), state_report_filename.replace('joblib', 'csv'))
     
-    n_states = len(set(state_report['state']))
-
     new_cols = list()
     for col in state_report.columns:
         for approx_type in ApproxType:
@@ -688,6 +707,7 @@ def run_everything(run_states,
                    plot_param_names=None,
                    opt_simplified=False,
                    opt_report=True,
+                   opt_convert_growth_rate_to_percent=False,
                    **kwargs):
     # setting intermediate variables to global allows us to inspect these objects via monkey-patching
     global map_state_name_to_model, state_report
@@ -723,7 +743,7 @@ def run_everything(run_states,
                 map_state_name_to_model[state] = state_model
     
             except:
-                print("Error getting model for state", state)
+                logging.info(f"Error getting model for state {state}", exc_info=True)
     
             plot_subfolder = state_model.plot_subfolder
 
@@ -757,13 +777,15 @@ def run_everything(run_states,
                                                        plot_param_name=param_name,
                                                        output_filename_format_str=filename_format_str,
                                                        opt_log=param_name in logarithmic_params,
-                                                       approx_types=state_model.model_approx_types)
+                                                       approx_types=state_model.model_approx_types,
+                                                       opt_convert_growth_rate_to_percent=opt_convert_growth_rate_to_percent)
                         if ApproxType.SM in state_model.model_approx_types:
                             render_whisker_plot_simplified(state_report,
                                                            plot_param_name=param_name,
                                                            output_filename_format_str=filename_format_str,
                                                            opt_log=param_name in logarithmic_params,
-                                                           approx_types=[ApproxType.SM_acc])
+                                                           approx_types=[ApproxType.SM_acc],
+                                                           opt_convert_growth_rate_to_percent=opt_convert_growth_rate_to_percent)
         else:
             state_report_filename = path.join(plot_subfolder, 'state_report.csv')
             filename_format_str = path.join(plot_subfolder, 'boxplot_for_{}_{}.png')

@@ -69,16 +69,22 @@ print(region_plot_subfolders)
 # Step 3: Upload Figures to AWS
 #####
 
-#{<Region.US_counties: 'US_counties'>: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels', <Region.countries: 'countries'>: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_countries_region_statsmodels', <Region.US_states: 'US_states'>: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels', <Region.provinces: 'provinces'>: 'state_plots/2020_06_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels'}
+from sub_units.utils import Region
 
+region_plot_subfolders = {
+    Region.US_counties: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
+    Region.countries: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    # Region.provinces: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_provinces_region_statsmodels'
+}
 
 # Or... 
 # run in bash...
 # TODO: get this part working using these fast CLIs rather than boto3 as below
-# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current_date_smoothed_moving_window_21_days_countries_region_statsmodels/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current_date_smoothed_moving_window_21_days_countries_region_statsmodels/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current_date_smoothed_moving_window_21_days_countries_region_statsmodels/
+# HYP_STR=2020_05_28_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current_date_smoothed_moving_window_21_days_countries_region_statsmodels/
 
 for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
@@ -102,16 +108,14 @@ for region, plot_subfolder in region_plot_subfolders.items():
 import os
 import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
 
-
 for region, plot_subfolder in region_plot_subfolders.items():
-    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
-    print(hyperparamater_str)
-
-    data_dir = plot_subfolder
+    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder)).format(date_str='2020_06_07')
+    data_dir = plot_subfolder.format(date_str='2020_06_07')
     regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f))]
     print(sorted(regions_to_present))
 
     # Regenerate Figures
+    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder)).format(date_str='current')
     generate_figure_browser.hyperparameter_str = hyperparamater_str + '/'
     generate_figure_browser.plot_browser_dir = f'plot_browser_moving_window_statsmodels_only_{region}'
     generate_figure_browser.regions_to_present = regions_to_present

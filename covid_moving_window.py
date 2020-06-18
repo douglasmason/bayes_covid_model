@@ -233,7 +233,8 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
                                              opt_statsmodels=True,
                                              opt_simplified=opt_simplified,
                                              override_max_date_str=override_max_date_str,
-                                             opt_report=opt_report
+                                             opt_report=opt_report,
+                                             opt_convert_growth_rate_to_percent=True
                                              )
 
     return plot_subfolder
