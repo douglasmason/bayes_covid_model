@@ -257,7 +257,7 @@ def choropleth_test():
         hover_name='state_without_us',
         hover_data=['p_value', tmp_str, tmp_str2]
     )
-    fig.to_html(os.path.join('choropleths', 'US_counties_acc.html'))
+    fig.write_html(os.path.join('choropleths', 'US_counties_acc.html'))
     fig.show()
 
     ######    
@@ -308,7 +308,7 @@ def choropleth_test():
         hover_name='state_without_us',
         hover_data=['p_value', tmp_str]
     )
-    fig.to_html(os.path.join('choropleths', 'US_counties.html'))
+    fig.write_html(os.path.join('choropleths', 'US_counties.html'))
     fig.show()
 
     ######    
@@ -361,7 +361,7 @@ def choropleth_test():
         hover_name='state_without_us',
         hover_data=['p_value', tmp_str],
     )
-    fig.to_html(os.path.join('choropleths', 'US_states.html'))
+    fig.write_html(os.path.join('choropleths', 'US_states.html'))
     fig.show()
 
     ######    
@@ -410,6 +410,6 @@ def choropleth_test():
         hover_name='state',
         hover_data=['p_value', tmp_str],
     )
-    fig.to_html(os.path.join('choropleths', 'global.html'))
+    fig.write_html(os.path.join('choropleths', 'global.html'))
     fig.show()
    

@@ -201,6 +201,7 @@ class BayesModel(ABC):
         self.static_params = static_params
         self.opt_simplified = opt_simplified
         self.n_samples = n_samples
+        self.discovered_MLE_params = list()
 
         if self.opt_smoothing:
             smoothing_str = 'smoothed_'
@@ -1666,6 +1667,8 @@ class BayesModel(ABC):
             print(f'     bootstrap index with the MLE: {param_ind}')
             if param_ind == len(self.bootstrap_params):
                 print(f'        (this one comes from the mean)')
+            
+            self.discovered_MLE_params.append(proposed_params_list[param_ind])
 
         bootstrap_weights = [1] * len(self.bootstrap_params)
         for bootstrap_ind in range(len(self.bootstrap_params)):
@@ -2199,6 +2202,8 @@ class BayesModel(ABC):
             print(f'     log likelihood at starting point: {ll_at_starting_pt:.4g}')
             print(f'     log likelihood at all_data_params: {self.get_log_likelihood(self.all_data_params):.4g}')
             print(f'     log likelihood at MLE: {log_likelihood_at_MLE:.4g}')
+            
+            self.discovered_MLE_params.append(params_at_MLE)
 
     def remove_sigma_entries_from_matrix(self, in_matrix):
 
@@ -2813,6 +2818,21 @@ class BayesModel(ABC):
                 self.render_and_plot_cred_int(approx_type=ApproxType.MCMC, mvn_fit=True)
             except:
                 logging.info('Error calculating and rendering MVN fit to random walk', exc_info=True)
+
+        max_ll = self.get_log_likelihood(self.all_data_params)
+        new_params = None
+        for params in self.discovered_MLE_params:
+            new_ll = self.get_log_likelihood(params)
+            if new_ll > max_ll:
+                new_params = params.copy()
+
+        if new_params is not None:
+            print('Re-running render_all_data_fit with new params!')
+            if ApproxType.SP_CF in self.model_approx_types:
+                self.render_all_data_fit(passed_params=new_params)
+                self.solve_and_plot_solution(in_params=new_params,
+                                             title='All-Data Solution',
+                                             plot_filename_filename='all_data_solution.png')
 
         print('Now that we\'ve sampled for even better MLEs, let\'s do the curvature-based covariance approximations there!')
         self.render_additional_covariance_approximations(self.all_data_params)
