@@ -664,7 +664,7 @@ class BayesModel(ABC):
                     cov = np.diag([1e-12] * len(p0))
         else:
             cov = None  # results.hess_inv # this fella only works for certain methods so avoid for now
-            
+
         # sometimes we will fit to a negative value for observation error due to the symmetry 
         # (it's only used within a square operation). This is an easy fix:
         for param_name in params_as_dict:
@@ -1379,7 +1379,15 @@ class BayesModel(ABC):
 
             print('Employing Scipy\'s curve_fit method...')
 
-            test_params_as_list = [self.test_params[key] for key in self.sorted_names]
+            if passed_params is None:
+                print('Starting with test parameters:')
+                self.pretty_print_params(self.test_params, opt_log_likelihood=True)
+                test_params_as_list = [self.test_params[key] for key in self.sorted_names]
+            else:
+                print('Starting with passed parameters:')
+                self.pretty_print_params(passed_params, opt_log_likelihood=True)
+                test_params_as_list = [self.convert_params_as_list_to_dict(passed_params)[key] for key in self.sorted_names]
+                
             try:
                 all_data_params, all_data_cov = self.fit_curve_via_curve_fit(test_params_as_list)
             except:
@@ -1391,11 +1399,12 @@ class BayesModel(ABC):
             all_data_params_for_sigma, all_data_cov_for_sigma = self.fit_curve_via_likelihood(all_data_params,
                                                                                               print_success=True,
                                                                                               opt_cov=True)
+            
 
             print('\nOrig params:')
-            self.pretty_print_params(all_data_params)
+            self.pretty_print_params(all_data_params, opt_log_likelihood=True)
             print('\nRe-fit params for sigmas:')
-            self.pretty_print_params(all_data_params_for_sigma)
+            self.pretty_print_params(all_data_params_for_sigma, opt_log_likelihood=True)
 
             for ind, name in enumerate(self.sorted_names):
                 if 'sigma' in name:
@@ -1417,7 +1426,14 @@ class BayesModel(ABC):
                     all_data_params[key] = all_data_params_for_sigma[key]
 
             print('\nscipy.curve_fit params:')
-            self.pretty_print_params(all_data_params)
+            self.pretty_print_params(all_data_params, opt_log_likelihood=True)
+            
+
+            all_data_ll = self.get_log_likelihood(all_data_params)
+            all_data_for_sigma_ll = self.get_log_likelihood(all_data_params_for_sigma)
+            if all_data_for_sigma_ll > all_data_ll:
+                all_data_params = all_data_params_for_sigma.copy()
+                all_data_cov = all_data_cov_for_sigma.copy() # this turns out to be unstable
 
             if ApproxType.SP_min in self.model_approx_types:
                 self.map_approx_type_to_means[ApproxType.SP_min] = self.convert_params_as_dict_to_list(
@@ -1443,36 +1459,36 @@ class BayesModel(ABC):
 
             all_data_sol = self.run_simulation(all_data_params)
             print('\nParameters when trained on all data (this is our starting point for optimization):')
-            self.pretty_print_params(all_data_params)
+            self.pretty_print_params(all_data_params, opt_log_likelihood=True)
 
-            methods = [
-                # 'Nelder-Mead',  # ok results, but claims it failed
-                # 'Powell', #warnings, bad answer
-                # 'CG', #warnings, never stopped
-                'BFGS',  # love this one, and it gives you hess_inv!
-                # 'Newton-CG', #can't do bounds, failed
-                # 'L-BFGS-B', #failed, bad results
-                # 'TNC', #bad results
-                # 'COBYLA', #failed, bad results
-                # 'SLSQP',  # failed, bad results
-                # 'trust-constr', #warnings, never stopped
-                # 'dogleg', #bad results, can't do bounds
-                # 'trust-ncg', #failed, can't do bounds
-                # 'trust-exact', #failed
-                # 'trust-krylov' # failed
-            ]
-
-            for method in methods:
-                print('\ntrying method', method)
-                try:
-                    test_params_as_list = [self.test_params[key] for key in self.sorted_names]
-                    all_data_params2, cov = self.fit_curve_via_likelihood(test_params_as_list,
-                                                                          method=method, print_success=True)
-                    # all_data_params2, _ = self.fit_curve_via_least_squares(test_params_as_list,
-                    #                                                        method=method, print_success=True)
-                    self.pretty_print_params(all_data_params2)
-                except:
-                    print(f'method {method} failed!')
+            # methods = [
+            #     # 'Nelder-Mead',  # ok results, but claims it failed
+            #     # 'Powell', #warnings, bad answer
+            #     # 'CG', #warnings, never stopped
+            #     'BFGS',  # love this one, and it gives you hess_inv!
+            #     # 'Newton-CG', #can't do bounds, failed
+            #     # 'L-BFGS-B', #failed, bad results
+            #     # 'TNC', #bad results
+            #     # 'COBYLA', #failed, bad results
+            #     # 'SLSQP',  # failed, bad results
+            #     # 'trust-constr', #warnings, never stopped
+            #     # 'dogleg', #bad results, can't do bounds
+            #     # 'trust-ncg', #failed, can't do bounds
+            #     # 'trust-exact', #failed
+            #     # 'trust-krylov' # failed
+            # ]
+            # 
+            # for method in methods:
+            #     print('\ntrying method', method)
+            #     try:
+            #         test_params_as_list = [self.test_params[key] for key in self.sorted_names]
+            #         all_data_params2, cov = self.fit_curve_via_likelihood(test_params_as_list,
+            #                                                               method=method, print_success=True)
+            #         # all_data_params2, _ = self.fit_curve_via_least_squares(test_params_as_list,
+            #         #                                                        method=method, print_success=True)
+            #         self.pretty_print_params(all_data_params2, opt_log_likelihood=True)
+            #     except:
+            #         print(f'method {method} failed!')
 
         # Add deterministic parameters to all-data solution
         for extra_param, extra_param_func in self.extra_params.items():
@@ -1487,6 +1503,8 @@ class BayesModel(ABC):
         self.all_data_params = all_data_params
         self.all_data_sol = all_data_sol
         self.all_data_cov = all_data_cov
+        print('all_data_params log likelihood:')
+        print(self.get_log_likelihood(self.all_data_params))
         print('all_data_params:')
         print(all_data_params)
         print('all_data_cov:')
@@ -1581,6 +1599,7 @@ class BayesModel(ABC):
 
             print('\n----\nRendering bootstrap model fits... now going through bootstraps...\n----')
             for bootstrap_ind in tqdm(range(self.n_bootstraps)):
+                
                 # get bootstrap indices by concatenating cases and deaths
                 bootstrap_tuples = [('cases', x) for x in self.cases_indices] + [('deaths', x) for x in
                                                                                  self.deaths_indices]
@@ -1623,6 +1642,30 @@ class BayesModel(ABC):
 
         self.bootstrap_sols = bootstrap_sols
         self.bootstrap_params = bootstrap_params
+        
+        # add the means of the results to our consideration
+        mean_of_bootstrap_params = list()
+        for param_name in bootstrap_params[0]:
+            mean_of_bootstrap_params.append(np.mean([self.bootstrap_params[i][param_name] for i in range(len(self.bootstrap_params))]))
+        proposed_params_list = self.bootstrap_params + [mean_of_bootstrap_params]
+
+        bootstrap_log_probs = list()
+        for proposed_params in proposed_params_list:
+            bootstrap_log_probs.append(self.get_log_likelihood(proposed_params))
+
+        param_ind = np.argmax(bootstrap_log_probs)
+        max_bootstrap_ll = self.get_log_likelihood(proposed_params_list[param_ind])
+        all_data_params_ll = self.get_log_likelihood(self.all_data_params)
+        
+        if max_bootstrap_ll > all_data_params_ll + 1e-3:
+
+            # re-run all-data fit using new params
+            print('-----\n Will re-do all-data fit from render_bootstrap_fits with new MLE at end of run...\n-----')
+            print(f'     log likelihood at all_data_params: {all_data_params_ll:.4g}')
+            print(f'     log likelihood at MLE: {max_bootstrap_ll:.4g}')
+            print(f'     bootstrap index with the MLE: {param_ind}')
+            if param_ind == len(self.bootstrap_params):
+                print(f'        (this one comes from the mean)')
 
         bootstrap_weights = [1] * len(self.bootstrap_params)
         for bootstrap_ind in range(len(self.bootstrap_params)):
@@ -1636,6 +1679,35 @@ class BayesModel(ABC):
 
         self.bootstrap_weights = bootstrap_weights
 
+    def render_all_data_fit_wrapper(self, passed_params=None, opt_forcing=True):
+
+        if opt_forcing:
+            orig_opt_force_plot = self.opt_force_plot
+            orig_opt_force_calc = self.opt_force_calc
+            self.opt_force_plot = True
+            self.opt_force_calc = True
+            
+        if ApproxType.SP_CF in self.model_approx_types:
+            self.render_all_data_fit(passed_params=passed_params)
+            self.solve_and_plot_solution(in_params=self.all_data_params,
+                                         title='All-Data Solution',
+                                         plot_filename_filename='all_data_solution.png')
+            self.render_additional_covariance_approximations(self.all_data_params)
+
+        for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
+                            ApproxType.SP_min]:
+
+            if approx_type in self.model_approx_types:
+                # Plot all hessian solutions
+                self.plot_all_solutions(approx_type=approx_type)
+
+                # Get and plot parameter distributions from hessian
+                self.render_and_plot_cred_int(approx_type=approx_type)
+        
+        if opt_forcing:
+            self.opt_force_plot = orig_opt_force_plot
+            self.opt_force_calc = orig_opt_force_calc
+        
     def render_likelihood_samples(self,
                                   n_samples=None
                                   ):
@@ -1833,10 +1905,7 @@ class BayesModel(ABC):
             MCMC_burn_in_frac = 0
 
         if p0 is None:
-            try:
-                p0 = self.convert_params_as_list_to_dict(self.map_approx_type_to_MVN[ApproxType.BS]['means'])
-            except:
-                p0 = self.all_data_params
+            p0 = self.all_data_params
 
         if type(sample_shape_param) == str and 'empirical' in sample_shape_param:
             cov = self.get_cov_for_MCMC(opt_walk=opt_walk)
@@ -1968,7 +2037,7 @@ class BayesModel(ABC):
         prev_p = p0.copy()
         print()
         print('Starting from...')
-        self.pretty_print_params(p0)
+        self.pretty_print_params(p0, opt_log_likelihood=True)
 
         print()
         print('With step size...')
@@ -2006,7 +2075,11 @@ class BayesModel(ABC):
         n_accepted = 0
         n_accepted_turn = 0
         use_sample_shape_param = sample_shape_param
+        ll_at_starting_pt = self.get_log_likelihood(p0.copy())
+        params_at_MLE = p0.copy()
         ll_at_MLE = self.get_log_likelihood(p0.copy())
+        self.log_likelihood_at_MLE = ll_at_MLE
+        self.params_at_MLE = params_at_MLE
 
         if (not success and self.opt_calc) or self.opt_force_calc:
 
@@ -2031,6 +2104,8 @@ class BayesModel(ABC):
                               f'\n how many samples accepted since last update? {n_accepted_turn} ({n_accepted_turn / n_test_ind_turn * 100:.4g}%)' + \
                               f'\n prev. log likelihood: {ll:.4g}' + \
                               f'\n       log likelihood: {proposed_ll:.4g}' + \
+                              f'\n       log likelihood at starting pt.: {ll_at_starting_pt:.4g}' + \
+                              f'\n       log likelihood at MLE: {ll_at_MLE:.4g}' + \
                               f'\n sample_shape_param: {sample_shape_param}' + \
                               f'\n acceptance ratio: {acceptance_ratio:.4g}' + \
                               ''.join(
@@ -2055,6 +2130,7 @@ class BayesModel(ABC):
                                 f'\n how many samples accepted since last update? {n_accepted_turn} of {n_test_ind_turn} ({n_accepted_turn / n_test_ind_turn * 100:.4g}%)' + \
                                 f'\n prev. log likelihood: {ll:.4g}' + \
                                 f'\n       log likelihood: {proposed_ll:.4g}' + \
+                                f'\n       log likelihood at starting pt.: {ll_at_starting_pt:.4g}' + \
                                 f'\n       log likelihood at MLE: {ll_at_MLE:.4g}' + \
                                 f'\n sample_shape_param {sample_shape_param}' + \
                                 f'\n acceptance ratio: {acceptance_ratio:.4g}' + \
@@ -2070,19 +2146,21 @@ class BayesModel(ABC):
 
                 else:
 
-                    if proposed_ll > ll_at_MLE and exceed_MLE_timer.elapsed_time() > 1:
+                    if proposed_ll > ll_at_MLE:
                         print(
                             f'\n\n  NEW POINT FOUND WITH HIGHER LOG-LIKELIHOOD THAN THE MLE!'
                             f'\n --> log likelihood: {proposed_ll:.4g}' + \
+                            f'\n     log likelihood at starting point: {ll_at_starting_pt:.4g}' + \
                             f'\n     log likelihood at MLE: {ll_at_MLE:.4g}' + \
                             f'\n sample_shape_param {sample_shape_param}' + \
-                            f''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names) +\
+                            f''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names) + \
                             f'\n')
-                    
+                        ll_at_MLE = proposed_ll
+
                     if timer.elapsed_time() > 1:
-                        n_test_ind_turn = test_ind - prev_test_ind
                         print(
                             f'\n --> log likelihood: {proposed_ll:.4g}' + \
+                            f'\n     log likelihood at starting point: {ll_at_starting_pt:.4g}' + \
                             f'\n     log likelihood at MLE: {ll_at_MLE:.4g}' + \
                             f'\n sample_shape_param {sample_shape_param}' + \
                             ''.join(f'\n  {key}: {proposed_p[key]:.4g}' for key in self.sorted_names))
@@ -2109,6 +2187,18 @@ class BayesModel(ABC):
             samples_key = 'likelihood_samples'
         self._add_samples(samples_as_list[MCMC_burn_in:], log_probs[MCMC_burn_in:], propensities[MCMC_burn_in:],
                           key=samples_key)
+        
+        param_ind_at_MLE = np.argmax(log_probs)
+        params_at_MLE = self.convert_params_as_list_to_dict(samples_as_list[param_ind_at_MLE])
+        log_likelihood_at_MLE = log_probs[param_ind_at_MLE]
+
+        if log_likelihood_at_MLE > self.get_log_likelihood(self.all_data_params) + 1e-3:
+
+            # re-run all-data fit using new params
+            print('-----\n Will re-do all-data fit from MCMC with new MLE at end of run\n-----')
+            print(f'     log likelihood at starting point: {ll_at_starting_pt:.4g}')
+            print(f'     log likelihood at all_data_params: {self.get_log_likelihood(self.all_data_params):.4g}')
+            print(f'     log likelihood at MLE: {log_likelihood_at_MLE:.4g}')
 
     def remove_sigma_entries_from_matrix(self, in_matrix):
 
@@ -2189,7 +2279,7 @@ class BayesModel(ABC):
         params = weight_sampled_params
         print(f'\nDiagnosing means in get_weighted_samples_via_model for approx_type {approx_type}...')
 
-        self.pretty_print_params(self.map_approx_type_to_means[approx_type])
+        self.pretty_print_params(self.map_approx_type_to_means[approx_type], opt_log_likelihood=True)
         print(f'\nDiagnosing standard errors in get_weighted_samples_via_model for approx_type {approx_type}...')
         self.pretty_print_params(np.diagonal(np.sqrt(self.map_approx_type_to_cov[approx_type])))
 
@@ -2564,23 +2654,9 @@ class BayesModel(ABC):
 
         if ApproxType.SP_CF in self.model_approx_types:
             self.render_all_data_fit()
-
-            # Plot all-data solution 
             self.solve_and_plot_solution(in_params=self.all_data_params,
                                          title='All-Data Solution',
                                          plot_filename_filename='all_data_solution.png')
-
-            self.render_additional_covariance_approximations(self.all_data_params)
-
-        for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
-                            ApproxType.SP_min]:
-
-            if approx_type in self.model_approx_types:
-                # Plot all hessian solutions
-                self.plot_all_solutions(approx_type=approx_type)
-
-                # Get and plot parameter distributions from hessian
-                self.render_and_plot_cred_int(approx_type=approx_type)
 
         if ApproxType.BS in self.model_approx_types:
             try:
@@ -2738,6 +2814,19 @@ class BayesModel(ABC):
             except:
                 logging.info('Error calculating and rendering MVN fit to random walk', exc_info=True)
 
+        print('Now that we\'ve sampled for even better MLEs, let\'s do the curvature-based covariance approximations there!')
+        self.render_additional_covariance_approximations(self.all_data_params)
+
+        for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
+                            ApproxType.SP_min]:
+
+            if approx_type in self.model_approx_types:
+                # Plot all hessian solutions
+                self.plot_all_solutions(approx_type=approx_type)
+
+                # Get and plot parameter distributions from hessian
+                self.render_and_plot_cred_int(approx_type=approx_type)
+                
     # Get extra likelihood samples
     # print('Just doing random sampling')
     # self.render_likelihood_samples()
@@ -2765,7 +2854,7 @@ class BayesModel(ABC):
                 opt_plot_random_walk = False
         return self.opt_plot and (opt_plot_random_walk or self.opt_force_plot)
 
-    def pretty_print_params(self, in_obj):
+    def pretty_print_params(self, in_obj, opt_log_likelihood=False):
         '''
         Helper function for printing our parameter values and bounds consistently
         :param in_dict: dictionary of parameters to pretty print
@@ -2785,6 +2874,8 @@ class BayesModel(ABC):
                 else:
                     val_str = f'{val:.4g}'
                 print(f'{name}: {val_str}')
+            if opt_log_likelihood:
+                print(f'log-likelihood: {self.get_log_likelihood(in_dict)}')
 
     def plot_growth_rate_timeseries(self,
                                     plot_filename_filename=None,

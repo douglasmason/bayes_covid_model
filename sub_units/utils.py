@@ -690,7 +690,7 @@ def generate_state_report(map_state_name_to_model,
         new_cols.append(new_col)
     state_report.columns = new_cols
 
-    if all([x.startswith('US: ') for x in state_report['state']]):
+    if len(state_report)>0 and all([x.startswith('US: ') for x in state_report['state']]):
         state_report['state'] = [x[3:] for x in state_report['state']]
 
     return state_report

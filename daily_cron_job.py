@@ -11,22 +11,19 @@ from sub_units.utils import Region
 from sub_units import post_analysis
 from sub_units import github_readme_components
 from sub_units.utils import print_and_write
-
-
-#####
-# Step 1: Update load_data (this happens as soon as you import modules that use load_data and they can't find the relevant file in loaded_data
-#####
-
 import datetime
 import covid_moving_window as covid
+from sub_units import post_analysis
+
+# get today's date
+yesterdays_date_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+print(f'Yesterday: {yesterdays_date_str}')
+
 
 #####
 # Step 2: Run Update
 #####
 
-# get today's date
-yesterdays_date_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-print(f'Yesterday: {yesterdays_date_str}')
 
 covid.n_bootstraps = None
 covid.n_likelihood_samples = None
@@ -67,12 +64,22 @@ print(region_plot_subfolders)
 # Step 2c: post-process parameters to identify which regions to deep-dive into
 ####
 
-# {<Region.US_counties: 'US_counties'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_US_counties_region_statsmodels', <Region.countries: 'countries'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_countries_region_statsmodels', <Region.US_states: 'US_states'>: 'state_plots/2020_06_09_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
+# Copy from AWS to local directory...
+# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_US_states_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_countries_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_provinces_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
 
+region_plot_subfolders = {Region.US_counties: '2020_06_17_date_smoothed_moving_window_21_days_US_counties_region_statsmodels', 
+Region.countries: '2020_06_17_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+Region.US_states: '2020_06_17_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
 
 post_analysis.hyperparameter_strings = list(region_plot_subfolders.values())
 
-from sub_units import post_analysis
+####
+# Step 2c: post-process parameters to identify which regions to deep-dive into
+####
+
 
 post_analysis.post_process_state_reports(opt_acc=True)
 
@@ -92,8 +99,6 @@ region_plot_subfolders = covid.run_everything()
 # Step 2d: post-process parameters to identify which regions to deep-dive into
 ####
 
-from sub_units import post_analysis
-
 post_analysis.post_process_state_reports(opt_acc=False)
 
 # re-run and produce all the plots for the top outbreak-y counties
@@ -109,7 +114,7 @@ with open(post_analysis.scratchpad_filename, 'r') as f:
 region_plot_subfolders = covid.run_everything()
 
 #####
-# Step 2e: Re-do post-analysis and write to github table file
+# Step 2e: Re-do post-analysis and write to github table file, even if you downloaded results from the server
 #####
 
 
@@ -139,11 +144,6 @@ shutil.copyfile('github_README.txt', 'README.md')
 # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 # # HYP_STR=2020_06_02_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-
-# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
-# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
-# HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
-# # HYP_STR=2020_06_07_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/current/
 
 
 ######

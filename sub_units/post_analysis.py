@@ -318,6 +318,11 @@ def choropleth_test():
     hyperparameter_str = states_hp_str
     params = map_hp_str_to_params_df[hyperparameter_str]
 
+    params['fips'] = [load_data.map_state_to_fips.get(x, None) for x in params['state']]
+    params['state_without_us'] = [x[4:] if type(x) == str else None for x in params['state']]
+    params['state_abbr'] = [us_state_abbrev[x[4:]] if type(x) == str and x[4:] in us_state_abbrev else None for x in
+                            params['state']]
+    
     param_name = 'positive_slope'
     param_ind = [i for i, x in enumerate(params['param']) if x == param_name]
     col_name = 'statsmodels_mean'
