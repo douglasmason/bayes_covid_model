@@ -677,7 +677,8 @@ class BayesModel(ABC):
     def solve_and_plot_solution(self,
                                 in_params=None,
                                 title=None,
-                                plot_filename_filename='test_plot'):
+                                plot_filename_filename='test_plot',
+                                opt_force_plot=False):
         '''
         Solve ODEs and plot relavant parts
         :param in_params: dictionary of parameters
@@ -708,7 +709,7 @@ class BayesModel(ABC):
                                range(len(sol[0]))][min_plot_pt:max_plot_pt]
 
         full_output_filename = path.join(self.plot_filename_base, plot_filename_filename)
-        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot):
+        if self.opt_plot and (not path.exists(full_output_filename) or self.opt_force_plot) or opt_force_plot:
             plt.clf()
             fig, ax = plt.subplots()
             ax.plot(sol_plot_date_range, [sol[0][i] for i in range(min_plot_pt, max_plot_pt)], 'blue',
@@ -1358,6 +1359,9 @@ class BayesModel(ABC):
             all_data_params = all_data_dict['all_data_params']
             all_data_sol = all_data_dict['all_data_sol']
             all_data_cov = all_data_dict['all_data_cov']
+            all_data_params_for_sigma = all_data_dict['all_data_params_for_sigma']
+            all_data_cov_for_sigma = all_data_dict['all_data_cov_for_sigma']
+
             success = True
             self.loaded_all_data_fit = True
         except:
@@ -1387,8 +1391,9 @@ class BayesModel(ABC):
             else:
                 print('Starting with passed parameters:')
                 self.pretty_print_params(passed_params, opt_log_likelihood=True)
-                test_params_as_list = [self.convert_params_as_list_to_dict(passed_params)[key] for key in self.sorted_names]
-                
+                test_params_as_list = [self.convert_params_as_list_to_dict(passed_params)[key] for key in
+                                       self.sorted_names]
+
             try:
                 all_data_params, all_data_cov = self.fit_curve_via_curve_fit(test_params_as_list)
             except:
@@ -1400,7 +1405,6 @@ class BayesModel(ABC):
             all_data_params_for_sigma, all_data_cov_for_sigma = self.fit_curve_via_likelihood(all_data_params,
                                                                                               print_success=True,
                                                                                               opt_cov=True)
-            
 
             print('\nOrig params:')
             self.pretty_print_params(all_data_params, opt_log_likelihood=True)
@@ -1426,70 +1430,63 @@ class BayesModel(ABC):
                     print(f'Stealing value for {key}: {all_data_params_for_sigma[key]}')
                     all_data_params[key] = all_data_params_for_sigma[key]
 
-            print('\nscipy.curve_fit params:')
-            self.pretty_print_params(all_data_params, opt_log_likelihood=True)
-            
+        print('\nscipy.curve_fit params:')
+        self.pretty_print_params(all_data_params, opt_log_likelihood=True)
 
-            all_data_ll = self.get_log_likelihood(all_data_params)
-            all_data_for_sigma_ll = self.get_log_likelihood(all_data_params_for_sigma)
-            if all_data_for_sigma_ll > all_data_ll:
-                all_data_params = all_data_params_for_sigma.copy()
-                all_data_cov = all_data_cov_for_sigma.copy() # this turns out to be unstable
+        if ApproxType.SP_min in self.model_approx_types:
+            self.map_approx_type_to_means[ApproxType.SP_min] = self.convert_params_as_dict_to_list(
+                all_data_params_for_sigma)
+            self.map_approx_type_to_cov[ApproxType.SP_min] = all_data_cov_for_sigma
+            self.map_approx_type_to_model[ApproxType.SP_min] = sp.stats.multivariate_normal(
+                mean=self.convert_params_as_dict_to_list(all_data_params_for_sigma),
+                cov=all_data_cov_for_sigma, allow_singular=True)
+            print('\nscipy.minimize params:')
+            self.pretty_print_params(all_data_params_for_sigma, opt_log_likelihood=True)
 
-            if ApproxType.SP_min in self.model_approx_types:
-                self.map_approx_type_to_means[ApproxType.SP_min] = self.convert_params_as_dict_to_list(
-                    all_data_params_for_sigma)
-                self.map_approx_type_to_cov[ApproxType.SP_min] = all_data_cov_for_sigma
-                self.map_approx_type_to_model[ApproxType.SP_min] = sp.stats.multivariate_normal(
-                    mean=self.convert_params_as_dict_to_list(all_data_params_for_sigma),
-                    cov=all_data_cov_for_sigma, allow_singular=True)
-                print('\nscipy.minimize params:')
-                self.pretty_print_params(all_data_params_for_sigma)
+        if ApproxType.SP_LS in self.model_approx_types:
+            all_data_params_leastsq, cov_leastsq = self.fit_curve_via_least_squares(
+                self.convert_params_as_dict_to_list(self.test_params))
+            self.map_approx_type_to_means[ApproxType.SP_LS] = self.convert_params_as_dict_to_list(
+                all_data_params_leastsq)
+            self.map_approx_type_to_cov[ApproxType.SP_LS] = cov_leastsq
+            self.map_approx_type_to_model[ApproxType.SP_LS] = sp.stats.multivariate_normal(
+                mean=self.convert_params_as_dict_to_list(all_data_params_leastsq),
+                cov=cov_leastsq, allow_singular=True)
+            print('\nscipy.least_squares params:')
+            self.pretty_print_params(all_data_params_leastsq)
 
-            if ApproxType.SP_LS in self.model_approx_types:
-                all_data_params_leastsq, cov_leastsq = self.fit_curve_via_least_squares(
-                    self.convert_params_as_dict_to_list(self.test_params))
-                self.map_approx_type_to_means[ApproxType.SP_LS] = self.convert_params_as_dict_to_list(
-                    all_data_params_leastsq)
-                self.map_approx_type_to_cov[ApproxType.SP_LS] = cov_leastsq
-                self.map_approx_type_to_model[ApproxType.SP_LS] = sp.stats.multivariate_normal(
-                    mean=self.convert_params_as_dict_to_list(all_data_params_leastsq),
-                    cov=cov_leastsq, allow_singular=True)
-                print('\nscipy.least_squares params:')
-                self.pretty_print_params(all_data_params_leastsq)
+        all_data_sol = self.run_simulation(all_data_params)
+        print('\nParameters when trained on all data (this is our starting point for optimization):')
+        self.pretty_print_params(all_data_params, opt_log_likelihood=True)
 
-            all_data_sol = self.run_simulation(all_data_params)
-            print('\nParameters when trained on all data (this is our starting point for optimization):')
-            self.pretty_print_params(all_data_params, opt_log_likelihood=True)
-
-            # methods = [
-            #     # 'Nelder-Mead',  # ok results, but claims it failed
-            #     # 'Powell', #warnings, bad answer
-            #     # 'CG', #warnings, never stopped
-            #     'BFGS',  # love this one, and it gives you hess_inv!
-            #     # 'Newton-CG', #can't do bounds, failed
-            #     # 'L-BFGS-B', #failed, bad results
-            #     # 'TNC', #bad results
-            #     # 'COBYLA', #failed, bad results
-            #     # 'SLSQP',  # failed, bad results
-            #     # 'trust-constr', #warnings, never stopped
-            #     # 'dogleg', #bad results, can't do bounds
-            #     # 'trust-ncg', #failed, can't do bounds
-            #     # 'trust-exact', #failed
-            #     # 'trust-krylov' # failed
-            # ]
-            # 
-            # for method in methods:
-            #     print('\ntrying method', method)
-            #     try:
-            #         test_params_as_list = [self.test_params[key] for key in self.sorted_names]
-            #         all_data_params2, cov = self.fit_curve_via_likelihood(test_params_as_list,
-            #                                                               method=method, print_success=True)
-            #         # all_data_params2, _ = self.fit_curve_via_least_squares(test_params_as_list,
-            #         #                                                        method=method, print_success=True)
-            #         self.pretty_print_params(all_data_params2, opt_log_likelihood=True)
-            #     except:
-            #         print(f'method {method} failed!')
+        # methods = [
+        #     # 'Nelder-Mead',  # ok results, but claims it failed
+        #     # 'Powell', #warnings, bad answer
+        #     # 'CG', #warnings, never stopped
+        #     'BFGS',  # love this one, and it gives you hess_inv!
+        #     # 'Newton-CG', #can't do bounds, failed
+        #     # 'L-BFGS-B', #failed, bad results
+        #     # 'TNC', #bad results
+        #     # 'COBYLA', #failed, bad results
+        #     # 'SLSQP',  # failed, bad results
+        #     # 'trust-constr', #warnings, never stopped
+        #     # 'dogleg', #bad results, can't do bounds
+        #     # 'trust-ncg', #failed, can't do bounds
+        #     # 'trust-exact', #failed
+        #     # 'trust-krylov' # failed
+        # ]
+        # 
+        # for method in methods:
+        #     print('\ntrying method', method)
+        #     try:
+        #         test_params_as_list = [self.test_params[key] for key in self.sorted_names]
+        #         all_data_params2, cov = self.fit_curve_via_likelihood(test_params_as_list,
+        #                                                               method=method, print_success=True)
+        #         # all_data_params2, _ = self.fit_curve_via_least_squares(test_params_as_list,
+        #         #                                                        method=method, print_success=True)
+        #         self.pretty_print_params(all_data_params2, opt_log_likelihood=True)
+        #     except:
+        #         print(f'method {method} failed!')
 
         # Add deterministic parameters to all-data solution
         for extra_param, extra_param_func in self.extra_params.items():
@@ -1497,25 +1494,36 @@ class BayesModel(ABC):
                 [all_data_params[name] for name in self.sorted_names])
 
         print(f'saving bootstraps to {self.all_data_fit_filename}...')
-        joblib.dump({'all_data_sol': all_data_sol, 'all_data_params': all_data_params, 'all_data_cov': all_data_cov},
+        joblib.dump({'all_data_sol': all_data_sol, 'all_data_params': all_data_params, 'all_data_cov': all_data_cov,
+                     'all_data_params_for_sigma': all_data_params_for_sigma,
+                     'all_data_cov_for_sigma': all_data_cov_for_sigma},
                     self.all_data_fit_filename)
         print('...done!')
 
-        self.all_data_params = all_data_params
-        self.all_data_sol = all_data_sol
-        self.all_data_cov = all_data_cov
-        print('all_data_params log likelihood:')
-        print(self.get_log_likelihood(self.all_data_params))
-        print('all_data_params:')
-        print(all_data_params)
-        print('all_data_cov:')
-        print(all_data_cov)
+        all_data_ll = self.get_log_likelihood(all_data_params)
+        all_data_for_sigma_ll = self.get_log_likelihood(all_data_params_for_sigma)
+        if all_data_for_sigma_ll > all_data_ll:
+            self.discovered_MLE_params.append(all_data_params_for_sigma)
+            self.all_data_params = all_data_params_for_sigma
+            self.all_data_sol = all_data_sol
+            self.all_data_cov = all_data_cov_for_sigma
+        else:
+            self.all_data_params = all_data_params
+            self.all_data_sol = all_data_sol
+            self.all_data_cov = all_data_cov
 
         self.map_approx_type_to_means[ApproxType.SP_CF] = self.convert_params_as_dict_to_list(all_data_params)
         self.map_approx_type_to_cov[ApproxType.SP_CF] = all_data_cov
         self.map_approx_type_to_model[ApproxType.SP_CF] = sp.stats.multivariate_normal(
             mean=self.convert_params_as_dict_to_list(all_data_params),
             cov=all_data_cov, allow_singular=True)
+
+        self.map_approx_type_to_means[ApproxType.SP_min] = self.convert_params_as_dict_to_list(
+            all_data_params_for_sigma)
+        self.map_approx_type_to_cov[ApproxType.SP_min] = all_data_cov
+        self.map_approx_type_to_model[ApproxType.SP_min] = sp.stats.multivariate_normal(
+            mean=self.convert_params_as_dict_to_list(all_data_params_for_sigma),
+            cov=all_data_cov_for_sigma, allow_singular=True)
 
     def render_additional_covariance_approximations(self, all_data_params):
         # Get other covariance approximations here
@@ -1600,7 +1608,6 @@ class BayesModel(ABC):
 
             print('\n----\nRendering bootstrap model fits... now going through bootstraps...\n----')
             for bootstrap_ind in tqdm(range(self.n_bootstraps)):
-                
                 # get bootstrap indices by concatenating cases and deaths
                 bootstrap_tuples = [('cases', x) for x in self.cases_indices] + [('deaths', x) for x in
                                                                                  self.deaths_indices]
@@ -1643,11 +1650,12 @@ class BayesModel(ABC):
 
         self.bootstrap_sols = bootstrap_sols
         self.bootstrap_params = bootstrap_params
-        
+
         # add the means of the results to our consideration
         mean_of_bootstrap_params = list()
         for param_name in bootstrap_params[0]:
-            mean_of_bootstrap_params.append(np.mean([self.bootstrap_params[i][param_name] for i in range(len(self.bootstrap_params))]))
+            mean_of_bootstrap_params.append(
+                np.mean([self.bootstrap_params[i][param_name] for i in range(len(self.bootstrap_params))]))
         proposed_params_list = self.bootstrap_params + [mean_of_bootstrap_params]
 
         bootstrap_log_probs = list()
@@ -1657,7 +1665,7 @@ class BayesModel(ABC):
         param_ind = np.argmax(bootstrap_log_probs)
         max_bootstrap_ll = self.get_log_likelihood(proposed_params_list[param_ind])
         all_data_params_ll = self.get_log_likelihood(self.all_data_params)
-        
+
         if max_bootstrap_ll > all_data_params_ll + 1e-3:
 
             # re-run all-data fit using new params
@@ -1667,7 +1675,7 @@ class BayesModel(ABC):
             print(f'     bootstrap index with the MLE: {param_ind}')
             if param_ind == len(self.bootstrap_params):
                 print(f'        (this one comes from the mean)')
-            
+
             self.discovered_MLE_params.append(proposed_params_list[param_ind])
 
         bootstrap_weights = [1] * len(self.bootstrap_params)
@@ -1682,35 +1690,6 @@ class BayesModel(ABC):
 
         self.bootstrap_weights = bootstrap_weights
 
-    def render_all_data_fit_wrapper(self, passed_params=None, opt_forcing=True):
-
-        if opt_forcing:
-            orig_opt_force_plot = self.opt_force_plot
-            orig_opt_force_calc = self.opt_force_calc
-            self.opt_force_plot = True
-            self.opt_force_calc = True
-            
-        if ApproxType.SP_CF in self.model_approx_types:
-            self.render_all_data_fit(passed_params=passed_params)
-            self.solve_and_plot_solution(in_params=self.all_data_params,
-                                         title='All-Data Solution',
-                                         plot_filename_filename='all_data_solution.png')
-            self.render_additional_covariance_approximations(self.all_data_params)
-
-        for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
-                            ApproxType.SP_min]:
-
-            if approx_type in self.model_approx_types:
-                # Plot all hessian solutions
-                self.plot_all_solutions(approx_type=approx_type)
-
-                # Get and plot parameter distributions from hessian
-                self.render_and_plot_cred_int(approx_type=approx_type)
-        
-        if opt_forcing:
-            self.opt_force_plot = orig_opt_force_plot
-            self.opt_force_calc = orig_opt_force_calc
-        
     def render_likelihood_samples(self,
                                   n_samples=None
                                   ):
@@ -1919,6 +1898,9 @@ class BayesModel(ABC):
             if sample_shape_param == 'empirical10':
                 print('Dividing covariance matrix by an additional factor of 10')
                 cov = cov / 10 ** 2
+            elif sample_shape_param == 'empirical100':
+                print('Dividing covariance matrix by an additional factor of 10')
+                cov = cov / 100 ** 2
 
             # if not opt_walk and which_distro == WhichDistro.sphere:
             #     print('Dividing covariance matrix by an additional factor of 5')
@@ -2190,19 +2172,18 @@ class BayesModel(ABC):
             samples_key = 'likelihood_samples'
         self._add_samples(samples_as_list[MCMC_burn_in:], log_probs[MCMC_burn_in:], propensities[MCMC_burn_in:],
                           key=samples_key)
-        
+
         param_ind_at_MLE = np.argmax(log_probs)
         params_at_MLE = self.convert_params_as_list_to_dict(samples_as_list[param_ind_at_MLE])
         log_likelihood_at_MLE = log_probs[param_ind_at_MLE]
 
         if log_likelihood_at_MLE > self.get_log_likelihood(self.all_data_params) + 1e-3:
-
             # re-run all-data fit using new params
             print('-----\n Will re-do all-data fit from MCMC with new MLE at end of run\n-----')
             print(f'     log likelihood at starting point: {ll_at_starting_pt:.4g}')
             print(f'     log likelihood at all_data_params: {self.get_log_likelihood(self.all_data_params):.4g}')
             print(f'     log likelihood at MLE: {log_likelihood_at_MLE:.4g}')
-            
+
             self.discovered_MLE_params.append(params_at_MLE)
 
     def remove_sigma_entries_from_matrix(self, in_matrix):
@@ -2745,6 +2726,8 @@ class BayesModel(ABC):
                           sample_shape_param='empirical', which_distro=WhichDistro.sphere)
                 self.MCMC(opt_walk=False,
                           sample_shape_param='empirical10', which_distro=WhichDistro.sphere)
+                self.MCMC(opt_walk=False,
+                          sample_shape_param='empirical100, which_distro=WhichDistro.sphere)
 
                 # Do random walks around the overall fit
                 # print('\nSampling around MLE with wide sigma')
@@ -2832,9 +2815,11 @@ class BayesModel(ABC):
                 self.render_all_data_fit(passed_params=new_params)
                 self.solve_and_plot_solution(in_params=new_params,
                                              title='All-Data Solution',
-                                             plot_filename_filename='all_data_solution.png')
+                                             plot_filename_filename='all_data_solution.png',
+                                             opt_force_plot=True)
 
-        print('Now that we\'ve sampled for even better MLEs, let\'s do the curvature-based covariance approximations there!')
+        print(
+            'Now that we\'ve sampled for even better MLEs, let\'s do the curvature-based covariance approximations there!')
         self.render_additional_covariance_approximations(self.all_data_params)
 
         for approx_type in [ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.SP_CF, ApproxType.SP_LS,
@@ -2846,7 +2831,7 @@ class BayesModel(ABC):
 
                 # Get and plot parameter distributions from hessian
                 self.render_and_plot_cred_int(approx_type=approx_type)
-                
+
     # Get extra likelihood samples
     # print('Just doing random sampling')
     # self.render_likelihood_samples()

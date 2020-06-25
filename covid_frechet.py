@@ -134,11 +134,11 @@ def _run_everything_sub(region=Region.US_states, override_run_states=None):
 
     curve_fit_bounds = {'alpha_positive': (1e-8, 1000),
                         's_positive': (1e-3, 1e8),
-                        'm_positive': (-1000, 1000),
+                        'm_positive': (-1e8, 1e8),
                         'mult_positive': (1e-8, 1e12),
                         'alpha_deceased': (1e-8, 1000),
                         's_deceased': (1e-3, 1e8),
-                        'm_deceased': (-1000, 1000),
+                        'm_deceased': (-1e8, 1e8),
                         'mult_deceased': (1e-8, 1e12),
                         'sigma_positive': (0, 100),
                         'sigma_deceased': (0, 100),

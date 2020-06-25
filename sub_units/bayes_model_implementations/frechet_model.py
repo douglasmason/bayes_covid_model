@@ -26,7 +26,7 @@ class FrechetModel(BayesModel):
 
         # model_approx_types = [ApproxType.PyMC3]
         model_approx_types = [ApproxType.BS, ApproxType.SP_CF, ApproxType.NDT_Hess, ApproxType.NDT_Jac, ApproxType.LS,
-                              ApproxType.MCMC]#, ApproxType.PyMC3]
+                              ApproxType.MCMC, ApproxType.SP_min]#, ApproxType.PyMC3]
         kwargs.update({'model_approx_types': model_approx_types})
         super(FrechetModel, self).__init__(*args, **kwargs)
         self.cases_indices = list(range(self.day_of_threshold_met_case, len(self.series_data)))
