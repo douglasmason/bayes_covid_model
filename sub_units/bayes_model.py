@@ -2727,7 +2727,7 @@ class BayesModel(ABC):
                 self.MCMC(opt_walk=False,
                           sample_shape_param='empirical10', which_distro=WhichDistro.sphere)
                 self.MCMC(opt_walk=False,
-                          sample_shape_param='empirical100, which_distro=WhichDistro.sphere)
+                          sample_shape_param='empirical100', which_distro=WhichDistro.sphere)
 
                 # Do random walks around the overall fit
                 # print('\nSampling around MLE with wide sigma')
