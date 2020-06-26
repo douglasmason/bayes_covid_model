@@ -81,10 +81,10 @@ region_plot_subfolders = {
 # Or... 
 # run in bash...
 # TODO: get this part working using these fast CLIs rather than boto3 as below
-# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_17_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 
 for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
@@ -101,25 +101,6 @@ for region, plot_subfolder in region_plot_subfolders.items():
         print(f'Uploading {relative_filename}...')
         upload_file(file, 'covid-figures', object_name=relative_filename)
 
-######
-# Step 4: Generate Figure Browser
-######
-
-import os
-import generate_plot_browser_moving_window_statsmodels_only as generate_figure_browser
-
-for region, plot_subfolder in region_plot_subfolders.items():
-    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder)).format(date_str=date_str)
-    data_dir = plot_subfolder.format(date_str=date_str)
-    regions_to_present = [f for f in os.listdir(data_dir) if not os.path.isfile(os.path.join(data_dir, f))]
-    print(sorted(regions_to_present))
-
-    # Regenerate Figures
-    hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder)).format(date_str='current')
-    generate_figure_browser.hyperparameter_str = hyperparamater_str + '/'
-    generate_figure_browser.plot_browser_dir = f'plot_browser_moving_window_statsmodels_only_{region}'
-    generate_figure_browser.regions_to_present = regions_to_present
-    generate_figure_browser.generate_plot_browser(regions_to_present)
 
 ######
 # Step 5: Push to Github
