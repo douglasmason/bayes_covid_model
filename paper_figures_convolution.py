@@ -1,4 +1,4 @@
-import covid_convolve as covid
+from write_ups import covid_convolve as covid
 
 covid.n_bootstraps = 100
 covid.n_likelihood_samples = 100000
