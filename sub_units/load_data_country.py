@@ -66,16 +66,17 @@ if not success:
         with open('source_data/counties.csv', 'w') as f:
             f.write(r.content.decode("utf-8"))
     
-        print('Downloading last week of data')
-        for days_back in tqdm(range(0, 7)):
+        print('Downloading last month of data if not available')
+        for days_back in tqdm(range(0, 28)):
             date = datetime.date.today() - datetime.timedelta(days=days_back)
             date_str = date.strftime('%m-%d-%Y')
             url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
-            r = requests.get(url, allow_redirects=True)
             filename = f'source_data/csse_covid_19_daily_reports/{date_str}.csv'
-            print(filename, len(r.content.decode("utf-8")))
-            with open(filename, 'w') as f:
-                f.write(r.content.decode("utf-8"))
+            if not os.path.exists(filename):
+                r = requests.get(url, allow_redirects=True)
+                print(filename, len(r.content.decode("utf-8")))
+                with open(filename, 'w') as f:
+                    f.write(r.content.decode("utf-8"))
 
     #####
     # Step 1: Get US Data States
