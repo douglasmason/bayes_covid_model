@@ -81,10 +81,10 @@ region_plot_subfolders = {
 # Or... 
 # run in bash...
 # TODO: get this part working using these fast CLIs rather than boto3 as below
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_countries_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_US_states_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_provinces_region_statsmodels; aws s3 cp --recursive state_plots/$HYP_STR s3://covid-figures/$HYP_STR/
 
 for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))

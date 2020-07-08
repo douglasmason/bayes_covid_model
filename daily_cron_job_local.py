@@ -1,5 +1,5 @@
 import os
-import shutil 
+import shutil
 import requests
 import glob
 import logging
@@ -26,17 +26,17 @@ print(f'Yesterday: {yesterdays_date_str}')
 
 # Copy from AWS to local directory...
 # cd /Users/kayote/PycharmProjects/im_so_pissed/state_plots
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_US_states_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_countries_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
-# HYP_STR=2020_06_24_date_smoothed_moving_window_21_days_provinces_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_US_counties_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_US_states_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_countries_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
+# HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_provinces_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
 
-region_plot_subfolders = {Region.US_counties: '2020_06_24_date_smoothed_moving_window_21_days_US_counties_region_statsmodels', 
-Region.countries: '2020_06_24_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-Region.US_states: '2020_06_24_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
+region_plot_subfolders = {
+    Region.US_counties: '2020_07_05_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
+    Region.countries: '2020_07_05_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states: '2020_07_05_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
 
 post_analysis.hyperparameter_strings = list(region_plot_subfolders.values())
-
 
 ######
 # Step 3: Generate Figure Browser
@@ -51,7 +51,7 @@ for region, plot_subfolder in region_plot_subfolders.items():
     hyperparamater_str = os.path.basename(os.path.normpath(plot_subfolder))
     print(hyperparamater_str)
 
-    data_dir = os.path.join('state_plots',plot_subfolder)
+    data_dir = os.path.join('state_plots', plot_subfolder)
 
     # only add regions with a valid directory and a figure to present inside
     if opt_file_check:
@@ -150,7 +150,7 @@ post_analysis.choropleth_test()
 # git add plot_browser_moving_window_statsmodels_only_countries/*
 # git add plot_browser_moving_window_statsmodels_only_US_counties/*
 # git add plot_browser_moving_window_statsmodels_only_US_states/* 
-
+# for f in plot_browser_moving_window_statsmodels_only_US_states/*; do echo git add $f; done
 
 # Do this by hand
 # TODO: Figure out how to update git repo automatically instead of by hand
