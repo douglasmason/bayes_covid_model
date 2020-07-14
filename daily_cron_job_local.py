@@ -32,9 +32,9 @@ print(f'Yesterday: {yesterdays_date_str}')
 # HYP_STR=2020_07_05_date_smoothed_moving_window_21_days_provinces_region_statsmodels; mkdir $HYP_STR; aws s3 cp --recursive s3://covid-figures/$HYP_STR/ $HYP_STR
 
 region_plot_subfolders = {
-    Region.US_counties: '2020_07_05_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
-    Region.countries: '2020_07_05_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    Region.US_states: '2020_07_05_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
+    Region.US_counties: '2020_07_12_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
+    Region.countries:   '2020_07_12_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states:   '2020_07_12_date_smoothed_moving_window_21_days_US_states_region_statsmodels'}
 
 post_analysis.hyperparameter_strings = list(region_plot_subfolders.values())
 
@@ -150,7 +150,7 @@ post_analysis.choropleth_test()
 # git add plot_browser_moving_window_statsmodels_only_countries/*
 # git add plot_browser_moving_window_statsmodels_only_US_counties/*
 # git add plot_browser_moving_window_statsmodels_only_US_states/* 
-# for f in plot_browser_moving_window_statsmodels_only_US_states/*; do echo git add $f; done
+# for f in plot_browser_moving_window_statsmodels_only_US_counties/*; do echo git add $f; done
 
 # Do this by hand
 # TODO: Figure out how to update git repo automatically instead of by hand

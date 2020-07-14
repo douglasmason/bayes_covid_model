@@ -71,11 +71,12 @@ print(region_plot_subfolders)
 
 from sub_units.utils import Region
 
+date_str = yesterdays_date_str
 region_plot_subfolders = {
-    Region.US_counties: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
-    Region.countries: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
-    Region.US_states: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
-    # Region.provinces: 'state_plots/{date_str}_date_smoothed_moving_window_21_days_provinces_region_statsmodels'
+    Region.US_counties: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_counties_region_statsmodels',
+    Region.countries: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_countries_region_statsmodels',
+    Region.US_states: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_US_states_region_statsmodels',
+    # Region.provinces: f'state_plots/{date_str}_date_smoothed_moving_window_21_days_provinces_region_statsmodels'
 }
 
 # Or... 

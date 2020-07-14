@@ -67,7 +67,7 @@ if not success:
             f.write(r.content.decode("utf-8"))
     
         print('Downloading last month of data if not available')
-        for days_back in tqdm(range(0, 28)):
+        for days_back in tqdm(range(1, 28)):
             date = datetime.date.today() - datetime.timedelta(days=days_back)
             date_str = date.strftime('%m-%d-%Y')
             url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/{date_str}.csv"
