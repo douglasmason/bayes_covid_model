@@ -151,6 +151,10 @@ post_analysis.choropleth_test()
 # git add plot_browser_moving_window_statsmodels_only_US_counties/*
 # git add plot_browser_moving_window_statsmodels_only_US_states/* 
 # for f in plot_browser_moving_window_statsmodels_only_US_counties/*; do echo git add $f; done
+# git add -u
+# git commit -m "refresh"
+# git pull origin master
+# git push origin master
 
 # Do this by hand
 # TODO: Figure out how to update git repo automatically instead of by hand
