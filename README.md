@@ -1,7 +1,7 @@
 
 # bayes_covid_model
 
-*Updated weekly.*
+*This work was last updated Jun 19, 2020. Before then, it was updated weekly.*
 
 **[Map: Countries of the World by Growth Rate](https://htmlpreview.github.io/?https://github.com/douglasmason/covid_model/blob/master/choropleths/global.html)**
 
